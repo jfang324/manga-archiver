@@ -1,7 +1,7 @@
 import pytest
 import aiohttp
 from unittest.mock import AsyncMock, MagicMock, patch
-from src.mangadex_downloader.services.api_access_service import *
+from mangadex_downloader.services.api_access_service import *
 from tests.mock_data import *
 
 
@@ -58,7 +58,7 @@ class TestRetrieveMangas:
     )
 
     @patch(
-        "src.mangadex_downloader.services.api_access_service.fetch",
+        "mangadex_downloader.services.api_access_service.fetch",
         return_value=mock_manga_data,
     )
     async def test_retrieve_mangas_success_returns_json(self, mock_fetch: AsyncMock):
@@ -70,7 +70,7 @@ class TestRetrieveMangas:
         assert mock_fetch.call_args[0][1].endswith(f"?title={mock_query}")
 
     @patch(
-        "src.mangadex_downloader.services.api_access_service.fetch",
+        "mangadex_downloader.services.api_access_service.fetch",
         side_effect=Exception("Error fetching url"),
     )
     async def test_retrieve_mangas_failure_returns_none(self, mock_fetch: AsyncMock):
@@ -88,7 +88,7 @@ class TestRetrieveChapters:
     )
 
     @patch(
-        "src.mangadex_downloader.services.api_access_service.fetch",
+        "mangadex_downloader.services.api_access_service.fetch",
         return_value=mock_chapter_data,
     )
     async def test_retrieve_chapters_success_returns_json(self, mock_fetch: AsyncMock):
@@ -100,7 +100,7 @@ class TestRetrieveChapters:
         assert mock_fetch.call_args[0][1].endswith(f"/{mock_manga_id}/feed")
 
     @patch(
-        "src.mangadex_downloader.services.api_access_service.fetch",
+        "mangadex_downloader.services.api_access_service.fetch",
         side_effect=Exception("Error fetching url"),
     )
     async def test_retrieve_chapters_failure_returns_none(self, mock_fetch: AsyncMock):
@@ -118,7 +118,7 @@ class TestRetrieveDownloadResources:
     )
 
     @patch(
-        "src.mangadex_downloader.services.api_access_service.fetch",
+        "mangadex_downloader.services.api_access_service.fetch",
         return_value=mock_download_resource_data,
     )
     async def test_retrieve_download_resources_success_returns_json(
@@ -134,7 +134,7 @@ class TestRetrieveDownloadResources:
         assert mock_fetch.call_args[0][1].endswith(f"/{mock_chapter_id}")
 
     @patch(
-        "src.mangadex_downloader.services.api_access_service.fetch",
+        "mangadex_downloader.services.api_access_service.fetch",
         side_effect=Exception("Error fetching url"),
     )
     async def test_retrieve_download_resources_failure_returns_none(

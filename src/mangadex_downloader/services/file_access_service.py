@@ -1,14 +1,30 @@
 import os
 import tempfile
 from PIL import Image
+import imghdr
+
+
+def is_image(file_path: str) -> bool:
+    """
+    Checks if a file is an image
+
+    :param file_path: The path to the file
+    :return: True if the file is an image, False otherwise
+    """
+
+    return (
+        os.path.exists(file_path)
+        and os.path.isfile(file_path)
+        and imghdr.what(file_path) is not None
+    )
 
 
 def save_image(image_data: bytes, file_path: str) -> None:
     """
-    Saves the image data to a file with with a name and location determined by the file_path
+    Saves the image data to a file with a name and location determined by the file_path
 
     :param image_data: The image data to save
-    :param file_name: The path to the file to save the image data to
+    :param file_path: The path to the file to save the image data to
     :return: None
     """
 
@@ -17,72 +33,79 @@ def save_image(image_data: bytes, file_path: str) -> None:
             file.write(image_data)
 
 
-def save_image_list(image_data_list: list[bytes], directory: str) -> None:
+def save_image_list(image_data_list: list[bytes], dir_path: str) -> None:
     """
     Saves each element in image_data_list to a file named after the index of the element
 
     :param image_data_list: The image data list to save
-    :param directory: The directory to save the images to
+    :param dir_path: The directory to save the images to
     :return: None
     """
 
     for i, image_data in enumerate(image_data_list):
-        file_path: str = os.path.join(directory, f"{i}.jpg")
+        file_path: str = os.path.join(dir_path, f"{i}.jpg")
         save_image(image_data, file_path)
 
 
-def get_file_list(directory_path: str) -> list[str]:
+def get_image_list(dir_path: str) -> list[str]:
     """
-    Get a list of all files in a directory
+    Get a list of image files in a directory
 
-    :param path: The path to the directory
-    :return: A list of all files in the directory
+    :param dir_path: The path to the directory
+    :return: A list of all images in the directory
     """
+
     try:
-        if not os.path.exists(directory_path):
-            raise FileNotFoundError(f"The directory {directory_path} does not exist.")
+        if not os.path.exists(dir_path):
+            raise FileNotFoundError(f"The directory {dir_path} does not exist")
 
-        if os.path.isfile(directory_path):
-            raise Exception(f"{directory_path} is not a directory.")
+        if not os.path.isdir(dir_path):
+            raise NotADirectoryError(f"{dir_path} is not a directory")
 
-        everything_list: list[str] = os.listdir(directory_path)
-        file_list: list[str] = []
+        path_list: list[str] = os.listdir(dir_path)
+        image_list: list[str] = []
 
-        for item in everything_list:
-            if os.path.isfile(os.path.join(directory_path, item)) and item.endswith(
-                (".png", ".jpg", ".jpeg")
-            ):
-                file_list.append(os.path.join(directory_path, item))
+        for path in path_list:
+            full_path: str = os.path.join(dir_path, path)
 
-        return file_list
+            if is_image(full_path):
+                image_list.append(full_path)
+
+        return image_list
     except Exception as e:
         print(e)
         return []
 
 
 def convert_images_to_pdf(
-    file_list: list[str], output_path: str, output_name: str
+    image_list: list[str], output_path: str, output_name: str
 ) -> None:
     """
     Converts a list of images to a PDF file
 
-    :param file_list: A list of image files to be converted
+    :param image_list: A list of image files to be converted
     :param output_path: The path to the output directory
     :param output_name: The name of the output PDF file
     """
-    images = []
-    for file in file_list:
-        if os.path.exists(file) and os.path.isfile(file):
-            img: Image.Image = Image.open(file)
-            img = img.convert("RGB")
+
+    images: list[Image.Image] = []
+
+    for image in image_list:
+        if is_image(image):
+            img: Image.Image = Image.open(image)
+
+            if img.mode == "P":
+                img = img.convert("RGB")
+
             images.append(img)
 
-    images[0].save(
-        os.path.join(output_path, output_name + ".pdf"),
-        "PDF",
-        save_all=True,
-        append_images=images[1:],
-    )
+    if len(images) > 1:
+        images[0].save(
+            f"{os.path.join(output_path, output_name)}.pdf",
+            save_all=True,
+            append_images=images[1:],
+            optimize=True,
+        )
 
 
 def generate_PDF(image_data_list: list[bytes], output_name: str) -> None:
@@ -97,7 +120,7 @@ def generate_PDF(image_data_list: list[bytes], output_name: str) -> None:
 
     with tempfile.TemporaryDirectory() as temp_dir:
         save_image_list(image_data_list, temp_dir)
-        file_list: list[str] = get_file_list(temp_dir)
-        file_list.sort(key=lambda x: int(x.split(os.path.sep)[-1].split(".")[0]))
+        image_list: list[str] = get_image_list(temp_dir)
+        image_list.sort(key=lambda x: int(x.split(os.path.sep)[-1].split(".")[0]))
 
-        convert_images_to_pdf(file_list, os.getcwd(), output_name)
+        convert_images_to_pdf(image_list, os.getcwd(), output_name)

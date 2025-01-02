@@ -1,5 +1,6 @@
 import asyncio
 import curses
+import time
 from .services.session_manager import *
 from .services.api_access_service import *
 from .services.data_processing_service import *
@@ -83,6 +84,8 @@ async def start(stdscr: curses) -> None:
 
     # Display the progress of the download and generate the PDF files
     stdscr.clear()
+    start_time = time.time()
+
     for i in range(len(all_image_data_lists)):
         stdscr.addstr(
             i,
@@ -91,13 +94,17 @@ async def start(stdscr: curses) -> None:
             curses.color_pair(1),
         )
         stdscr.refresh()
+
         generate_PDF(
             all_image_data_lists[i],
             f'{processed_manga_data[int(selected_manga_index)]["title"]} [{processed_chapter_data[selected_chapters_indexes[i]]["chapter_number"]}]',
         )
+
+    elapsed_time = time.time() - start_time
+
     print(
         "\033[31m"
-        + f"Finished downloading {len(all_image_data_lists)} chapters of {processed_manga_data[selected_manga_index]['title']}"
+        + f"Finished downloading {len(all_image_data_lists)} chapters of {processed_manga_data[selected_manga_index]['title']} in {elapsed_time:.2f} seconds"
         + "\033[0m"
     )
     print("\033[31m" + f"Saved to {os.getcwd()}" + "\033[0m")

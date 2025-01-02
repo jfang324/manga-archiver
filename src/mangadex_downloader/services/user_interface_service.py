@@ -9,8 +9,9 @@ def prompt_user_input(stdscr: curses, message: str) -> str:
     :param message: The message to display to the user
     :return: The string entered by the user
     """
+
     curses.curs_set(1)
-    user_input = ""
+    user_input: str = ""
 
     # Capture user input until they press enter or escape
     while True:
@@ -111,6 +112,7 @@ def prompt_list_selection(
     :param title: The title at the top of the list
     :return: The index of the selected item
     """
+
     current_index: int = 0
 
     while True:
@@ -174,6 +176,7 @@ def prompt_list_multi_selection(
     :param title: The title at the top of the list
     :return: The index of the selected item
     """
+
     selected_indexes: set[int] = set()
     current_index: int = 0
 

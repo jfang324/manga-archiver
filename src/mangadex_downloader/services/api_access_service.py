@@ -35,12 +35,13 @@ async def fetch(session: aiohttp.ClientSession, url: str, params: dict = {}) -> 
 
 async def retrieve_mangas(session: aiohttp.ClientSession, query: str) -> dict:
     """
-    Retrieves manga's similiar to the query from the MangaDex API
+    Retrieves manga's similar to the query from the MangaDex API
 
     :param session: The aiohttp.ClientSession to use
     :param query: The query to search for
-    :return: A dictionary containing information for similiar mangas
+    :return: A dictionary containing information for similar mangas
     """
+
     try:
         url: str = f"{mangadex_root_url}?title={query}"
         params: dict = {"limit": 100}
@@ -59,6 +60,7 @@ async def retrieve_chapters(session: aiohttp.ClientSession, manga_id: str) -> di
     :param manga_id: The id of the manga to retrieve chapters for
     :return: A dictionary containing information for chapters of the manga
     """
+
     try:
         url: str = f"{mangadex_root_url}/{manga_id}/feed"
         params: dict = {
@@ -83,6 +85,7 @@ async def retrieve_download_resources(
     :param chapter_id: The id of the chapter to retrieve download resources for
     :return: A dictionary containing information for download resources of the chapter
     """
+
     try:
         url: str = f"{mangadex_resource_links_url}/{chapter_id}"
 
@@ -120,6 +123,7 @@ async def retrieve_image_data_list(
     :param url_list: The urls of the images to retrieve data for
     :return: A list containing the binary data of the images
     """
+
     try:
         tasks = [retrieve_image_data(session, url) for url in url_list]
 
