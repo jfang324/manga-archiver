@@ -39,5 +39,4 @@ jobs:
             - name: Test with pytest & coverage
               working-directory: .
               run: |
-                  coverage run -m pytest -v -p no:warnings
-                  coverage report -m
+                  coverage run -m pytest -v -p no:warnings && coverage report -m

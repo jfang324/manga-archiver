@@ -72,7 +72,7 @@ pip install -r requirements-dev.txt
 9. Run the tests:
 
 ```bash
-coverage run -m pytest -v
+coverage run -m pytest -v && coverage report -m
 ```
 
 ## Gallery & Demonstrations
