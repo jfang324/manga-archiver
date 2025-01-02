@@ -2,7 +2,7 @@ import os
 import pytest
 from unittest.mock import patch, MagicMock
 from PIL import Image
-from mangadex_downloader.services.file_access_service import *
+from src.mangadex_downloader.services.file_access_service import *
 from tests.mock_data import *
 
 
@@ -52,7 +52,7 @@ class TestSaveImage:
 
 
 class TestSaveImageList:
-    @patch("mangadex_downloader.services.file_access_service.save_image")
+    @patch("src.mangadex_downloader.services.file_access_service.save_image")
     def test_save_image_list_saves_each_image_in_image_data_list_to_a_file(
         self, mock_save_image: MagicMock
     ):
@@ -74,7 +74,8 @@ class TestGetImageList:
     @patch("os.path.isdir", return_value=True)
     @patch("os.listdir", return_value=mock_image_paths)
     @patch(
-        "mangadex_downloader.services.file_access_service.is_image", return_value=True
+        "src.mangadex_downloader.services.file_access_service.is_image",
+        return_value=True,
     )
     def test_get_image_list_with_valid_directory_returns_correct_list(
         self,
@@ -91,7 +92,8 @@ class TestGetImageList:
     @patch("os.path.isdir", return_value=True)
     @patch("os.listdir", return_value=mock_image_paths)
     @patch(
-        "mangadex_downloader.services.file_access_service.is_image", return_value=False
+        "src.mangadex_downloader.services.file_access_service.is_image",
+        return_value=False,
     )
     def test_get_image_list_with_valid_directory_with_no_images_returns_empty_list(
         self,
@@ -124,7 +126,8 @@ class TestConvertImagesToPdf:
 
     @patch("tempfile.TemporaryDirectory", new_callable=create_mock_directory)
     @patch(
-        "mangadex_downloader.services.file_access_service.is_image", return_value=True
+        "src.mangadex_downloader.services.file_access_service.is_image",
+        return_value=True,
     )
     @patch("PIL.Image.open", return_value=Image.new("RGB", (100, 100)))
     @patch("PIL.Image.Image.save", return_value=None)
@@ -154,7 +157,7 @@ class TestConvertImagesToPdf:
         )
 
     @patch("tempfile.TemporaryDirectory", new_callable=create_mock_directory)
-    @patch("mangadex_downloader.services.file_access_service.is_image")
+    @patch("src.mangadex_downloader.services.file_access_service.is_image")
     @patch("PIL.Image.open", return_value=Image.new("RGB", (100, 100)))
     @patch("PIL.Image.Image.save", return_value=None)
     @patch("os.path.join", return_value="/path/to/output.pdf")

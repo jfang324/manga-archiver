@@ -1,4 +1,4 @@
-from mangadex_downloader.services.data_processing_service import *
+from src.mangadex_downloader.services.data_processing_service import *
 from tests.mock_data import *
 
 
