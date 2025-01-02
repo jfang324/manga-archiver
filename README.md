@@ -9,7 +9,7 @@ A CLI tool that makes it easy to search for and download manga from [MangaDex](h
 To use this tool, you will need the following:
 
 -   Python 3.9, 3.10, or 3.11
--   python-dotenv (if you want to use the .env file, optional unless the API changes)
+-   python-dotenv (if you want to use a .env file, optional unless the API changes)
 -   aiohttp
 -   Pillow
 -   windows-curses (if you are using Windows)
@@ -102,3 +102,4 @@ Jeffery Fang - [jefferyfang324@gmail.com](mailto:jefferyfang324@gmail.com)
 -   Pytest
 -   Coverage
 -   Poetry
+-   tempfile
