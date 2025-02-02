@@ -26,38 +26,38 @@ To install the tool, run the following commands in your terminal:
 
 1. Clone the repository:
 
-```bash
+```sh
 git clone https://github.com/jfang324/mangadex-downloader.git
 ```
 
 2. Navigate to the project directory:
 
-```bash
+```sh
 cd mangadex-downloader
 ```
 
 3. Create a .env file in the project directory and add the following lines:
 
-```bash
-MANGADEX_ROOT_URL=https://api.mangadex.org/manga
-MANGADEX_RESOURCE_LINKS_URL=https://api.mangadex.org/at-home/server
+```env
+MANGADEX_ROOT_URL = "https://api.mangadex.org/manga"
+MANGADEX_RESOURCE_LINKS_URL = "https://api.mangadex.org/at-home/server"
 ```
 
 4. If using Windows, install the windows-curses package:
 
-```bash
+```sh
 pip install windows-curses
 ```
 
 5. Install the project using pip:
 
-```bash
+```sh
 pip install .
 ```
 
 6. The script will now be installed in your python scripts directory (probably `C:\Users\<username>\AppData\Roaming\Python\Python3.X\Scripts` for Windows users). To run the script, navigate to the scripts directory and run the following command:
 
-```bash
+```sh
 mangadex-downloader
 ```
 
@@ -65,14 +65,20 @@ mangadex-downloader
 
 8. To run the tests, install the development dependencies:
 
-```bash
+```sh
 pip install -r requirements-dev.txt
 ```
 
 9. Run the tests:
 
-```bash
-coverage run -m pytest -v && coverage report -m
+```sh
+coverage run -m pytest -v
+```
+
+10. Generate a coverage report:
+
+```sh
+coverage report -m
 ```
 
 ## Gallery & Demonstrations
