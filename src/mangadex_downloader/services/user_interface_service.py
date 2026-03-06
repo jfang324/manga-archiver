@@ -1,3 +1,5 @@
+from typing import Optional
+
 import curses
 
 
@@ -19,7 +21,7 @@ def prompt_user_input(stdscr: curses.window, message: str) -> str:
         stdscr.addstr(0, 0, f"{message}: ", curses.color_pair(1))
         stdscr.addstr(f"{user_input}")
 
-        key: str = stdscr.getch()
+        key = stdscr.getch()
         if key in [ord("\n"), curses.KEY_ENTER]:
             break
         elif key in [ord("\b"), curses.KEY_BACKSPACE]:
@@ -102,7 +104,7 @@ def display_list(
 
 def prompt_list_selection(
     stdscr: curses.window, result_list: list[dict], page_size: int, title: str
-) -> int:
+) -> Optional[int]:
     """
     Displays the result list to the user and prompt them to select an item
 
@@ -166,7 +168,7 @@ def prompt_list_selection(
 
 def prompt_list_multi_selection(
     stdscr: curses.window, result_list: list[dict], page_size: int, title: str
-) -> list[int]:
+) -> Optional[list[int]]:
     """
     Displays the result list to the user and prompt them to select a list of items
 

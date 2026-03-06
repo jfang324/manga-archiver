@@ -1,5 +1,7 @@
 import asyncio
 
+from typing import Optional
+
 import aiohttp
 
 from ..constants import (
@@ -27,7 +29,7 @@ async def fetch(session: aiohttp.ClientSession, url: str, params: dict = {}) -> 
             )
 
 
-async def retrieve_mangas(session: aiohttp.ClientSession, query: str) -> dict:
+async def retrieve_mangas(session: aiohttp.ClientSession, query: str) -> Optional[dict]:
     """
     Retrieves manga's similar to the query from the MangaDex API
 
@@ -46,7 +48,7 @@ async def retrieve_mangas(session: aiohttp.ClientSession, query: str) -> dict:
         return None
 
 
-async def retrieve_chapters(session: aiohttp.ClientSession, manga_id: str) -> dict:
+async def retrieve_chapters(session: aiohttp.ClientSession, manga_id: str) -> Optional[dict]:
     """
     Retrieves chapters of the manga with the given manga_id from the MangaDex API
 
@@ -71,7 +73,7 @@ async def retrieve_chapters(session: aiohttp.ClientSession, manga_id: str) -> di
 
 async def retrieve_download_resources(
     session: aiohttp.ClientSession, chapter_id: str
-) -> dict:
+) -> Optional[dict]:
     """
     Retrieves download resources of the chapter with the given chapter_id from the MangaDex API
 
@@ -109,7 +111,7 @@ async def retrieve_image_data(session: aiohttp.ClientSession, image_url: str) ->
 
 async def retrieve_image_data_list(
     session: aiohttp.ClientSession, url_list: list[str]
-) -> list[bytes]:
+) -> Optional[list[bytes]]:
     """
     Retrieves the image data from the given image urls
 

@@ -1,11 +1,13 @@
+from typing import Optional
+
 import aiohttp
 
 
 class SessionManager:
-    _session: aiohttp.ClientSession = None
+    _session: Optional[aiohttp.ClientSession] = None
 
     @staticmethod
-    def create_session() -> aiohttp.ClientSession:
+    def create_session() -> Optional[aiohttp.ClientSession]:
         """
         Creates a new aiohttp.ClientSession if one does not already exist
         """
