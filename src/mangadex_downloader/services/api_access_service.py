@@ -1,16 +1,12 @@
-from dotenv import load_dotenv
-import os
 import asyncio
+
+from typing import Optional
+
 import aiohttp
 
-load_dotenv()
-
-mangadex_root_url: str = (
-    os.getenv("MANGADEX_ROOT_URL") or "https://api.mangadex.org/manga"
-)
-mangadex_resource_links_url: str = (
-    os.getenv("MANGADEX_RESOURCE_LINKS_URL")
-    or "https://api.mangadex.org/at-home/server"
+from ..constants import (
+    MANGADEX_ROOT_URL,
+    MANGADEX_RESOURCE_LINKS_URL,
 )
 
 
@@ -33,7 +29,7 @@ async def fetch(session: aiohttp.ClientSession, url: str, params: dict = {}) -> 
             )
 
 
-async def retrieve_mangas(session: aiohttp.ClientSession, query: str) -> dict:
+async def retrieve_mangas(session: aiohttp.ClientSession, query: str) -> Optional[dict]:
     """
     Retrieves manga's similar to the query from the MangaDex API
 
@@ -43,7 +39,7 @@ async def retrieve_mangas(session: aiohttp.ClientSession, query: str) -> dict:
     """
 
     try:
-        url: str = f"{mangadex_root_url}?title={query}"
+        url: str = f"{MANGADEX_ROOT_URL}?title={query}"
         params: dict = {"limit": 100}
 
         return await fetch(session, url, params)
@@ -52,7 +48,7 @@ async def retrieve_mangas(session: aiohttp.ClientSession, query: str) -> dict:
         return None
 
 
-async def retrieve_chapters(session: aiohttp.ClientSession, manga_id: str) -> dict:
+async def retrieve_chapters(session: aiohttp.ClientSession, manga_id: str) -> Optional[dict]:
     """
     Retrieves chapters of the manga with the given manga_id from the MangaDex API
 
@@ -62,7 +58,7 @@ async def retrieve_chapters(session: aiohttp.ClientSession, manga_id: str) -> di
     """
 
     try:
-        url: str = f"{mangadex_root_url}/{manga_id}/feed"
+        url: str = f"{MANGADEX_ROOT_URL}/{manga_id}/feed"
         params: dict = {
             "translatedLanguage[]": ["en"],
             "limit": 500,
@@ -77,7 +73,7 @@ async def retrieve_chapters(session: aiohttp.ClientSession, manga_id: str) -> di
 
 async def retrieve_download_resources(
     session: aiohttp.ClientSession, chapter_id: str
-) -> dict:
+) -> Optional[dict]:
     """
     Retrieves download resources of the chapter with the given chapter_id from the MangaDex API
 
@@ -87,7 +83,7 @@ async def retrieve_download_resources(
     """
 
     try:
-        url: str = f"{mangadex_resource_links_url}/{chapter_id}"
+        url: str = f"{MANGADEX_RESOURCE_LINKS_URL}/{chapter_id}"
 
         return await fetch(session, url)
     except Exception as e:
@@ -115,7 +111,7 @@ async def retrieve_image_data(session: aiohttp.ClientSession, image_url: str) ->
 
 async def retrieve_image_data_list(
     session: aiohttp.ClientSession, url_list: list[str]
-) -> list[bytes]:
+) -> Optional[list[bytes]]:
     """
     Retrieves the image data from the given image urls
 

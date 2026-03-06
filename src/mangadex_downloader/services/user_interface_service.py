@@ -1,7 +1,9 @@
+from typing import Optional
+
 import curses
 
 
-def prompt_user_input(stdscr: curses, message: str) -> str:
+def prompt_user_input(stdscr: curses.window, message: str) -> str:
     """
     Prompts the user to enter a string and returns the string entered by the user
 
@@ -19,7 +21,7 @@ def prompt_user_input(stdscr: curses, message: str) -> str:
         stdscr.addstr(0, 0, f"{message}: ", curses.color_pair(1))
         stdscr.addstr(f"{user_input}")
 
-        key: str = stdscr.getch()
+        key = stdscr.getch()
         if key in [ord("\n"), curses.KEY_ENTER]:
             break
         elif key in [ord("\b"), curses.KEY_BACKSPACE]:
@@ -36,7 +38,7 @@ def prompt_user_input(stdscr: curses, message: str) -> str:
 
 
 def display_list(
-    stdscr: curses,
+    stdscr: curses.window,
     result_list: list[dict],
     page_start: int,
     page_end: int,
@@ -57,9 +59,9 @@ def display_list(
         if i == current_index:
             stdscr.addstr(i - page_start + 2, 0, "> ", curses.color_pair(2))
             if i in selected_indexes:
-                if "chapter_number" in result_list[i]:
+                if "chapter" in result_list[i]:
                     stdscr.addstr(
-                        f'{result_list[i]["chapter_number"]} {result_list[i]["title"]}',
+                        f'{result_list[i]["chapter"]} {result_list[i]["title"]}',
                         curses.color_pair(3),
                     )
                 else:
@@ -68,9 +70,9 @@ def display_list(
                         curses.color_pair(3),
                     )
             else:
-                if "chapter_number" in result_list[i]:
+                if "chapter" in result_list[i]:
                     stdscr.addstr(
-                        f'{result_list[i]["chapter_number"]} {result_list[i]["title"]}',
+                        f'{result_list[i]["chapter"]} {result_list[i]["title"]}',
                         curses.A_REVERSE,
                     )
                 else:
@@ -82,9 +84,9 @@ def display_list(
             if i in selected_indexes:
                 stdscr.addstr(i - page_start + 2, 0, " ", curses.A_REVERSE)
                 stdscr.addstr(" ")
-                if "chapter_number" in result_list[i]:
+                if "chapter" in result_list[i]:
                     stdscr.addstr(
-                        f'{result_list[i]["chapter_number"]} {result_list[i]["title"]}',
+                        f'{result_list[i]["chapter"]} {result_list[i]["title"]}',
                         curses.color_pair(3),
                     )
                 else:
@@ -92,17 +94,17 @@ def display_list(
             else:
                 stdscr.addstr(i - page_start + 2, 0, " ", curses.A_REVERSE)
                 stdscr.addstr(" ")
-                if "chapter_number" in result_list[i]:
+                if "chapter" in result_list[i]:
                     stdscr.addstr(
-                        f'{result_list[i]["chapter_number"]} {result_list[i]["title"]}',
+                        f'{result_list[i]["chapter"]} {result_list[i]["title"]}',
                     )
                 else:
                     stdscr.addstr(f' {result_list[i]["title"]}')
 
 
 def prompt_list_selection(
-    stdscr: curses, result_list: list[dict], page_size: int, title: str
-) -> int:
+    stdscr: curses.window, result_list: list[dict], page_size: int, title: str
+) -> Optional[int]:
     """
     Displays the result list to the user and prompt them to select an item
 
@@ -165,8 +167,8 @@ def prompt_list_selection(
 
 
 def prompt_list_multi_selection(
-    stdscr: curses, result_list: list[dict], page_size: int, title: str
-) -> list[int]:
+    stdscr: curses.window, result_list: list[dict], page_size: int, title: str
+) -> Optional[list[int]]:
     """
     Displays the result list to the user and prompt them to select a list of items
 

@@ -9,7 +9,6 @@ A CLI tool that makes it easy to search for and download manga from [MangaDex](h
 To use this tool, you will need the following:
 
 -   Python 3.9, 3.10, or 3.11
--   python-dotenv (if you want to use a .env file, optional unless the API changes)
 -   aiohttp
 -   Pillow
 -   windows-curses (if you are using Windows)
@@ -36,34 +35,27 @@ git clone https://github.com/jfang324/mangadex-downloader.git
 cd mangadex-downloader
 ```
 
-3. Create a .env file in the project directory and add the following lines:
-
-```env
-MANGADEX_ROOT_URL = "https://api.mangadex.org/manga"
-MANGADEX_RESOURCE_LINKS_URL = "https://api.mangadex.org/at-home/server"
-```
-
-4. If using Windows, install the windows-curses package:
+3. If using Windows, install the windows-curses package:
 
 ```sh
 pip install windows-curses
 ```
 
-5. Install the project using pip:
+4. Install the project using pip:
 
 ```sh
 pip install .
 ```
 
-6. The script will now be installed in your python scripts directory (probably `C:\Users\<username>\AppData\Roaming\Python\Python3.X\Scripts` for Windows users). To run the script, navigate to the scripts directory and run the following command:
+5. The script will now be installed in your python scripts directory (probably `C:\Users\<username>\AppData\Roaming\Python\Python3.X\Scripts` for Windows users). To run the script, navigate to the scripts directory and run the following command:
 
 ```sh
 mangadex-downloader
 ```
 
-7. If you want to be able to run the script from anywhere, you can add the scripts directory to your PATH environment variable.
+6. If you want to be able to run the script from anywhere, you can add the scripts directory to your PATH environment variable.
 
-8. To run the tests, install the development dependencies:
+7. To run the tests, install the development dependencies:
 
 ```sh
 pip install -r requirements-dev.txt

@@ -110,22 +110,22 @@ mock_processed_chapter_data: list[dict] = [
     {
         "title": "Chapter 4",
         "id": "4",
-        "chapter_number": "0",
+        "chapter": "0",
     },
     {
         "title": "Chapter 1",
         "id": "1",
-        "chapter_number": "1",
+        "chapter": "1",
     },
     {
         "title": "Chapter 2",
         "id": "2",
-        "chapter_number": "2",
+        "chapter": "2",
     },
     {
         "title": None,
         "id": "3",
-        "chapter_number": "3",
+        "chapter": "3",
     },
 ]
 
@@ -141,12 +141,15 @@ mock_download_resource_data: dict = {
         ],
     },
 }
-mock_processed_download_resource_data: list[str] = [
-    "https://mangaCDN.com/data/hash/chapter1.jpg",
-    "https://mangaCDN.com/data/hash/chapter2.jpg",
-    "https://mangaCDN.com/data/hash/chapter3.jpg",
-    "https://mangaCDN.com/data/hash/chapter4.jpg",
-]
+mock_processed_download_resource_data: dict = {
+    "urls": [
+        "https://mangaCDN.com/data/hash/chapter1.jpg",
+        "https://mangaCDN.com/data/hash/chapter2.jpg",
+        "https://mangaCDN.com/data/hash/chapter3.jpg",
+        "https://mangaCDN.com/data/hash/chapter4.jpg",
+    ],
+    "hash": "hash",
+}
 
 
 mock_image_data: bytes = b"A long string of bytes representing an image"

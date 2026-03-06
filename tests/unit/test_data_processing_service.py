@@ -72,7 +72,7 @@ class TestProcessChapterData:
             {
                 "title": None,
                 "id": "4",
-                "chapter_number": "4",
+                "chapter": "4",
             }
         ]
 
@@ -106,12 +106,12 @@ class TestProcessChapterData:
             }
         )
 
-        assert response == [{"title": "Chapter 5", "id": "5", "chapter_number": "0"}]
+        assert response == [{"title": "Chapter 5", "id": "5", "chapter": "0"}]
 
 
 class TestProcessDownloadResourceData:
     def test_process_download_resource_data_returns_correct_data(self):
-        response: list[str] = process_download_resource_data(
+        response: dict = process_download_resource_data(
             mock_download_resource_data
         )
 
