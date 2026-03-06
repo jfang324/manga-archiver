@@ -10,9 +10,7 @@ from PIL import Image
 class PdfGenerator:
     """Generator for creating PDF files from images."""
 
-    def __init__(
-        self, quality: int = 75, optimize: bool = False
-    ) -> None:
+    def __init__(self, quality: int = 75, optimize: bool = False) -> None:
         """Initialize the PDF generator.
 
         :param quality: PDF quality (1-100, default: 75)
