@@ -57,9 +57,9 @@ def display_list(
         if i == current_index:
             stdscr.addstr(i - page_start + 2, 0, "> ", curses.color_pair(2))
             if i in selected_indexes:
-                if "chapter_number" in result_list[i]:
+                if "chapter" in result_list[i]:
                     stdscr.addstr(
-                        f'{result_list[i]["chapter_number"]} {result_list[i]["title"]}',
+                        f'{result_list[i]["chapter"]} {result_list[i]["title"]}',
                         curses.color_pair(3),
                     )
                 else:
@@ -68,9 +68,9 @@ def display_list(
                         curses.color_pair(3),
                     )
             else:
-                if "chapter_number" in result_list[i]:
+                if "chapter" in result_list[i]:
                     stdscr.addstr(
-                        f'{result_list[i]["chapter_number"]} {result_list[i]["title"]}',
+                        f'{result_list[i]["chapter"]} {result_list[i]["title"]}',
                         curses.A_REVERSE,
                     )
                 else:
@@ -82,9 +82,9 @@ def display_list(
             if i in selected_indexes:
                 stdscr.addstr(i - page_start + 2, 0, " ", curses.A_REVERSE)
                 stdscr.addstr(" ")
-                if "chapter_number" in result_list[i]:
+                if "chapter" in result_list[i]:
                     stdscr.addstr(
-                        f'{result_list[i]["chapter_number"]} {result_list[i]["title"]}',
+                        f'{result_list[i]["chapter"]} {result_list[i]["title"]}',
                         curses.color_pair(3),
                     )
                 else:
@@ -92,9 +92,9 @@ def display_list(
             else:
                 stdscr.addstr(i - page_start + 2, 0, " ", curses.A_REVERSE)
                 stdscr.addstr(" ")
-                if "chapter_number" in result_list[i]:
+                if "chapter" in result_list[i]:
                     stdscr.addstr(
-                        f'{result_list[i]["chapter_number"]} {result_list[i]["title"]}',
+                        f'{result_list[i]["chapter"]} {result_list[i]["title"]}',
                     )
                 else:
                     stdscr.addstr(f' {result_list[i]["title"]}')

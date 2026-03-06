@@ -7,6 +7,7 @@ from .services.api_access_service import *
 from .services.data_processing_service import *
 from .services.user_interface_service import *
 from .services.file_access_service import *
+from .types import ProcessedChapter, ProcessedManga
 
 
 async def end() -> None:
@@ -37,7 +38,7 @@ async def start(stdscr: curses.window) -> None:
 
     # Retrieve and process the API response into a list of mangas similar to the query
     manga_data: dict = await retrieve_mangas(session, query)
-    processed_manga_data: list[dict] = process_manga_data(manga_data)
+    processed_manga_data: list[ProcessedManga] = process_manga_data(manga_data)
 
     # Prompt user to select a manga out of the list of mangas
     selected_manga_index: int = prompt_list_selection(
@@ -51,7 +52,7 @@ async def start(stdscr: curses.window) -> None:
     chapter_data: dict = await retrieve_chapters(
         session, processed_manga_data[int(selected_manga_index)]["id"]
     )
-    processed_chapter_data: list[dict] = process_chapter_data(chapter_data)
+    processed_chapter_data: list[ProcessedChapter] = process_chapter_data(chapter_data)
 
     # Prompt user to select a list of chapters to download
     selected_chapters_indexes: list[int] = prompt_list_multi_selection(
@@ -74,7 +75,7 @@ async def start(stdscr: curses.window) -> None:
 
     # Process the download resources into lists of download links and retrieve the image data for each batch
     link_batches: list[list[str]] = [
-        process_download_resource_data(dr) for dr in all_download_resources
+        process_download_resource_data(dr)["urls"] for dr in all_download_resources
     ]
     all_batch_download_tasks: list[list[bytes]] = [
         retrieve_image_data_list(session, link_batch) for link_batch in link_batches
@@ -91,14 +92,14 @@ async def start(stdscr: curses.window) -> None:
         stdscr.addstr(
             i,
             0,
-            f'Downloading {processed_manga_data[int(selected_manga_index)]["title"]} [{processed_chapter_data[selected_chapters_indexes[i]]["chapter_number"]}]',
+            f'Downloading {processed_manga_data[int(selected_manga_index)]["title"]} [{processed_chapter_data[selected_chapters_indexes[i]]["chapter"]}]',
             curses.color_pair(1),
         )
         stdscr.refresh()
 
         generate_PDF(
             all_image_data_lists[i],
-            f'{processed_manga_data[int(selected_manga_index)]["title"]} [{processed_chapter_data[selected_chapters_indexes[i]]["chapter_number"]}]',
+            f'{processed_manga_data[int(selected_manga_index)]["title"]} [{processed_chapter_data[selected_chapters_indexes[i]]["chapter"]}]',
         )
 
     elapsed_time = time.time() - start_time
