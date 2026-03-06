@@ -27,6 +27,10 @@ windows-curses = "^2.3.3"
 asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
 
+[tool.coverage.run]
+omit = ["*/cli/*", "*/tests/*"]
+source = ["src"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
