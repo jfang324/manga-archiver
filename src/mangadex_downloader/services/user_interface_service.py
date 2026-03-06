@@ -1,7 +1,7 @@
 import curses
 
 
-def prompt_user_input(stdscr: curses, message: str) -> str:
+def prompt_user_input(stdscr: curses.window, message: str) -> str:
     """
     Prompts the user to enter a string and returns the string entered by the user
 
@@ -36,7 +36,7 @@ def prompt_user_input(stdscr: curses, message: str) -> str:
 
 
 def display_list(
-    stdscr: curses,
+    stdscr: curses.window,
     result_list: list[dict],
     page_start: int,
     page_end: int,
@@ -101,7 +101,7 @@ def display_list(
 
 
 def prompt_list_selection(
-    stdscr: curses, result_list: list[dict], page_size: int, title: str
+    stdscr: curses.window, result_list: list[dict], page_size: int, title: str
 ) -> int:
     """
     Displays the result list to the user and prompt them to select an item
@@ -165,7 +165,7 @@ def prompt_list_selection(
 
 
 def prompt_list_multi_selection(
-    stdscr: curses, result_list: list[dict], page_size: int, title: str
+    stdscr: curses.window, result_list: list[dict], page_size: int, title: str
 ) -> list[int]:
     """
     Displays the result list to the user and prompt them to select a list of items

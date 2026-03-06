@@ -1,16 +1,10 @@
-from dotenv import load_dotenv
-import os
 import asyncio
+
 import aiohttp
 
-load_dotenv()
-
-mangadex_root_url: str = (
-    os.getenv("MANGADEX_ROOT_URL") or "https://api.mangadex.org/manga"
-)
-mangadex_resource_links_url: str = (
-    os.getenv("MANGADEX_RESOURCE_LINKS_URL")
-    or "https://api.mangadex.org/at-home/server"
+from ..constants import (
+    MANGADEX_ROOT_URL,
+    MANGADEX_RESOURCE_LINKS_URL,
 )
 
 
@@ -43,7 +37,7 @@ async def retrieve_mangas(session: aiohttp.ClientSession, query: str) -> dict:
     """
 
     try:
-        url: str = f"{mangadex_root_url}?title={query}"
+        url: str = f"{MANGADEX_ROOT_URL}?title={query}"
         params: dict = {"limit": 100}
 
         return await fetch(session, url, params)
@@ -62,7 +56,7 @@ async def retrieve_chapters(session: aiohttp.ClientSession, manga_id: str) -> di
     """
 
     try:
-        url: str = f"{mangadex_root_url}/{manga_id}/feed"
+        url: str = f"{MANGADEX_ROOT_URL}/{manga_id}/feed"
         params: dict = {
             "translatedLanguage[]": ["en"],
             "limit": 500,
@@ -87,7 +81,7 @@ async def retrieve_download_resources(
     """
 
     try:
-        url: str = f"{mangadex_resource_links_url}/{chapter_id}"
+        url: str = f"{MANGADEX_RESOURCE_LINKS_URL}/{chapter_id}"
 
         return await fetch(session, url)
     except Exception as e:

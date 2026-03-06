@@ -1,5 +1,6 @@
 import asyncio
 import curses
+import os
 import time
 from .services.session_manager import *
 from .services.api_access_service import *
@@ -13,7 +14,7 @@ async def end() -> None:
     quit()
 
 
-async def start(stdscr: curses) -> None:
+async def start(stdscr: curses.window) -> None:
     # Main body of the program
 
     # Initialize curses settings for UI
@@ -113,7 +114,7 @@ async def start(stdscr: curses) -> None:
     await end()
 
 
-def curses_main(stdscr: curses) -> None:
+def curses_main(stdscr: curses.window) -> None:
     # Run the start function in an asyncio.run to enable use of async/await
     asyncio.run(start(stdscr))
 
