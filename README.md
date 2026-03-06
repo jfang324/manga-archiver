@@ -83,9 +83,10 @@ https://github.com/user-attachments/assets/90d6f14f-1847-4bd9-9de3-947c70ff6060
 
 ## Known Issues
 
--   Currently only supports english translations
--   Characters that can't be used in file names cause unexpected behavior when generating the PDF file when they are included in the title of the manga
--   Characters used for query parameters cause unexpected behavior included in user input
+- Currently only supports english translations
+- Characters that can't be used in file names cause unexpected behavior when generating the PDF file when they are included in the title of the manga
+- Characters used for query parameters cause unexpected behavior included in user input
+- Data-saver mode (`--data-saver` flag) may not work due to issues with MangaDex's CDN; the feature is implemented correctly but the CDN endpoints are currently broken
 
 ## Contact
 
