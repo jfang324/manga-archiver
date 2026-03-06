@@ -49,7 +49,11 @@ jobs:
     - name: Lint with ruff
       run: |
         poetry run ruff check . || true
-    
+
+    - name: Type check with pyright
+      run: |
+        poetry run pyright || true
+
     - name: Test with pytest & coverage
       run: |
         poetry run coverage run -m pytest -v
