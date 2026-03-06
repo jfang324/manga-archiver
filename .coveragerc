@@ -4,8 +4,8 @@ source = src
 
 [report]
 omit =
-    tests/*
-    */__init__.py
-    */main.py
-    */services/user_interface_service.py
+  tests/*
+  */__init__.py
+  */main.py
+  */cli/*
 show_missing = True
