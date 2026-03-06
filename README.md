@@ -8,16 +8,9 @@ A CLI tool that makes it easy to search for and download manga from [MangaDex](h
 
 To use this tool, you will need the following:
 
--   Python 3.9, 3.10, or 3.11
--   aiohttp
--   Pillow
--   windows-curses (if you are using Windows)
-
-To run the tests, you will need the following:
-
--   Pytest
--   Coverage
--   pytest-asyncio
+- Python 3.9, 3.10, or 3.11
+- Poetry (for dependency management)
+- A terminal with at least **80 columns x 24 rows**
 
 ### Installation
 
@@ -35,42 +28,71 @@ git clone https://github.com/jfang324/mangadex-downloader.git
 cd mangadex-downloader
 ```
 
-3. If using Windows, install the windows-curses package:
+3. Install the project using Poetry:
 
 ```sh
-pip install windows-curses
+poetry install
 ```
 
-4. Install the project using pip:
+4. To run the script, use Poetry:
 
 ```sh
-pip install .
+poetry run mangadex-downloader
 ```
 
-5. The script will now be installed in your python scripts directory (probably `C:\Users\<username>\AppData\Roaming\Python\Python3.X\Scripts` for Windows users). To run the script, navigate to the scripts directory and run the following command:
+Or if you've installed it globally:
 
 ```sh
 mangadex-downloader
 ```
 
-6. If you want to be able to run the script from anywhere, you can add the scripts directory to your PATH environment variable.
+## CLI Arguments
 
-7. To run the tests, install the development dependencies:
+The following command-line arguments are available:
+
+| Flag           | Type | Default | Description                                           |
+| -------------- | ---- | ------- | ----------------------------------------------------- |
+| `--page-size`  | int  | 10      | Number of items to display per page in the UI         |
+| `--quality`    | int  | 75      | PDF quality (1-100, where 100 is highest)             |
+| `--optimize`   | flag | False   | Optimize PDF file size (trade-off: slower generation) |
+| `--data-saver` | flag | False   | Download lower quality images (uses less bandwidth)   |
+
+### Usage Examples
+
+Basic usage with defaults:
 
 ```sh
-pip install -r requirements-dev.txt
+mangadex-downloader
 ```
 
-9. Run the tests:
+High quality PDFs with data-saver mode:
 
 ```sh
-coverage run -m pytest -v
+mangadex-downloader --quality 95 --data-saver
 ```
 
-10. Generate a coverage report:
+Optimized PDFs with more items per page:
 
 ```sh
-coverage report -m
+mangadex-downloader --page-size 20 --optimize
+```
+
+## Terminal Requirements
+
+**Minimum terminal size: 80 columns x 24 rows**
+
+If your terminal is too small, you'll see this error:
+
+```
+============================================================
+ERROR: Terminal window too small
+============================================================
+
+Minimum required: 80 columns x 24 rows
+Current size: [your terminal size]
+
+Please resize your terminal window and try again.
+============================================================
 ```
 
 ## Gallery & Demonstrations
@@ -79,7 +101,7 @@ https://github.com/user-attachments/assets/90d6f14f-1847-4bd9-9de3-947c70ff6060
 
 ## Acknowledgements
 
--   [MangaDex](https://mangadex.org/) for providing the API used in this project
+- [MangaDex](https://mangadex.org/) for providing the API used in this project
 
 ## Known Issues
 
@@ -88,17 +110,56 @@ https://github.com/user-attachments/assets/90d6f14f-1847-4bd9-9de3-947c70ff6060
 - Characters used for query parameters cause unexpected behavior included in user input
 - Data-saver mode (`--data-saver` flag) may not work due to issues with MangaDex's CDN; the feature is implemented correctly but the CDN endpoints are currently broken
 
+## Development
+
+To run the tests:
+
+```sh
+coverage run -m pytest -v
+```
+
+To generate a coverage report:
+
+```sh
+coverage report -m
+```
+
+To lint the code:
+
+```sh
+ruff check .
+```
+
+To check types:
+
+```sh
+pyright
+```
+
 ## Contact
 
 Jeffery Fang - [jefferyfang324@gmail.com](mailto:jefferyfang324@gmail.com)
 
 ## Tools & Technologies
 
--   Python
--   Curses/Windows-Curses
--   aiohttp
--   Pillow
--   Pytest
--   Coverage
--   Poetry
--   tempfile
+### Core
+
+- Python 3.9+
+- aiohttp (async HTTP client)
+- Pillow (image processing)
+
+### CLI
+
+- Curses/Windows-Curses (terminal UI)
+- Ruff (linting and formatting)
+
+### Testing
+
+- Pytest
+- Coverage
+- pytest-asyncio
+
+### Build & Package
+
+- Poetry (dependency management and packaging)
+- Pyright (type checking)
