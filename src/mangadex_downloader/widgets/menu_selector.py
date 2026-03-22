@@ -86,7 +86,8 @@ class MenuSelector(Widget):
 
     def on_list_view_highlighted(self) -> None:
         """Update the description column when an option is highlighted."""
-        list_view = self.query_one("#navigation-list", ListView)
+        list_view: ListView = self.query_one("#navigation-list", ListView)
+
         if list_view.index is not None:
             self._build_description_column(list_view.index)
 
@@ -107,5 +108,6 @@ class MenuSelector(Widget):
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         """Send a Selected message to the parent to signal a screen change."""
-        requested_screen = self.menu_options[event.index].screen
+        requested_screen: str = self.menu_options[event.index].screen
+
         self.post_message(self.Selected(requested_screen))
