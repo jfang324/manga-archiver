@@ -2,14 +2,13 @@
 
 import argparse
 
-from .cli import run_app
-from .cli.app import Config
+from .app import MangaDexDownloaderApp
 
 
 def main():
     """Run the MangaDex downloader application."""
     parser = argparse.ArgumentParser(
-        description="Download manga chapters from MangaDex"
+        description="Download manga from MangaDex and other providers"
     )
     parser.add_argument(
         "--page-size",
@@ -34,16 +33,9 @@ def main():
         help="Download lower quality images (data-saver mode)",
     )
 
-    args = parser.parse_args()
-
-    config = Config(
-        page_size=args.page_size,
-        quality=args.quality,
-        optimize=args.optimize,
-        data_saver=args.data_saver,
-    )
-
-    run_app(config)
+    # run_app(config)
+    app = MangaDexDownloaderApp()
+    app.run()
 
 
 if __name__ == "__main__":

@@ -1,17 +1,18 @@
 [tool.poetry]
 name = "mangadex-downloader"
-version = "0.1.0"
+version = "1.0.0"
 description = "A Python package for downloading manga from MangaDex"
 authors = ["Jeffery Fang <Jefferyfang324@gmail.com>"]
 readme = "README.md"
 repository = "https://github.com/jfang324/mangadex-downloader"
 
 [tool.poetry.dependencies]
-python = ">=3.9"
+python = ">=3.10 ,<4.0"
 python-dotenv = "^1.0.1"
 aiohttp = {extras = ["speedups"], version = "^3.10.5"}
 pillow = "^10.4.0"
 windows-curses = {version = "^2.3.3", markers = "sys_platform == 'win32'"}
+textual = "^8.1.1"
 
 [tool.poetry.scripts]
 mangadex-downloader = "mangadex_downloader.main:main"
@@ -20,8 +21,9 @@ mangadex-downloader = "mangadex_downloader.main:main"
 pytest = "^8.3.3"
 coverage = "^7.6.1"
 pytest-asyncio = "^0.24.0"
-ruff = "^0.9.0"
-pyright = "^1.1.350"
+ruff = "^0.15.7"
+pyright = "^1.1.408"
+pre-commit = "^4.5.1"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
@@ -32,8 +34,8 @@ omit = ["*/cli/*", "*/tests/*"]
 source = ["src"]
 
 [tool.ruff]
-select = ["E", "F", "C90", "I", "N", "W", "UP"]
-ignore = []
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "T20", "S", "PERF", "FIX", "ARG"]
+ignore = ["E501", "B008", "PTH110", "PTH112", "PTH113", "PTH118", "PTH119", "PTH208", "PTH109", "B904", "T201"]
 line-length = 100
 
 [tool.ruff.mccabe]
@@ -42,9 +44,18 @@ max-complexity = 10
 [tool.ruff.pydocstyle]
 convention = "google"
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mangadex_downloader"]
+
+[tool.ruff.format]
+quote-style = "double"
+
 [tool.pyright]
 include = ["src"]
-exclude = ["**/tests"]
+exclude = ["**/tests", "**/__pycache__", "**/.*"]
 venvPath = "."
 venv = ".venv"
 reportMissingImports = true
