@@ -122,8 +122,8 @@ class MenuSelector(Widget):
             return
 
         if index < 0 or index >= len(self.menu_options):
-            self.notify("Invalid index selected", severity="error")
             self.log.error(f"Invalid index selected in MenuSelector: {index}")
+            self.notify("Invalid index selected", severity="error")
             return
 
         description_label: Label = self.query_one("#description-label", Label)

@@ -1,5 +1,6 @@
 """MangaDex API client implementation."""
 
+import logging
 from typing import Optional, Union
 
 import aiohttp
@@ -21,77 +22,112 @@ class MangaDexApiClient(Provider):
         session: aiohttp.ClientSession,
         data_saver: bool = False,
     ) -> None:
-        """Initialize the MangaDex API client.
+        """
+        Initialize the MangaDex API client.
 
-        :param session: The aiohttp ClientSession to use for requests
-        :param data_saver: Whether to download data-saver (lower quality) images
+        Args:
+            session (aiohttp.ClientSession): The aiohttp ClientSession to use for requests
+            data_saver (bool, optional): Whether to download data-saver (lower quality) images. Defaults to False.
         """
         super().__init__(session)
+
         self._data_saver = data_saver
 
     async def _request(self, url: str, params: Optional[dict] = None) -> dict:
-        """Make an HTTP request and return the JSON response.
+        """
+        Make an HTTP request and return the JSON response.
 
-        :param url: The URL to request
-        :param params: Optional query parameters
-        :return: The JSON response as a dictionary
-        :raises NotFoundError: If the resource is not found (404)
-        :raises RateLimitError: If rate limited (429)
-        :raises ApiError: For other API errors
+        Args:
+            url (str): The URL to request
+            params (dict, optional): Optional query parameters. Defaults to None.
+
+        Returns:
+            dict: The JSON response as a dictionary
+
+        Raises:
+            NotFoundError: If the resource is not found (404)
+            RateLimitError: If rate limited (429)
+            ApiError: For other API errors
         """
         async with self._session.get(url, params=params) as response:
             if response.status == 404:
                 raise NotFoundError(f"Resource not found: {url}")
+
             if response.status == 429:
                 raise RateLimitError(f"Rate limit exceeded for: {url}")
+
             if response.status != 200:
                 raise ApiError(f"API error: {url} returned status {response.status}")
+
             return await response.json()
 
     @staticmethod
     def _get_nested(data: dict, *keys: str, default: str = "") -> str:
-        """Safely traverse nested dictionaries.
+        """
+        Safely traverse nested dictionaries.
 
-        :param data: The dictionary to traverse
-        :param keys: The sequence of keys to follow
-        :param default: Value to return if any key is missing
-        :return: The found value or default
+        Args:
+            data (dict): The dictionary to traverse
+            keys (str): The sequence of keys to follow
+            default (str): Value to return if any key is missing. Defaults to "".
+
+        Returns:
+            str: The found value or default
         """
         result: Union[dict, str, None] = data
+
         for key in keys:
             if isinstance(result, dict):
                 result = result.get(key)
             else:
                 return default
+
             if result is None:
                 return default
+
         if isinstance(result, str):
             return result
+
         if isinstance(result, dict) and result:
             return next(iter(result.values()), default)
+
         return default
 
     async def search_manga(self, query: str) -> list[ProcessedManga]:
-        """Search for manga matching the query.
+        """
+        Search for manga matching the query.
 
-        :param query: The search query string
-        :return: List of matching manga objects
+        Args:
+            query (str): The search query string
+
+        Returns:
+            list[ProcessedManga]: List of matching manga objects
+
+        Raises:
+            NotFoundError: If the resource is not found (404)
+            RateLimitError: If rate limited (429)
+            ApiError: If the API returns any other error
         """
         url: str = f"{MANGADEX_ROOT_URL}?title={query}"
         params: dict = {"limit": 100}
 
         try:
             response: dict = await self._request(url, params)
+
             return self._process_manga_data(response)
-        except ApiError as e:
-            print(f"Error searching manga: {e}")
-            return []
+        except (NotFoundError, RateLimitError, ApiError) as e:
+            logging.error(f"Error searching manga: {e}")
+            raise e
 
     def _process_manga_data(self, manga_data: dict) -> list[ProcessedManga]:
-        """Process raw manga data into ProcessedManga objects.
+        """
+        Process raw manga data into ProcessedManga objects.
 
-        :param manga_data: Raw API response data
-        :return: List of processed manga objects
+        Args:
+            manga_data (dict): Raw API response data
+
+        Returns:
+            list[ProcessedManga]: List of processed manga objects
         """
         processed_manga_data: list[ProcessedManga] = []
         data: list[dict] = manga_data.get("data", [])

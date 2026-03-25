@@ -3,10 +3,45 @@ from asyncio import Task
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.message import Message
+from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Input, Label, ListView
+from textual.widgets import Input, Label, ListItem, ListView
+
+
+class SearchItem(ListItem):
+    """
+    A ListItem widget for displaying search results.
+
+    Attributes:
+        title (str): The title of the search result.
+    """
+
+    DEFAULT_CSS = """
+        SearchItem {
+            height: auto;
+        }
+
+        Label {
+            width: 1fr;
+            text-wrap: wrap;
+        }
+    """
+
+    def __init__(self, title: str) -> None:
+        """
+        Initialize the SearchItem widget.
+
+        Args:
+            title (str): The title of the search result.
+        """
+        super().__init__()
+
+        self.title = title
+
+    def compose(self) -> ComposeResult:
+        yield Label(self.title)
 
 
 class SearchPanel(Widget):
@@ -26,31 +61,45 @@ class SearchPanel(Widget):
         height: 1fr;
     }
 
-    #search-row {
+    #search-section {
         width: 1fr;
         height: auto;
         border-bottom: solid $primary;
     }
 
-    #search-row > Label {
+    #search-label {
         padding: 0 1;
     }
 
-    #results-row {
+    #results-section {
         width: 1fr;
         height: 1fr;
     }
 
-    #results-row > Label {
+    #results-header {
+        width: 1fr;
+        height: auto;
         padding: 0 1;
-        margin-bottom: 1;
+        border-bottom: solid $primary;
     }
 
-    #results-row > ListView {
+    #results-label {
+        width: 1fr;
+        content-align: left middle;
+    }
+
+    #results-count {
+        width: 1fr;
+        content-align: right middle;
+    }
+
+    #search-results {
         height: 1fr;
-        margin: 0 1
+        margin: 0 1;
     }
     """
+
+    results: reactive[list[tuple[str, str]]] = reactive([])
 
     class Search(Message):
         """
@@ -71,6 +120,25 @@ class SearchPanel(Widget):
 
             self.query = query
 
+    class Selected(Message):
+        """
+        Message to indicate that a search result has been selected.
+
+        Attributes:
+            value (str): The value of the selected search result.
+        """
+
+        def __init__(self, value: str) -> None:
+            """
+            Initialize the Selected message.
+
+            Args:
+                value (str): The value of the selected search result.
+            """
+            super().__init__()
+
+            self.value = value
+
     def __init__(self, debounce_duration: int = 500) -> None:
         """
         Initialize the SearchPanel widget.
@@ -85,12 +153,14 @@ class SearchPanel(Widget):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            with Vertical(id="search-row"):
-                yield Label("Search")
+            with Vertical(id="search-section"):
+                yield Label("Search", id="search-label")
                 yield Input(id="search-input")
 
-            with Vertical(id="results-row"):
-                yield Label("Results")
+            with Vertical(id="results-section"):
+                with Horizontal(id="results-header"):
+                    yield Label("Results:", id="results-label")
+                    yield Label(id="results-count")
                 yield ListView(id="search-results")
 
     @on(Input.Changed, "#search-input")
@@ -107,3 +177,29 @@ class SearchPanel(Widget):
         await asyncio.sleep(self.debounce_duration / 1000)
 
         self.post_message(self.Search(search_query))
+
+    def _build_results(self, results: list[tuple[str, str]]) -> None:
+        """Build the results list for the ListView."""
+        list_view: ListView = self.query_one("#search-results", ListView)
+        list_items: list[ListItem] = [SearchItem(title) for title, _ in results]
+
+        list_view.clear()
+        list_view.extend(list_items)
+
+    def watch_results(self, new_results: list[tuple[str, str]]) -> None:
+        """Watch for changes to the results list and update the ListView."""
+        self._build_results(new_results)
+        self.query_one("#results-count", Label).update(f"{len(new_results)} results")
+
+    @on(ListView.Selected, "#search-results")
+    def _select_result(self, event: ListView.Selected) -> None:
+        """Select a result in the ListView."""
+        index = event.index
+
+        if index is None or index < 0 or index >= len(self.results):
+            self.log.error(f"Invalid index selected in SearchPanel: {index}")
+            self.notify("Invalid index selected", severity="error")
+            return
+
+        search_item: tuple[str, str] = self.results[index]
+        self.post_message(self.Selected(search_item[1]))

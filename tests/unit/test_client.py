@@ -172,7 +172,7 @@ class TestMangaDexApiClientSearchManga:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_search_manga_api_error_returns_empty(self, mock_session):
+    async def test_search_manga_api_error_raises_error(self, mock_session):
         """Test API error returns empty list."""
         mock_response = MagicMock()
         mock_response.status = 500
@@ -180,9 +180,9 @@ class TestMangaDexApiClientSearchManga:
         mock_session.get.return_value = AsyncContextManagerMock(mock_response)
 
         client = MangaDexApiClient(mock_session)
-        result = await client.search_manga("test")
 
-        assert result == []
+        with pytest.raises(ApiError, match="API error"):
+            await client.search_manga("test")
 
 
 class TestMangaDexApiClientGetChapters:
