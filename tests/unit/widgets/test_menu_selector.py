@@ -17,7 +17,7 @@ class MenuSelectorApp(App):
         yield MenuSelector(MENU_OPTIONS)
 
     @on(MenuSelector.Selected)
-    def _on_menu_selector_selected(self, message: MenuSelector.Selected) -> None:
+    def _record_navigation_message(self, message: MenuSelector.Selected) -> None:
         self.records.append(message)
 
 

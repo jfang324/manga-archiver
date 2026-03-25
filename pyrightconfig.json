@@ -1,6 +1,6 @@
 {
-  "include": ["src"],
-  "exclude": ["**/__pycache__"],
-  "typeCheckingMode": "basic",
-  "pythonVersion": "3.9"
+    "include": ["src"],
+    "exclude": ["**/__pycache__"],
+    "typeCheckingMode": "basic",
+    "pythonVersion": "3.10"
 }

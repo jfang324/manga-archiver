@@ -1,8 +1,6 @@
-from textual.app import App, ComposeResult
-from textual.containers import Horizontal
+from textual.app import App
 
-from .constants.menu_options import MENU_OPTIONS
-from .widgets.menu_selector import MenuSelector
+from .screens import MenuScreen, SearchScreen
 
 
 class MangaDexDownloaderApp(App):
@@ -21,7 +19,9 @@ class MangaDexDownloaderApp(App):
         }
     """
 
-    def compose(self) -> ComposeResult:
-        """Compose the application."""
-        with Horizontal():
-            yield MenuSelector(MENU_OPTIONS)
+    def on_mount(self) -> None:
+        """On mount, install all screens and push the menu screen to the screen stack."""
+        self.install_screen(MenuScreen(), name="menu_screen")
+        self.install_screen(SearchScreen(), name="search_screen")
+
+        self.push_screen("menu_screen")
