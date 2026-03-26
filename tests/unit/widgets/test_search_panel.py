@@ -7,7 +7,7 @@ from textual.widgets import Input, ListView
 
 from src.mangadex_downloader.widgets.search_panel import SearchItem, SearchPanel
 
-DEBOUNCE_DURATION = 20
+DEBOUNCE_DURATION = 50
 
 
 class SearchPanelApp(App):

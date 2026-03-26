@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Vertical
@@ -13,6 +15,10 @@ from ..integrations.mangadex.client import (
 )
 from ..utils.session_manager import SessionManager
 from ..widgets import SearchPanel
+from .selection_screen import SelectionScreen
+
+if TYPE_CHECKING:
+    from ..types import ProcessedManga
 
 
 class SearchScreen(Screen):
@@ -23,7 +29,7 @@ class SearchScreen(Screen):
         mangadex_client (MangaDexApiClient): The MangaDex API client to use for search queries.
 
     Reactive Attributes:
-        results (list[tuple[str, str]]): A list of results for the current query. Each result is a tuple of (title, value)
+        results (list[tuple[str, str]]): A list of results for the current query. Each result is a tuple of (title, manga_id)
     """
 
     results: reactive[list[tuple[str, str]]] = reactive([])
@@ -63,8 +69,10 @@ class SearchScreen(Screen):
         self.results = new_results
 
     @on(SearchPanel.Selected)
-    def _navigate_to_chapters(self, event: SearchPanel.Selected) -> None:
+    def _navigate_to_chapter_screen(self, event: SearchPanel.Selected) -> None:
         """Navigate to the chapters screen for the selected result."""
+        manga_title: str = event.title
         manga_id: str = event.value
+        manga: ProcessedManga = {"title": manga_title, "id": manga_id}
 
-        self.notify(f"Navigating to chapters screen for: {manga_id}")
+        self.app.push_screen(SelectionScreen(manga))

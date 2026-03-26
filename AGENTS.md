@@ -115,11 +115,24 @@ Returns:
 ```
 
 ### Error Handling
-- Handle exceptions with try/except blocks
-- For expected failures: catch exception, print error, return `None`
-- For unexpected failures: raise with meaningful message
-- Async functions should handle exceptions internally unless re-raising is intentional
-- Log errors with print statements (current project pattern)
+
+**For API/Service Clients:**
+- Log the error with full exception details for debugging
+- Raise the exception to let consumers handle it appropriately
+
+**For Screen/UI Consumers:**
+```python
+try:
+    # API call
+except (NotFoundError, RateLimitError, ApiError) as e:
+    self.log.error(f"Context: {e}")  # Full exception for developers
+    self.notify("User-friendly message", severity="error")  # Simple for users
+    return
+```
+
+- Use specific exception types when catching
+- Log detailed error info (exception object) for debugging
+- Show simple, user-friendly notifications
 - Never expose or log secrets/keys
 
 ## Code Quality Standards

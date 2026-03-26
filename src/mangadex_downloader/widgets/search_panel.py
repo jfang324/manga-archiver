@@ -125,18 +125,21 @@ class SearchPanel(Widget):
         Message to indicate that a search result has been selected.
 
         Attributes:
+            title (str): The title of the selected search result.
             value (str): The value of the selected search result.
         """
 
-        def __init__(self, value: str) -> None:
+        def __init__(self, title: str, value: str) -> None:
             """
             Initialize the Selected message.
 
             Args:
+                title (str): The title of the selected search result.
                 value (str): The value of the selected search result.
             """
             super().__init__()
 
+            self.title = title
             self.value = value
 
     def __init__(self, debounce_duration: int = 500) -> None:
@@ -201,5 +204,5 @@ class SearchPanel(Widget):
             self.notify("Invalid index selected", severity="error")
             return
 
-        search_item: tuple[str, str] = self.results[index]
-        self.post_message(self.Selected(search_item[1]))
+        title, value = self.results[index]
+        self.post_message(self.Selected(title, value))
