@@ -1,6 +1,7 @@
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Vertical
+from textual.message import Message
 from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Footer
@@ -14,6 +15,7 @@ from ..integrations.mangadex.client import (
 from ..types import ProcessedChapter, ProcessedManga
 from ..utils.session_manager import SessionManager
 from ..widgets import SelectionPanel
+from ..workers.jobs import FetchingResourcesJob
 
 
 class SelectionScreen(Screen):
@@ -27,6 +29,25 @@ class SelectionScreen(Screen):
     Reactive Attributes:
         results (list[tuple[str | None, str, str]]): A list of chapters for the selected manga. Each result is a tuple of (title, chapter_id, chapter_number)
     """
+
+    class EnqueueJobs(Message):
+        """
+        Message to enqueue jobs to the pipeline.
+
+        Attributes:
+            jobs (list[FetchingResourcesJob]): The jobs to enqueue.
+        """
+
+        def __init__(self, jobs: list[FetchingResourcesJob]) -> None:
+            """
+            Initialize the EnqueueJobs message.
+
+            Args:
+                jobs (list[FetchingResourcesJob]): The jobs to enqueue.
+            """
+            super().__init__()
+
+            self.jobs = jobs
 
     results: reactive[list[tuple[str | None, str, str]]] = reactive([])
 
@@ -73,7 +94,17 @@ class SelectionScreen(Screen):
 
     def _queue_downloads(self, selected_chapters: list[tuple[str, str]]) -> None:
         """Queue downloads for the selected chapters."""
+        jobs: list[FetchingResourcesJob] = [
+            FetchingResourcesJob(
+                id=chapter_id,
+                chapter_id=chapter_id,
+                chapter_title=chapter_title,
+                manga_id=self.manga_id,
+            )
+            for chapter_title, chapter_id in selected_chapters
+        ]
 
+        self.post_message(self.EnqueueJobs(jobs))
         self.notify(f"Queued {len(selected_chapters)} downloads for {self.manga_title}")
 
     @on(SelectionPanel.Selected)
