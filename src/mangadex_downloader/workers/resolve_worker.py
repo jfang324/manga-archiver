@@ -8,6 +8,8 @@ from .jobs import DownloadingJob, FetchingResourcesJob, JobStatus
 if TYPE_CHECKING:
     from ..types import ProcessedDownloadResource
 
+import time
+
 
 class ResolveWorker(Worker):
     """
@@ -23,6 +25,7 @@ class ResolveWorker(Worker):
 
         Args:
             api_client (MangaDexApiClient): The API client for MangaDex
+            semaphore (Semaphore): The semaphore to use for global rate limiting
         """
         super().__init__(**kwargs)
 
@@ -39,12 +42,32 @@ class ResolveWorker(Worker):
         Returns:
             DownloadingJob: The next job in the pipeline
         """
-        job_id, chapter_id, chapter_title = (job.id, job.chapter_id, job.chapter_title)
+        (
+            job_id,
+            chapter_id,
+            manga_title,
+            chapter_title,
+            output_directory,
+            output_format,
+            start_time,
+            end_time,
+        ) = (
+            job.id,
+            job.chapter_id,
+            job.manga_title,
+            job.chapter_title,
+            job.output_directory,
+            job.output_format,
+            job.start_time,
+            job.end_time,
+        )
 
         if not chapter_id:
             raise ValueError(f"Invalid FetchingResourcesJob missing chapter_id: {job}")
 
         self.on_status_change(job.id, JobStatus.FETCHING_RESOURCES)
+
+        start_time = time.perf_counter_ns()
 
         async with self._semaphore:
             resources: ProcessedDownloadResource = (
@@ -53,7 +76,11 @@ class ResolveWorker(Worker):
 
         return DownloadingJob(
             id=job_id,
-            chapter_id=chapter_id,
+            manga_title=manga_title,
             chapter_title=chapter_title,
+            output_directory=output_directory,
+            output_format=output_format,
             urls=resources["urls"],
+            start_time=start_time,
+            end_time=end_time,
         )

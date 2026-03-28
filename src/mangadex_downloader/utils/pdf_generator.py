@@ -1,59 +1,130 @@
-"""PDF generation utilities."""
-
-import os
+import re
 from io import BytesIO
-from typing import Optional
+from pathlib import Path
 
 from PIL import Image
 
+from ..models.app_config import OutputFormat
+
 
 class PdfGenerator:
-    """Generator for creating PDF files from images."""
+    """
+    Generator for creating PDF files from images.
+    """
 
     def __init__(self, quality: int = 75, optimize: bool = False) -> None:
-        """Initialize the PDF generator.
+        """
+        Initialize the PDF generator.
 
-        :param quality: PDF quality (1-100, default: 75)
-        :param optimize: Whether to optimize PDF file size (default: False)
+        Args:
+            quality (int): The quality of the PDF (1-100, default: 75)
+            optimize (bool): Whether to optimize PDF file size (default: False)
         """
         self._quality = quality
         self._optimize = optimize
 
+    def _sanitize(self, path: str) -> str:
+        """
+        Sanitize a path to be used as a filename.
+
+        Args:
+            path (str): The path to sanitize
+
+        Returns:
+            str: The sanitized path
+        """
+        # Remove characters that are invalid on Windows or Unix filesystems
+        # This includes: < > : " / \ | ? * and control characters
+        # All other characters (alphanumeric, spaces, hyphens, underscores, periods, brackets, parentheses) are kept
+        sanitized = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "", path)
+
+        # Replace multiple spaces with single space
+        sanitized = re.sub(r"\s+", " ", sanitized)
+
+        # Strip leading/trailing whitespace
+        sanitized = sanitized.strip()
+
+        # Ensure filename isn't empty
+        if not sanitized:
+            sanitized = "untitled"
+
+        return sanitized
+
     def generate(
         self,
         image_data_list: list[bytes],
+        output_directory: Path,
         output_name: str,
-        output_path: Optional[str] = None,
-    ) -> None:
-        """Generate a PDF file from the image data list.
+        output_format: OutputFormat,
+        quality: int = 75,
+        optimize: bool = False,
+    ) -> str:
+        """
+        Generate a PDF file from the image data list.
 
         Loads images directly from bytes in memory without writing to disk.
 
-        :param image_data_list: The image data list to convert to a PDF file
-        :param output_name: The name of the output PDF file
-        :param output_path: The directory to save the PDF to (defaults to cwd)
+        Args:
+            image_data_list (list[bytes]): The list of image data to merge
+            output_directory (Path): The directory to save the PDF file
+            output_name (str): The name of the PDF file
+            output_format (OutputFormat): The format of the PDF file
+            quality (int): The quality of the PDF (1-100, default: 75)
+            optimize (bool): Whether to optimize PDF file size (default: False)
+
+        Returns:
+            str: The path to the generated file
+
+        Raises:
+            ValueError: If any of the arguments are invalid
         """
         if not image_data_list:
-            return
+            raise ValueError("Image data list cannot be empty")
+
+        if not output_directory.exists() and not output_directory.is_dir():
+            raise ValueError(
+                f"Output directory must be a valid directory: {output_directory}"
+            )
+
+        if not output_name:
+            raise ValueError("Output name cannot be empty")
+
+        if quality < 1 or quality > 100:
+            raise ValueError("Quality must be between 1 and 100")
+
+        full_output_path: Path = (
+            output_directory / f"{self._sanitize(output_name)}.{str(output_format)}"
+        )
 
         images: list[Image.Image] = []
 
-        for image_data in image_data_list:
-            # Load image directly from bytes (no disk I/O)
-            img = Image.open(BytesIO(image_data))
+        try:
+            for image_data in image_data_list:
+                try:
+                    # Load image directly from bytes (no disk I/O)
+                    img = Image.open(BytesIO(image_data))
+                except Exception as e:
+                    raise ValueError(f"Invalid image data: {e}") from e
 
-            # Convert to RGB if necessary
-            if img.mode in ("RGBA", "P"):
-                img = img.convert("RGB")
+                # Convert to RGB if necessary
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
 
-            images.append(img)
+                images.append(img)
 
-        if images:
-            save_path = output_path or os.getcwd()
+            if not images:
+                raise ValueError("No valid images to generate PDF")
+
             images[0].save(
-                f"{os.path.join(save_path, output_name)}.pdf",
+                full_output_path,
                 save_all=True,
                 append_images=images[1:],
-                quality=self._quality,
-                optimize=self._optimize,
+                quality=quality,
+                optimize=optimize,
             )
+
+            return str(full_output_path)
+        finally:
+            # Ensure all images are closed to free memory
+            for img in images:
+                img.close()

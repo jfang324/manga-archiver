@@ -226,9 +226,9 @@ class TestMangaDexApiClientGetChapters:
         mock_session.get.return_value = AsyncContextManagerMock(mock_response)
 
         client = MangaDexApiClient(mock_session)
-        result = await client.get_chapters("1")
 
-        assert result == []
+        with pytest.raises(ApiError, match="API error"):
+            await client.get_chapters("1")
 
 
 class TestMangaDexApiClientGetDownloadResource:

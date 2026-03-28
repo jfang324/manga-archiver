@@ -1,5 +1,3 @@
-"""MangaDex API client implementation."""
-
 import logging
 from typing import Optional, Union
 
@@ -12,9 +10,13 @@ from .constants import MANGADEX_RESOURCE_LINKS_URL, MANGADEX_ROOT_URL
 
 
 class MangaDexApiClient(Provider):
-    """Client for interacting with the MangaDex API.
+    """
+    Client for interacting with the MangaDex API.
 
-    Implements the Provider interface and handles all MangaDex-specific logic.
+    Implements the Provider interface and handles all MangaDex-specific logic
+
+    Attributes:
+        _data_saver (bool): Whether to download data-saver (lower quality) images.
     """
 
     def __init__(
@@ -33,13 +35,13 @@ class MangaDexApiClient(Provider):
 
         self._data_saver = data_saver
 
-    async def _request(self, url: str, params: Optional[dict] = None) -> dict:
+    async def _request(self, url: str, params: dict | None = None) -> dict:
         """
         Make an HTTP request and return the JSON response.
 
         Args:
             url (str): The URL to request
-            params (dict, optional): Optional query parameters. Defaults to None.
+            params (dict | None): Optional query parameters. Defaults to None.
 
         Returns:
             dict: The JSON response as a dictionary
@@ -149,10 +151,19 @@ class MangaDexApiClient(Provider):
         return processed_manga_data
 
     async def get_chapters(self, manga_id: str) -> list[ProcessedChapter]:
-        """Retrieve chapters for a given manga.
+        """
+        Retrieve chapters for a given manga.
 
-        :param manga_id: The ID of the manga to get chapters for
-        :return: List of chapter objects sorted by chapter number
+        Args:
+            manga_id (str): The ID of the manga to get chapters for
+
+        Returns:
+            list[ProcessedChapter]: List of chapter objects sorted by chapter number
+
+        Raises:
+            NotFoundError: If the resource is not found (404)
+            RateLimitError: If rate limited (429)
+            ApiError: If the API returns any other error
         """
         url: str = f"{MANGADEX_ROOT_URL}/{manga_id}/feed"
         params: dict = {
@@ -163,16 +174,21 @@ class MangaDexApiClient(Provider):
 
         try:
             response: dict = await self._request(url, params)
+
             return self._process_chapter_data(response)
-        except ApiError as e:
-            print(f"Error retrieving chapters: {e}")
-            return []
+        except (NotFoundError, RateLimitError, ApiError) as e:
+            logging.error(f"Error retrieving chapters: {e}")
+            raise e
 
     def _process_chapter_data(self, chapter_data: dict) -> list[ProcessedChapter]:
-        """Process raw chapter data into ProcessedChapter objects.
+        """
+        Process raw chapter data into ProcessedChapter objects.
 
-        :param chapter_data: Raw API response data
-        :return: List of processed chapter objects
+        Args:
+            chapter_data (dict): Raw API response data
+
+        Returns:
+            list[ProcessedChapter]: List of processed chapter objects
         """
         processed_chapter_data: list[ProcessedChapter] = []
         data: list[dict] = chapter_data.get("data", [])
@@ -202,29 +218,39 @@ class MangaDexApiClient(Provider):
         return processed_chapter_data
 
     async def get_download_resource(self, chapter_id: str) -> ProcessedDownloadResource:
-        """Get download resource information for a chapter.
+        """
+        Get download resource information for a chapter.
 
-        :param chapter_id: The ID of the chapter to get download info for
-        :return: Download resource object containing URLs
-        :raises NotFoundError: If the chapter is not found
+        Args:
+            chapter_id (str): The ID of the chapter to get download info for
+
+        Returns:
+            ProcessedDownloadResource: Download resource object containing URLs
+
+        Raises:
+            NotFoundError: If the chapter is not found
         """
         url: str = f"{MANGADEX_RESOURCE_LINKS_URL}/{chapter_id}"
 
         try:
             response: dict = await self._request(url)
+
             return self._process_download_resource_data(response)
-        except NotFoundError:
-            raise
-        except ApiError as e:
-            raise ApiError(f"Error retrieving download resources: {e}") from e
+        except (NotFoundError, RateLimitError, ApiError) as e:
+            logging.error(f"Error retrieving download resources: {e}")
+            raise e
 
     def _process_download_resource_data(
         self, download_resources: dict
     ) -> ProcessedDownloadResource:
-        """Process raw download resource data into ProcessedDownloadResource.
+        """
+        Process raw download resource data into ProcessedDownloadResource.
 
-        :param download_resources: Raw API response data
-        :return: Processed download resource object
+        Args:
+            download_resources (dict): Raw API response data
+
+        Returns:
+            ProcessedDownloadResource: Processed download resource object
         """
         download_urls: list[str] = []
         base_url: str = download_resources["baseUrl"]

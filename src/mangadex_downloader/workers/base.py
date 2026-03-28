@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import random
 from abc import ABC, abstractmethod
 from asyncio import CancelledError, Queue, TimeoutError
@@ -20,8 +21,8 @@ class WorkerConfig:
         await_output_space (bool): Whether to check the output queue for space before processing.
     """
 
-    max_retries: int = 3
-    base_delay: int = 1
+    max_retries: int = 5
+    base_delay: int = 2
     jitter: bool = False
     await_output_space: bool = False
 
@@ -71,6 +72,7 @@ class Worker(ABC):
         self._running = True
 
         while self._running:
+            job = None
             try:
                 if self.config.await_output_space and self.output_queue:
                     while self.output_queue.full():
@@ -82,8 +84,13 @@ class Worker(ABC):
 
                 self.input_queue.task_done()
             except TimeoutError:
+                if job is not None:
+                    logging.error(f"Job timed out: {job.id}")
                 continue
             except CancelledError:
+                if job is not None:
+                    logging.error(f"Job cancelled: {job.id}")
+
                 self._running = False
                 break
 

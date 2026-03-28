@@ -3,10 +3,13 @@
 import argparse
 
 from .app import MangaDexDownloaderApp
+from .utils.logger import setup_logging
 
 
 def main():
     """Run the MangaDex downloader application."""
+    setup_logging()
+
     parser = argparse.ArgumentParser(
         description="Download manga from MangaDex and other providers"
     )

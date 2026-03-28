@@ -38,7 +38,10 @@ class SelectionPanel(Widget):
     }
     """
 
-    BINDINGS = [("ctrl+s", "request_download", "Download chapters")]
+    BINDINGS = [
+        ("ctrl+s", "request_download", "Download chapters"),
+        ("ctrl+a", "select_all", "Select all"),
+    ]
 
     class Selected(Message):
         """
@@ -89,7 +92,7 @@ class SelectionPanel(Widget):
         selection_items: list[Selection] = []
 
         for title, value, chapter in options:
-            name = f"{chapter}. {title}" if title else chapter
+            name = f"{chapter}. {title or ''}"
 
             self.name_map[value] = name
             selection_items.append(Selection(name, value))
@@ -116,3 +119,7 @@ class SelectionPanel(Widget):
         ]
 
         self.post_message(self.Selected(name_and_id_pairs))
+
+    def action_select_all(self) -> None:
+        """Select all options."""
+        self.query_one("#selection-list", SelectionList).select_all()

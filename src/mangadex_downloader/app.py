@@ -5,11 +5,17 @@ from textual.app import App
 
 from .integrations.mangadex import MangaDexApiClient
 from .screens import MenuScreen, SearchScreen, SelectionScreen
+from .utils.downloader import DownloadClient
 from .utils.session_manager import SessionManager
 from .workers import PipelineConfig, PipelineManager
 
 if TYPE_CHECKING:
-    from .workers.jobs import FetchingResourcesJob
+    from .screens.selection_screen import PartialJob
+
+from pathlib import Path
+
+from .models.app_config import OutputFormat
+from .workers.jobs import FetchingResourcesJob
 
 
 class MangaDexDownloaderApp(App):
@@ -17,8 +23,7 @@ class MangaDexDownloaderApp(App):
     The core Textual application class for top level event handling.
 
     Attributes:
-
-    Reactive Attributes:
+        pipeline_manager (PipelineManager | None): The pipeline manager instance
     """
 
     DEFAULT_CSS = """
@@ -40,9 +45,21 @@ class MangaDexDownloaderApp(App):
         """Instantiate the pipeline manager and start it."""
         session_manager = SessionManager().create_session()
         mangadex_client = MangaDexApiClient(session_manager)
+        download_client = DownloadClient(session_manager)
 
         self.pipeline_manager = PipelineManager(
-            mangadex_client, lambda *args: None, PipelineConfig()
+            mangadex_client,
+            download_client,
+            lambda *args: None,
+            PipelineConfig(
+                num_resolve_workers=10,
+                num_download_workers=10,
+                num_merge_workers=5,
+                resolve_rate_limit=10,
+                download_rate_limit=100,
+                benchmark_enabled=True,
+                benchmark_expected_count=30,
+            ),
         )
 
         await self.pipeline_manager.start()
@@ -56,7 +73,20 @@ class MangaDexDownloaderApp(App):
             self.log.error("Pipeline manager not initialized")
             return
 
-        jobs: list[FetchingResourcesJob] = event.jobs
+        partial_jobs: list[PartialJob] = event.partial_jobs
+        jobs: list[FetchingResourcesJob] = [
+            FetchingResourcesJob(
+                id=partial_job["chapter_id"],
+                manga_title=partial_job["manga_title"],
+                chapter_id=partial_job["chapter_id"],
+                chapter_title=partial_job["chapter_title"],
+                output_directory=Path("C:\\Users\\JFang\\Desktop\\trash"),
+                output_format=OutputFormat.PDF,
+                start_time=-1,
+                end_time=-1,
+            )
+            for partial_job in partial_jobs
+        ]
 
         await self.pipeline_manager.enqueue_jobs(jobs)
 
@@ -78,6 +108,10 @@ class MangaDexDownloaderApp(App):
         self.notify(f"resolve_pipeline: {self.pipeline_manager.resolve_queue.qsize()}")
         self.notify(
             f"download_pipeline: {self.pipeline_manager.download_queue.qsize()}"
+        )
+        self.notify(f"merge_pipeline: {self.pipeline_manager.merge_queue.qsize()}")
+        self.notify(
+            f"benchmark_pipeline: {self.pipeline_manager.benchmark_queue.qsize()}"
         )
 
         if isinstance(self.screen_stack[-1], MenuScreen):

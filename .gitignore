@@ -7,3 +7,5 @@ build
 poetry.lock
 src/mangadex_downloader/__pycache__/*
 .env
+debug.log
+error.log

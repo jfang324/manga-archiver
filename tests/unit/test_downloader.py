@@ -140,6 +140,5 @@ class TestDownloadClientDownloadImages:
             "https://test.com/3.jpg",
         ]
 
-        # Should return empty list when any download fails
-        result = await client.download_images(urls)
-        assert result == []
+        with pytest.raises(DownloadError, match="404"):
+            await client.download_images(urls)

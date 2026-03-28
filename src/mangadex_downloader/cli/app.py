@@ -139,7 +139,7 @@ async def start(stdscr: curses.window, config: Config) -> None:
         chapter_title = chapters[selected_chapters_indexes[i]]["chapter"]
         pdf_name = f"{selected_manga['title']} [{chapter_title}]"
         sanitized_pdf_name = sanitize_filename(pdf_name)
-        pdf_generator.generate(images, sanitized_pdf_name)
+        pdf_generator.generate(images, sanitized_pdf_name)  # pyright: ignore
 
     elapsed_time = time.time() - start_time
 

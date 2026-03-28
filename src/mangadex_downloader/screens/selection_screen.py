@@ -1,3 +1,5 @@
+from typing import TypedDict
+
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Vertical
@@ -15,7 +17,12 @@ from ..integrations.mangadex.client import (
 from ..types import ProcessedChapter, ProcessedManga
 from ..utils.session_manager import SessionManager
 from ..widgets import SelectionPanel
-from ..workers.jobs import FetchingResourcesJob
+
+
+class PartialJob(TypedDict):
+    manga_title: str
+    chapter_id: str
+    chapter_title: str
 
 
 class SelectionScreen(Screen):
@@ -35,19 +42,19 @@ class SelectionScreen(Screen):
         Message to enqueue jobs to the pipeline.
 
         Attributes:
-            jobs (list[FetchingResourcesJob]): The jobs to enqueue.
+            partial_jobs (list[PartialJob]): The jobs to enqueue.
         """
 
-        def __init__(self, jobs: list[FetchingResourcesJob]) -> None:
+        def __init__(self, partial_jobs: list[PartialJob]) -> None:
             """
             Initialize the EnqueueJobs message.
 
             Args:
-                jobs (list[FetchingResourcesJob]): The jobs to enqueue.
+                partial_jobs (list[PartialJob]): The jobs to enqueue.
             """
             super().__init__()
 
-            self.jobs = jobs
+            self.partial_jobs = partial_jobs
 
     results: reactive[list[tuple[str | None, str, str]]] = reactive([])
 
@@ -94,17 +101,16 @@ class SelectionScreen(Screen):
 
     def _queue_downloads(self, selected_chapters: list[tuple[str, str]]) -> None:
         """Queue downloads for the selected chapters."""
-        jobs: list[FetchingResourcesJob] = [
-            FetchingResourcesJob(
-                id=chapter_id,
-                chapter_id=chapter_id,
-                chapter_title=chapter_title,
-                manga_id=self.manga_id,
-            )
+        partial_jobs: list[PartialJob] = [
+            {
+                "manga_title": self.manga_title,
+                "chapter_id": chapter_id,
+                "chapter_title": chapter_title,
+            }
             for chapter_title, chapter_id in selected_chapters
         ]
 
-        self.post_message(self.EnqueueJobs(jobs))
+        self.post_message(self.EnqueueJobs(partial_jobs))
         self.notify(f"Queued {len(selected_chapters)} downloads for {self.manga_title}")
 
     @on(SelectionPanel.Selected)
