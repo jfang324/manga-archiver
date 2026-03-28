@@ -41,8 +41,8 @@ class PipelineConfig:
     num_download_workers: int = 1
     num_merge_workers: int = 1
 
-    resolve_rate_limit: int = 10
-    download_rate_limit: int = 10
+    resolve_rate_limit: int = 5
+    download_rate_limit: int = 5
 
     benchmark_enabled: bool = False
     benchmark_expected_count: int | None = None
@@ -77,10 +77,10 @@ class PipelineManager:
             config (PipelineConfig): The configuration for the pipeline
             benchmark_callback (Callable[[float, float], None]): Optional callback for benchmark results
         """
-        self.resolve_queue: Queue[FetchingResourcesJob] = Queue()
-        self.download_queue: Queue[DownloadingJob] = Queue()
-        self.merge_queue: Queue[MergingJob] = Queue()
-        self.benchmark_queue: Queue[BenchmarkJob] = Queue()
+        self._resolve_queue: Queue[FetchingResourcesJob] = Queue()
+        self._download_queue: Queue[DownloadingJob] = Queue()
+        self._merge_queue: Queue[MergingJob] = Queue()
+        self._benchmark_queue: Queue[BenchmarkJob] = Queue()
 
         self._resolve_semaphore: Semaphore = Semaphore(config.resolve_rate_limit)
         self._download_semaphore: Semaphore = Semaphore(config.download_rate_limit)
@@ -89,8 +89,8 @@ class PipelineManager:
             ResolveWorker(
                 api_client=mangadex_api_client,
                 semaphore=self._resolve_semaphore,
-                input_queue=self.resolve_queue,
-                output_queue=self.download_queue,
+                input_queue=self._resolve_queue,
+                output_queue=self._download_queue,
                 worker_id=f"resolve_worker_{index}",
                 on_status_change=on_status_change,
                 config=WorkerConfig(),
@@ -101,8 +101,8 @@ class PipelineManager:
             DownloadWorker(
                 download_client=download_client,
                 semaphore=self._download_semaphore,
-                input_queue=self.download_queue,
-                output_queue=self.merge_queue,
+                input_queue=self._download_queue,
+                output_queue=self._merge_queue,
                 worker_id=f"download_worker_{index}",
                 on_status_change=on_status_change,
                 config=WorkerConfig(),
@@ -112,8 +112,10 @@ class PipelineManager:
         self.merge_pool: list[MergeWorker] = [
             MergeWorker(
                 pdf_generator=PdfGenerator(),
-                input_queue=self.merge_queue,
-                output_queue=self.benchmark_queue if config.benchmark_enabled else None,
+                input_queue=self._merge_queue,
+                output_queue=(
+                    self._benchmark_queue if config.benchmark_enabled else None
+                ),
                 worker_id=f"merge_worker_{index}",
                 on_status_change=on_status_change,
                 config=WorkerConfig(),
@@ -131,7 +133,7 @@ class PipelineManager:
                 BenchmarkWorker(
                     expected_count=config.benchmark_expected_count,
                     benchmark_callback=wrapped_callback,
-                    input_queue=self.benchmark_queue,
+                    input_queue=self._benchmark_queue,
                     output_queue=None,
                     worker_id=f"benchmark_worker_{index}",
                     on_status_change=on_status_change,
@@ -143,7 +145,7 @@ class PipelineManager:
     async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]):
         """Enqueue jobs to the resolve queue to start the pipeline."""
         for job in jobs:
-            await self.resolve_queue.put(job)
+            await self._resolve_queue.put(job)
 
     def _wrap_benchmark_callback(
         self, original_callback: Callable[[float, float], None] | None

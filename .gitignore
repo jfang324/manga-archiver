@@ -8,4 +8,6 @@ poetry.lock
 src/mangadex_downloader/__pycache__/*
 .env
 debug.log
+debug.log.*
 error.log
+error.log.*

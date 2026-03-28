@@ -52,11 +52,11 @@ class MangaDexDownloaderApp(App):
             download_client,
             lambda *args: None,
             PipelineConfig(
-                num_resolve_workers=10,
-                num_download_workers=10,
+                num_resolve_workers=5,
+                num_download_workers=5,
                 num_merge_workers=5,
-                resolve_rate_limit=10,
-                download_rate_limit=100,
+                resolve_rate_limit=5,
+                download_rate_limit=5,
                 benchmark_enabled=True,
                 benchmark_expected_count=30,
             ),
@@ -105,13 +105,13 @@ class MangaDexDownloaderApp(App):
         # TODO: Remove this
         if not self.pipeline_manager:
             return
-        self.notify(f"resolve_pipeline: {self.pipeline_manager.resolve_queue.qsize()}")
+        self.notify(f"resolve_pipeline: {self.pipeline_manager._resolve_queue.qsize()}")
         self.notify(
-            f"download_pipeline: {self.pipeline_manager.download_queue.qsize()}"
+            f"download_pipeline: {self.pipeline_manager._download_queue.qsize()}"
         )
-        self.notify(f"merge_pipeline: {self.pipeline_manager.merge_queue.qsize()}")
+        self.notify(f"merge_pipeline: {self.pipeline_manager._merge_queue.qsize()}")
         self.notify(
-            f"benchmark_pipeline: {self.pipeline_manager.benchmark_queue.qsize()}"
+            f"benchmark_pipeline: {self.pipeline_manager._benchmark_queue.qsize()}"
         )
 
         if isinstance(self.screen_stack[-1], MenuScreen):
