@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import tracemalloc
 from asyncio import Queue, Semaphore
 from dataclasses import dataclass
 from typing import Callable
@@ -120,11 +122,15 @@ class PipelineManager:
         ]
 
         self.benchmark_pool: list[BenchmarkWorker] = []
+        self._track_memory = config.benchmark_enabled
+        self._benchmark_callback = benchmark_callback
+
         if config.benchmark_enabled:
+            wrapped_callback = self._wrap_benchmark_callback(benchmark_callback)
             self.benchmark_pool = [
                 BenchmarkWorker(
                     expected_count=config.benchmark_expected_count,
-                    benchmark_callback=benchmark_callback,
+                    benchmark_callback=wrapped_callback,
                     input_queue=self.benchmark_queue,
                     output_queue=None,
                     worker_id=f"benchmark_worker_{index}",
@@ -139,10 +145,32 @@ class PipelineManager:
         for job in jobs:
             await self.resolve_queue.put(job)
 
+    def _wrap_benchmark_callback(
+        self, original_callback: Callable[[float, float], None] | None
+    ) -> Callable[[float, float], None]:
+        """Wrap benchmark callback to include memory logging."""
+
+        def wrapped_callback(earliest_start: float, latest_end: float) -> None:
+            if self._track_memory:
+                _, peak = tracemalloc.get_traced_memory()
+                peak_mb = peak / 1024 / 1024
+                logging.debug(
+                    f"Benchmark: time={(latest_end - earliest_start) / 1_000_000:.2f}ms, "
+                    f"peak_memory={peak_mb:.2f}MB"
+                )
+
+            if original_callback:
+                original_callback(earliest_start, latest_end)
+
+        return wrapped_callback
+
     async def start(self):
         """
         Start all worker pools.
         """
+        if self._track_memory:
+            tracemalloc.start()
+
         all_workers = (
             self.resolve_pool
             + self.download_pool

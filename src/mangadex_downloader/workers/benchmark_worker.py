@@ -35,10 +35,6 @@ class BenchmarkWorker(Worker):
         """
         if job.start_time != -1 and job.end_time != -1:
             self._job_timings.append((job.start_time, job.end_time))
-            logger.debug(
-                f"Benchmark tracked job {job.id}: "
-                f"start={job.start_time}, end={job.end_time}"
-            )
 
         if (
             self._expected_count is not None
@@ -53,11 +49,6 @@ class BenchmarkWorker(Worker):
 
         earliest: float = min(t[0] for t in self._job_timings)
         latest: float = max(t[1] for t in self._job_timings)
-
-        logger.debug(
-            f"Benchmark complete: {len(self._job_timings)} jobs in "
-            f"{(latest - earliest) / 1_000_000:.2f}ms"
-        )
 
         if self._benchmark_callback:
             self._benchmark_callback(earliest, latest)
