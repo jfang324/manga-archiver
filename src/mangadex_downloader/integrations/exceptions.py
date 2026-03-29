@@ -1,6 +1,3 @@
-"""Custom exceptions for API integrations."""
-
-
 class MangaDexError(Exception):
     """Base exception for all MangaDex API errors."""
 

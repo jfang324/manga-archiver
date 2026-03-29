@@ -13,9 +13,6 @@ from textual.widgets import Input, Label, ListItem, ListView
 class SearchItem(ListItem):
     """
     A ListItem widget for displaying search results.
-
-    Attributes:
-        title (str): The title of the search result.
     """
 
     DEFAULT_CSS = """
@@ -29,14 +26,14 @@ class SearchItem(ListItem):
         }
     """
 
-    def __init__(self, title: str) -> None:
+    def __init__(self, title: str, **kwargs) -> None:
         """
         Initialize the SearchItem widget.
 
         Args:
-            title (str): The title of the search result.
+            title (str): The title of the search result
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
         self.title = title
 
@@ -49,7 +46,7 @@ class SearchPanel(Widget):
     A search panel widget for searching queries and displaying results.
 
     Attributes:
-        debounce_duration (int): The duration in milliseconds to debounce the search query.
+        debounce_duration (int): The duration in milliseconds to debounce the search query
 
     Reactive Attributes:
         results (list[tuple[str, str]]): A list of results for the current query. Each result is a tuple of (title, value)
@@ -106,17 +103,17 @@ class SearchPanel(Widget):
         Message to indicate that a search query has been made.
 
         Attributes:
-            query (str): The search query.
+            query (str): The search query
         """
 
-        def __init__(self, query: str) -> None:
+        def __init__(self, query: str, **kwargs) -> None:
             """
             Initialize the Search message.
 
             Args:
-                query (str): The search query.
+                query (str): The search query
             """
-            super().__init__()
+            super().__init__(**kwargs)
 
             self.query = query
 
@@ -125,34 +122,34 @@ class SearchPanel(Widget):
         Message to indicate that a search result has been selected.
 
         Attributes:
-            title (str): The title of the selected search result.
-            value (str): The value of the selected search result.
+            title (str): The title of the selected search result
+            value (str): The value of the selected search result
         """
 
-        def __init__(self, title: str, value: str) -> None:
+        def __init__(self, title: str, value: str, **kwargs) -> None:
             """
             Initialize the Selected message.
 
             Args:
-                title (str): The title of the selected search result.
-                value (str): The value of the selected search result.
+                title (str): The title of the selected search result
+                value (str): The value of the selected search result
             """
-            super().__init__()
+            super().__init__(**kwargs)
 
             self.title = title
             self.value = value
 
-    def __init__(self, debounce_duration: int = 500) -> None:
+    def __init__(self, debounce_duration: int = 500, **kwargs) -> None:
         """
         Initialize the SearchPanel widget.
 
         Args:
-            debounce_duration (int): The duration in milliseconds to debounce the search query. Defaults to 500.
+            debounce_duration (int): The duration in milliseconds to debounce the search query. Defaults to 500
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
-        self.debounce_duration = debounce_duration
-        self.debounce_task: Task | None = None  # Task to debounce the search query
+        self._debounce_duration = debounce_duration
+        self._debounce_task: Task | None = None  # Task to debounce the search query
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -169,20 +166,21 @@ class SearchPanel(Widget):
     @on(Input.Changed, "#search-input")
     async def _debounced_search(self, event: Input.Changed) -> None:
         """Debounced search function to search for a query and display results."""
-        if self.debounce_task:
-            self.debounce_task.cancel()
+        if self._debounce_task:
+            self._debounce_task.cancel()
 
         search_query: str = event.input.value
-        self.debounce_task = asyncio.create_task(self._delayed_search(search_query))
+        self.debounce_task = asyncio.create_task(
+            self._delayed_search_task(search_query)
+        )
 
-    async def _delayed_search(self, search_query: str) -> None:
+    async def _delayed_search_task(self, search_query: str) -> None:
         """Function that delays posting the query message to the parent."""
-        await asyncio.sleep(self.debounce_duration / 1000)
+        await asyncio.sleep(self._debounce_duration / 1000)
 
         self.post_message(self.Search(search_query))
 
     def _build_results(self, results: list[tuple[str, str]]) -> None:
-        """Build the results list for the ListView."""
         list_view: ListView = self.query_one("#search-results", ListView)
         list_items: list[ListItem] = [SearchItem(title) for title, _ in results]
 
@@ -190,13 +188,11 @@ class SearchPanel(Widget):
         list_view.extend(list_items)
 
     def watch_results(self, new_results: list[tuple[str, str]]) -> None:
-        """Watch for changes to the results list and update the ListView."""
         self._build_results(new_results)
         self.query_one("#results-count", Label).update(f"{len(new_results)} results")
 
     @on(ListView.Selected, "#search-results")
     def _select_result(self, event: ListView.Selected) -> None:
-        """Select a result in the ListView."""
         index = event.index
 
         if index is None or index < 0 or index >= len(self.results):

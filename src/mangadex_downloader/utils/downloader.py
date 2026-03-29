@@ -1,9 +1,9 @@
 import asyncio
 import logging
 
-import aiohttp
+from aiohttp import ClientSession
 
-from ..integrations.exceptions import DownloadError
+from ..integrations import DownloadError
 
 
 class DownloadClient:
@@ -11,7 +11,7 @@ class DownloadClient:
     Client for downloading images from URLs.
     """
 
-    def __init__(self, session: aiohttp.ClientSession) -> None:
+    def __init__(self, session: ClientSession) -> None:
         """
         Initialize the downloader with an HTTP session.
 
@@ -28,7 +28,7 @@ class DownloadClient:
             url: The URL of the image to download
 
         Returns:
-            The binary data of the image
+            bytes: The binary data of the image
 
         Raises:
             DownloadError: If the download fails
@@ -54,6 +54,9 @@ class DownloadClient:
 
         Returns:
             List of binary data for each image
+
+        Raises:
+            DownloadError: If the download fails
         """
         tasks = [self.download_image(url) for url in urls]
 

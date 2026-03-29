@@ -1,35 +1,32 @@
 import logging
-from typing import Optional, Union
+from typing import Optional
 
-import aiohttp
+from aiohttp import ClientSession
 
 from ...types import ProcessedChapter, ProcessedDownloadResource, ProcessedManga
 from ..base import Provider
 from ..exceptions import ApiError, NotFoundError, RateLimitError
 from .constants import MANGADEX_RESOURCE_LINKS_URL, MANGADEX_ROOT_URL
 
+logger = logging.getLogger(__name__)
+
 
 class MangaDexApiClient(Provider):
     """
     Client for interacting with the MangaDex API.
-
-    Implements the Provider interface and handles all MangaDex-specific logic
-
-    Attributes:
-        _data_saver (bool): Whether to download data-saver (lower quality) images.
     """
 
     def __init__(
         self,
-        session: aiohttp.ClientSession,
+        session: ClientSession,
         data_saver: bool = False,
     ) -> None:
         """
         Initialize the MangaDex API client.
 
         Args:
-            session (aiohttp.ClientSession): The aiohttp ClientSession to use for requests
-            data_saver (bool, optional): Whether to download data-saver (lower quality) images. Defaults to False.
+            session (ClientSession): The aiohttp ClientSession to use for requests
+            data_saver (bool | None): Whether to download lower quality images. Defaults to False
         """
         super().__init__(session)
 
@@ -41,7 +38,7 @@ class MangaDexApiClient(Provider):
 
         Args:
             url (str): The URL to request
-            params (dict | None): Optional query parameters. Defaults to None.
+            params (dict | None): Optional query parameters. Defaults to None
 
         Returns:
             dict: The JSON response as a dictionary
@@ -71,12 +68,12 @@ class MangaDexApiClient(Provider):
         Args:
             data (dict): The dictionary to traverse
             keys (str): The sequence of keys to follow
-            default (str): Value to return if any key is missing. Defaults to "".
+            default (str): Value to return if any key is missing. Defaults to ""
 
         Returns:
             str: The found value or default
         """
-        result: Union[dict, str, None] = data
+        result: dict | str | None = data
 
         for key in keys:
             if isinstance(result, dict):
@@ -229,6 +226,8 @@ class MangaDexApiClient(Provider):
 
         Raises:
             NotFoundError: If the chapter is not found
+            RateLimitError: If the API rate limit is exceeded
+            ApiError: If the API returns any other error
         """
         url: str = f"{MANGADEX_RESOURCE_LINKS_URL}/{chapter_id}"
 

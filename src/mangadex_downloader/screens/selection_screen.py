@@ -30,8 +30,7 @@ class SelectionScreen(Screen):
     The selection screen of the application.
 
     Attributes:
-        mangadex_client (MangaDexApiClient): The MangaDex API client to use for chapter retrieval.
-        manga (ProcessedManga): The selected manga.
+        manga (ProcessedManga): The selected manga that this screen is displaying chapters for.
 
     Reactive Attributes:
         results (list[tuple[str | None, str, str]]): A list of chapters for the selected manga. Each result is a tuple of (title, chapter_id, chapter_number)
@@ -42,43 +41,45 @@ class SelectionScreen(Screen):
         Message to enqueue jobs to the pipeline.
 
         Attributes:
-            partial_jobs (list[PartialJob]): The jobs to enqueue.
+            partial_jobs (list[PartialJob]): partial information for jobs to enqueue
         """
 
-        def __init__(self, partial_jobs: list[PartialJob]) -> None:
+        def __init__(self, partial_jobs: list[PartialJob], **kwargs) -> None:
             """
             Initialize the EnqueueJobs message.
 
             Args:
                 partial_jobs (list[PartialJob]): The jobs to enqueue.
             """
-            super().__init__()
+            super().__init__(**kwargs)
 
             self.partial_jobs = partial_jobs
 
-    results: reactive[list[tuple[str | None, str, str]]] = reactive([])
+    results: reactive[list[tuple[str | None, str, str]]] = reactive(
+        []
+    )  # chapter title, chapter id, chapter number
 
-    def __init__(self, manga: ProcessedManga) -> None:
+    def __init__(self, manga: ProcessedManga, **kwargs) -> None:
         """
         Initialize the SelectionScreen.
 
         Args:
-            manga (ProcessedManga): The selected manga.
+            manga (ProcessedManga): The manga to display chapters for
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
-        session_manager = SessionManager().create_session()
-        self.mangadex_client = MangaDexApiClient(session_manager)
+        self._session_manager = SessionManager().create_session()
+        self._mangadex_client = MangaDexApiClient(self._session_manager)
 
-        self.manga_id = manga["id"]
-        self.manga_title = manga["title"]
+        self._manga_id = manga["id"]
+        self._manga_title = manga["title"]
 
     @work
     async def on_mount(self) -> None:
         """On mount, fetch the chapters for the selected manga."""
         try:
-            chapters: list[ProcessedChapter] = await self.mangadex_client.get_chapters(
-                self.manga_id
+            chapters: list[ProcessedChapter] = await self._mangadex_client.get_chapters(
+                self._manga_id
             )
         except (NotFoundError, RateLimitError, ApiError) as e:
             self.log.error(f"Error fetching chapters for SelectionScreen: {e}")
@@ -94,16 +95,15 @@ class SelectionScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield SelectionPanel(self.manga_title).data_bind(
+            yield SelectionPanel(self._manga_title).data_bind(
                 options=SelectionScreen.results
             )
             yield Footer()
 
     def _queue_downloads(self, selected_chapters: list[tuple[str, str]]) -> None:
-        """Queue downloads for the selected chapters."""
         partial_jobs: list[PartialJob] = [
             {
-                "manga_title": self.manga_title,
+                "manga_title": self._manga_title,
                 "chapter_id": chapter_id,
                 "chapter_title": chapter_title,
             }
@@ -111,11 +111,12 @@ class SelectionScreen(Screen):
         ]
 
         self.post_message(self.EnqueueJobs(partial_jobs))
-        self.notify(f"Queued {len(selected_chapters)} downloads for {self.manga_title}")
+        self.notify(
+            f"Queued {len(selected_chapters)} downloads for {self._manga_title}"
+        )
 
     @on(SelectionPanel.Selected)
     def _navigate_to_menu_screen(self, event: SelectionPanel.Selected) -> None:
-        """Navigate to the menu screen."""
         selected_chapters: list[tuple[str, str]] = event.selected_pairs
 
         self._queue_downloads(selected_chapters)

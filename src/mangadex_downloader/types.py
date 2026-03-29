@@ -1,25 +1,17 @@
-"""Type definitions for processed data from MangaDex API."""
-
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 
 class ProcessedManga(TypedDict):
-    """Processed manga data from search results."""
-
-    title: str
     id: str
+    title: str
 
 
 class ProcessedChapter(TypedDict):
-    """Processed chapter data from feed."""
-
-    title: Optional[str]
     id: str
+    title: str | None
     chapter: str
 
 
 class ProcessedDownloadResource(TypedDict):
-    """Processed download resource containing image URLs."""
-
-    urls: list[str]
     hash: str
+    urls: list[str]

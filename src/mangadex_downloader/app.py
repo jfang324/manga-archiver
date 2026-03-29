@@ -3,10 +3,9 @@ from typing import TYPE_CHECKING
 from textual import on, work
 from textual.app import App
 
-from .integrations.mangadex import MangaDexApiClient
+from .integrations import MangaDexApiClient
 from .screens import MenuScreen, SearchScreen, SelectionScreen
-from .utils.downloader import DownloadClient
-from .utils.session_manager import SessionManager
+from .utils import DownloadClient, SessionManager
 from .workers import PipelineConfig, PipelineManager
 
 if TYPE_CHECKING:
@@ -14,7 +13,7 @@ if TYPE_CHECKING:
 
 from pathlib import Path
 
-from .models.app_config import OutputFormat
+from .models import OutputFormat
 from .workers.jobs import FetchingResourcesJob
 
 
@@ -35,22 +34,20 @@ class MangaDexDownloaderApp(App):
 
     BINDINGS = [("escape", "safe_pop_screen", "Go back")]
 
-    def __init__(self) -> None:
-        """Initialize the MangaDex downloader application."""
-        super().__init__()
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
 
-        self.pipeline_manager: PipelineManager | None = None
+        self._pipeline_manager: PipelineManager | None = None
 
     @work
-    async def _setup_pipeline(self) -> None:
-        """Instantiate the pipeline manager and start it."""
-        session_manager = SessionManager().create_session()
-        mangadex_client = MangaDexApiClient(session_manager)
-        download_client = DownloadClient(session_manager)
+    async def _setup_pipeline_manager(self) -> None:
+        self._session_manager = SessionManager().create_session()
+        self._mangadex_client = MangaDexApiClient(self._session_manager)
+        self._download_client = DownloadClient(self._session_manager)
 
-        self.pipeline_manager = PipelineManager(
-            mangadex_client,
-            download_client,
+        self._pipeline_manager = PipelineManager(
+            self._mangadex_client,
+            self._download_client,
             lambda *args: None,
             PipelineConfig(
                 num_resolve_workers=5,
@@ -63,13 +60,12 @@ class MangaDexDownloaderApp(App):
             ),
         )
 
-        await self.pipeline_manager.start()
+        await self._pipeline_manager.start()
 
     @work
     @on(SelectionScreen.EnqueueJobs)
     async def _enqueue_jobs(self, event: SelectionScreen.EnqueueJobs) -> None:
-        """Enqueue jobs to the resolve queue to start the pipeline."""
-        if not self.pipeline_manager:
+        if not self._pipeline_manager:
             self.notify("Pipeline manager not initialized", severity="error")
             self.log.error("Pipeline manager not initialized")
             return
@@ -89,19 +85,17 @@ class MangaDexDownloaderApp(App):
             for partial_job in partial_jobs
         ]
 
-        await self.pipeline_manager.enqueue_jobs(jobs)
+        await self._pipeline_manager.enqueue_jobs(jobs)
 
     def on_mount(self) -> None:
-        """On mount, install all screens and push the menu screen to the screen stack."""
         self.install_screen(MenuScreen(), name="menu_screen")
         self.install_screen(SearchScreen(), name="search_screen")
 
+        self._setup_pipeline_manager()
         self.push_screen("menu_screen")
 
-        self._setup_pipeline()
-
     def action_safe_pop_screen(self) -> None:
-        """Safely pop the screen."""
+        """A safe version of pop_screen that checks if the current screen is a MenuScreen before popping."""
         if isinstance(self.screen_stack[-1], MenuScreen):
             return
 

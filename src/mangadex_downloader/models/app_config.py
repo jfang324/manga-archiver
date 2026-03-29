@@ -13,25 +13,24 @@ class OutputFormat(Enum):
     EPUB = "epub"
 
     def __str__(self) -> str:
-        """Return the string representation for ease of use."""
         return self.value
 
     @classmethod
     def list_formats(cls) -> list[str]:
-        """Return a list of the supported output formats."""
         return [format.value for format in cls]
 
 
 @dataclass
 class AppConfig:
-    """Application configuration with validation.
+    """
+    Application configuration with validation.
 
     Attributes:
-        optimize: Whether to optimize output file size
-        data_saver: Whether to download lower quality images
-        output_path: The directory to save output files (validated)
-        quality: The quality setting for output (1-100, validated)
-        output_format: The output format (PDF, CBZ, etc., validated)
+        optimize (bool): Whether to optimize output file size
+        data_saver (bool): Whether to download lower quality images
+        output_path (Path): The directory to save output files (validated)
+        quality (int): The quality setting for output (1-100, validated)
+        output_format (OutputFormat): The output format (PDF, CBZ, etc., validated)
     """
 
     optimize: bool
@@ -50,12 +49,11 @@ class AppConfig:
 
     @property
     def output_path(self) -> Path:
-        """The output directory path."""
+        """Public output_path property (validated)."""
         return self._output_path
 
     @output_path.setter
     def output_path(self, value: Path):
-        """Set output path with validation."""
         if not value.exists():
             raise ValueError(f"output_path does not exist: {value}")
 
@@ -66,12 +64,11 @@ class AppConfig:
 
     @property
     def quality(self) -> int:
-        """The quality setting (1-100)."""
+        """Public quality property (validated)."""
         return self._quality
 
     @quality.setter
     def quality(self, value: int):
-        """Set quality with validation."""
         if value < 1 or value > 100:
             raise ValueError(f"quality must be between 1 and 100: {value}")
 
@@ -79,12 +76,11 @@ class AppConfig:
 
     @property
     def output_format(self) -> OutputFormat:
-        """The output format."""
+        """Public output_format property (validated)."""
         return self._output_format
 
     @output_format.setter
     def output_format(self, value: OutputFormat):
-        """Set output format with validation."""
         if value not in OutputFormat:
             raise ValueError(f"output_format is not supported: {value}")
 

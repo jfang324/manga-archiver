@@ -5,24 +5,13 @@ from pathlib import Path
 
 from PIL import Image
 
-from ..models.app_config import OutputFormat
+from ..models import OutputFormat
 
 
 class MultiFormatExporter:
     """
-    Exporter for creating PDF and CBZ files from images.
+    Exporter for merging images into a merged format.
     """
-
-    def __init__(self, quality: int = 75, optimize: bool = False) -> None:
-        """
-        Initialize the multi-format exporter.
-
-        Args:
-            quality (int): The quality of the PDF (1-100, default: 75)
-            optimize (bool): Whether to optimize PDF file size (default: False)
-        """
-        self._quality = quality
-        self._optimize = optimize
 
     def _sanitize(self, path: str) -> str:
         """
@@ -62,8 +51,7 @@ class MultiFormatExporter:
         optimize: bool = False,
     ) -> str:
         """
-        Generate a PDF or CBZ file from the image data list.
-
+        Merge the image data list into a merged format.
         Loads images directly from bytes in memory without writing to disk.
 
         Args:
@@ -103,12 +91,10 @@ class MultiFormatExporter:
         try:
             for image_data in image_data_list:
                 try:
-                    # Load image directly from bytes (no disk I/O)
                     img = Image.open(BytesIO(image_data))
                 except Exception as e:
                     raise ValueError(f"Invalid image data: {e}") from e
 
-                # Convert to RGB if necessary
                 if img.mode in ("RGBA", "P"):
                     img = img.convert("RGB")
 
@@ -137,7 +123,6 @@ class MultiFormatExporter:
 
             return str(full_output_path)
         finally:
-            # Ensure all images are closed to free memory
             for img in images:
                 img.close()
 
