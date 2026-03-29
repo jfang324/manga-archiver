@@ -11,13 +11,10 @@ from src.mangadex_downloader.workers.merge_worker import MergeWorker
 
 
 class TestMergeWorkerDoWork:
-    """Test MergeWorker._do_work method."""
-
     @pytest.mark.asyncio
     async def test_do_work_returns_benchmark_job(self):
-        """Test that _do_work returns a BenchmarkJob with correct fields."""
-        mock_pdf_generator = MagicMock()
-        mock_pdf_generator.generate.return_value = "/output/path/test.pdf"
+        mock_multi_format_exporter = MagicMock()
+        mock_multi_format_exporter.generate.return_value = "/output/path/test.pdf"
 
         mock_on_status_change = MagicMock()
 
@@ -33,8 +30,8 @@ class TestMergeWorkerDoWork:
         )
 
         worker = MergeWorker(
-            pdf_generator=mock_pdf_generator,
-            worker_id="merge_worker_0",
+            multi_format_exporter=mock_multi_format_exporter,
+            id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             on_status_change=mock_on_status_change,
@@ -50,10 +47,9 @@ class TestMergeWorkerDoWork:
         assert result.output_format == OutputFormat.PDF
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_pdf_generator(self):
-        """Test that pdf_generator.generate is called with correct arguments."""
-        mock_pdf_generator = MagicMock()
-        mock_pdf_generator.generate.return_value = "/output/path/test.pdf"
+    async def test_do_work_calls_multi_format_exporter(self):
+        mock_multi_format_exporter = MagicMock()
+        mock_multi_format_exporter.generate.return_value = "/output/path/test.pdf"
 
         job = MergingJob(
             id="job_123",
@@ -67,8 +63,8 @@ class TestMergeWorkerDoWork:
         )
 
         worker = MergeWorker(
-            pdf_generator=mock_pdf_generator,
-            worker_id="merge_worker_0",
+            multi_format_exporter=mock_multi_format_exporter,
+            id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             on_status_change=MagicMock(),
@@ -77,7 +73,7 @@ class TestMergeWorkerDoWork:
 
         await worker._do_work(job)
 
-        mock_pdf_generator.generate.assert_called_once_with(
+        mock_multi_format_exporter.generate.assert_called_once_with(
             image_data_list=[b"image1", b"image2"],
             output_directory=Path("/output"),
             output_name="Test Manga [1] - Introduction",
@@ -86,9 +82,8 @@ class TestMergeWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_calls_status_change_merging(self):
-        """Test that on_status_change is called with MERGING."""
-        mock_pdf_generator = MagicMock()
-        mock_pdf_generator.generate.return_value = "/output/path/test.pdf"
+        mock_multi_format_exporter = MagicMock()
+        mock_multi_format_exporter.generate.return_value = "/output/path/test.pdf"
 
         mock_on_status_change = MagicMock()
 
@@ -104,8 +99,8 @@ class TestMergeWorkerDoWork:
         )
 
         worker = MergeWorker(
-            pdf_generator=mock_pdf_generator,
-            worker_id="merge_worker_0",
+            multi_format_exporter=mock_multi_format_exporter,
+            id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             on_status_change=mock_on_status_change,
@@ -118,9 +113,8 @@ class TestMergeWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_parses_chapter_title_with_number(self):
-        """Test that chapter title is parsed correctly: '1. Introduction' -> '[1] - Introduction'."""
-        mock_pdf_generator = MagicMock()
-        mock_pdf_generator.generate.return_value = "/output/path/test.pdf"
+        mock_multi_format_exporter = MagicMock()
+        mock_multi_format_exporter.generate.return_value = "/output/path/test.pdf"
 
         job = MergingJob(
             id="job_123",
@@ -134,8 +128,8 @@ class TestMergeWorkerDoWork:
         )
 
         worker = MergeWorker(
-            pdf_generator=mock_pdf_generator,
-            worker_id="merge_worker_0",
+            multi_format_exporter=mock_multi_format_exporter,
+            id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             on_status_change=MagicMock(),
@@ -145,15 +139,15 @@ class TestMergeWorkerDoWork:
         await worker._do_work(job)
 
         # Verify the output name format: "Manga Title [chapter_num] - title"
-        mock_pdf_generator.generate.assert_called_once()
-        call_kwargs = mock_pdf_generator.generate.call_args.kwargs
+        mock_multi_format_exporter.generate.assert_called_once()
+        call_kwargs = mock_multi_format_exporter.generate.call_args.kwargs
         assert call_kwargs["output_name"] == "One Piece [100] - The Final Battle"
 
     @pytest.mark.asyncio
     async def test_do_work_parses_chapter_title_strips_trailing_dot(self):
         """Test that trailing dot is stripped from chapter number: '1.' -> '1'."""
-        mock_pdf_generator = MagicMock()
-        mock_pdf_generator.generate.return_value = "/output/path/test.pdf"
+        mock_multi_format_exporter = MagicMock()
+        mock_multi_format_exporter.generate.return_value = "/output/path/test.pdf"
 
         job = MergingJob(
             id="job_123",
@@ -167,8 +161,8 @@ class TestMergeWorkerDoWork:
         )
 
         worker = MergeWorker(
-            pdf_generator=mock_pdf_generator,
-            worker_id="merge_worker_0",
+            multi_format_exporter=mock_multi_format_exporter,
+            id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             on_status_change=MagicMock(),
@@ -177,14 +171,13 @@ class TestMergeWorkerDoWork:
 
         await worker._do_work(job)
 
-        call_kwargs = mock_pdf_generator.generate.call_args.kwargs
+        call_kwargs = mock_multi_format_exporter.generate.call_args.kwargs
         assert call_kwargs["output_name"] == "Test Manga [5] - Start"
 
     @pytest.mark.asyncio
     async def test_do_work_sets_end_time_after_generation(self):
-        """Test that end_time is set after PDF generation."""
-        mock_pdf_generator = MagicMock()
-        mock_pdf_generator.generate.return_value = "/output/path/test.pdf"
+        mock_multi_format_exporter = MagicMock()
+        mock_multi_format_exporter.generate.return_value = "/output/path/test.pdf"
 
         job = MergingJob(
             id="job_123",
@@ -198,8 +191,8 @@ class TestMergeWorkerDoWork:
         )
 
         worker = MergeWorker(
-            pdf_generator=mock_pdf_generator,
-            worker_id="merge_worker_0",
+            multi_format_exporter=mock_multi_format_exporter,
+            id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             on_status_change=MagicMock(),

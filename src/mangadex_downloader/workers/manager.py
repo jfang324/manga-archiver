@@ -5,18 +5,15 @@ from asyncio import Queue, Semaphore
 from dataclasses import dataclass
 from typing import Callable
 
-from ..integrations.mangadex import MangaDexApiClient
-from ..utils.downloader import DownloadClient
-from ..utils.multi_format_exporter import MultiFormatExporter
+from ..integrations import MangaDexApiClient
+from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
 from .benchmark_worker import BenchmarkWorker
 from .download_worker import DownloadWorker
 from .jobs import (
-    BenchmarkJob,
-    DownloadingJob,
     FetchingResourcesJob,
+    Job,
     JobStatus,
-    MergingJob,
 )
 from .merge_worker import MergeWorker
 from .resolve_worker import ResolveWorker
@@ -77,73 +74,72 @@ class PipelineManager:
             config (PipelineConfig): The configuration for the pipeline
             benchmark_callback (Callable[[float, float], None]): Optional callback for benchmark results
         """
-        self._resolve_queue: Queue[FetchingResourcesJob] = Queue()
-        self._download_queue: Queue[DownloadingJob] = Queue()
-        self._merge_queue: Queue[MergingJob] = Queue()
-        self._benchmark_queue: Queue[BenchmarkJob] = Queue()
+        self._resolve_queue: Queue[Job] = Queue()
+        self._download_queue: Queue[Job] = Queue()
+        self._merge_queue: Queue[Job] = Queue()
+        self._benchmark_queue: Queue[Job] = Queue()
 
         self._resolve_semaphore: Semaphore = Semaphore(config.resolve_rate_limit)
         self._download_semaphore: Semaphore = Semaphore(config.download_rate_limit)
 
-        self.resolve_pool: list[ResolveWorker] = [
+        self._resolve_pool: list[ResolveWorker] = [
             ResolveWorker(
-                api_client=mangadex_api_client,
-                semaphore=self._resolve_semaphore,
+                id=f"resolve_worker_{index}",
                 input_queue=self._resolve_queue,
                 output_queue=self._download_queue,
-                worker_id=f"resolve_worker_{index}",
                 on_status_change=on_status_change,
                 config=WorkerConfig(),
+                api_client=mangadex_api_client,
+                semaphore=self._resolve_semaphore,
             )
             for index in range(config.num_resolve_workers)
         ]
-        self.download_pool: list[DownloadWorker] = [
+        self._download_pool: list[DownloadWorker] = [
             DownloadWorker(
-                download_client=download_client,
-                semaphore=self._download_semaphore,
+                id=f"download_worker_{index}",
                 input_queue=self._download_queue,
                 output_queue=self._merge_queue,
-                worker_id=f"download_worker_{index}",
                 on_status_change=on_status_change,
                 config=WorkerConfig(),
+                download_client=download_client,
+                semaphore=self._download_semaphore,
             )
             for index in range(config.num_download_workers)
         ]
-        self.merge_pool: list[MergeWorker] = [
+        self._merge_pool: list[MergeWorker] = [
             MergeWorker(
-                pdf_generator=MultiFormatExporter(),
+                id=f"merge_worker_{index}",
                 input_queue=self._merge_queue,
                 output_queue=(
                     self._benchmark_queue if config.benchmark_enabled else None
                 ),
-                worker_id=f"merge_worker_{index}",
                 on_status_change=on_status_change,
                 config=WorkerConfig(),
+                multi_format_exporter=MultiFormatExporter(),
             )
             for index in range(config.num_merge_workers)
         ]
 
-        self.benchmark_pool: list[BenchmarkWorker] = []
+        self._benchmark_pool: list[BenchmarkWorker] = []
         self._track_memory = config.benchmark_enabled
         self._benchmark_callback = benchmark_callback
 
         if config.benchmark_enabled:
             wrapped_callback = self._wrap_benchmark_callback(benchmark_callback)
-            self.benchmark_pool = [
+            self._benchmark_pool = [
                 BenchmarkWorker(
-                    expected_count=config.benchmark_expected_count,
-                    benchmark_callback=wrapped_callback,
+                    id=f"benchmark_worker_{index}",
                     input_queue=self._benchmark_queue,
                     output_queue=None,
-                    worker_id=f"benchmark_worker_{index}",
                     on_status_change=on_status_change,
                     config=WorkerConfig(),
+                    expected_count=config.benchmark_expected_count,
+                    benchmark_callback=wrapped_callback,
                 )
                 for index in range(1)
             ]
 
     async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]):
-        """Enqueue jobs to the resolve queue to start the pipeline."""
         for job in jobs:
             await self._resolve_queue.put(job)
 
@@ -167,24 +163,18 @@ class PipelineManager:
         return wrapped_callback
 
     async def start(self):
-        """
-        Start all worker pools.
-        """
         if self._track_memory:
             tracemalloc.start()
 
         all_workers = (
-            self.resolve_pool
-            + self.download_pool
-            + self.merge_pool
-            + self.benchmark_pool
+            self._resolve_pool
+            + self._download_pool
+            + self._merge_pool
+            + self._benchmark_pool
         )
 
         await asyncio.gather(*[w.run() for w in all_workers])
 
     async def stop(self):
-        """
-        Stop all worker pools.
-        """
-        for worker in self.resolve_pool:
+        for worker in self._resolve_pool:
             worker.stop()

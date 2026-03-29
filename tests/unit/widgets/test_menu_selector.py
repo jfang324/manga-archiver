@@ -14,7 +14,11 @@ class MenuSelectorApp(App):
         self.records: list[MenuSelector.Selected] = []
 
     def compose(self) -> ComposeResult:
-        yield MenuSelector(MENU_OPTIONS)
+        yield MenuSelector(
+            menu_options=MENU_OPTIONS,
+            title="Menu Selector",
+            description_title="Description",
+        )
 
     @on(MenuSelector.Selected)
     def _record_navigation_message(self, message: MenuSelector.Selected) -> None:
@@ -23,7 +27,6 @@ class MenuSelectorApp(App):
 
 class TestMenuSelector:
     async def test_navigating_menu_changes_description(self) -> None:
-        """Test navigating the menu changes the description."""
         app = MenuSelectorApp()
 
         async with app.run_test() as pilot:
@@ -49,7 +52,6 @@ class TestMenuSelector:
             assert new_description == MENU_OPTIONS[hovered_index].description
 
     async def test_selecting_menu_option_sends_message(self) -> None:
-        """Test selecting a menu option sends a message to the parent."""
         app = MenuSelectorApp()
 
         async with app.run_test() as pilot:

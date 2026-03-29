@@ -1,5 +1,3 @@
-"""Pytest fixtures and configuration."""
-
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -20,7 +18,8 @@ class AsyncContextManagerMock:
 
 @pytest.fixture
 def mock_session():
-    """Create a mock aiohttp ClientSession.
+    """
+    Create a mock aiohttp ClientSession.
 
     Usage in tests:
         mock_session.get.return_value = AsyncContextManagerMock(mock_response)
@@ -32,28 +31,17 @@ def mock_session():
 
 @pytest.fixture
 def mock_response():
-    """Create a mock aiohttp response object."""
     response = MagicMock()
+
     response.status = 200
     response.json = AsyncMock(return_value={})
     response.read = AsyncMock(return_value=b"mock_image_data")
+
     return response
-
-
-@pytest.fixture
-def mock_curses_window():
-    """Create a mock curses window object."""
-    window = MagicMock()
-    window.clear = MagicMock()
-    window.addstr = MagicMock()
-    window.refresh = MagicMock()
-    window.getch = MagicMock(return_value=10)  # Enter key
-    return window
 
 
 @pytest.fixture(autouse=True)
 def reset_session_manager():
-    """Reset SessionManager singleton before each test."""
     from src.mangadex_downloader.utils.session_manager import SessionManager
 
     SessionManager._session = None

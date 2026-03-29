@@ -37,7 +37,6 @@ class TestSelectionPanel:
         return f"{values[2]}. {values[0]}" if values[0] else values[2]
 
     async def test_selecting_option_sends_message(self) -> None:
-        """Test selecting an option sends a message to the parent."""
         app = SelectionPanelApp()
 
         async with app.run_test() as pilot:
@@ -59,7 +58,6 @@ class TestSelectionPanel:
             ]
 
     async def test_selecting_multiple_options_sends_message(self) -> None:
-        """Test selecting multiple options sends a message to the parent."""
         app = SelectionPanelApp()
 
         async with app.run_test() as pilot:
@@ -84,7 +82,6 @@ class TestSelectionPanel:
             ]
 
     async def test_selection_options_displays_options(self) -> None:
-        """Test that the selection options display the expected options."""
         app = SelectionPanelApp()
 
         async with app.run_test():

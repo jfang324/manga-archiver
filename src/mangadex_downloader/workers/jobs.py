@@ -20,7 +20,8 @@ class JobStatus(Enum):
 
 @dataclass
 class Job:
-    """Base class for all jobs.
+    """
+    Base class for all jobs.
 
     Attributes:
         id: The unique identifier for the job
@@ -54,7 +55,8 @@ class FetchingResourcesJob(Job):
 
 @dataclass
 class DownloadingJob(Job):
-    """Job for downloading images from URLs.
+    """
+    Job for downloading images from URLs.
 
     Attributes:
         urls: List of image URLs to download
@@ -65,7 +67,8 @@ class DownloadingJob(Job):
 
 @dataclass
 class MergingJob(Job):
-    """Job for merging images into output format.
+    """
+    Job for merging images into output format.
 
     Attributes:
         image_data: List of image bytes to merge

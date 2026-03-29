@@ -1,9 +1,9 @@
-from asyncio import Semaphore
-from typing import TYPE_CHECKING
+from asyncio import Queue, Semaphore
+from typing import TYPE_CHECKING, Callable
 
-from ..integrations.mangadex import MangaDexApiClient
-from .base import Worker
-from .jobs import DownloadingJob, FetchingResourcesJob, JobStatus
+from ..integrations import MangaDexApiClient
+from .base import Worker, WorkerConfig
+from .jobs import DownloadingJob, FetchingResourcesJob, Job, JobStatus
 
 if TYPE_CHECKING:
     from ..types import ProcessedDownloadResource
@@ -14,22 +14,33 @@ import time
 class ResolveWorker(Worker):
     """
     Worker class for fetching and processing resources for a chapter
-
-    Attributes:
-        api_client (MangaDexApiClient): The API client for MangaDex
     """
 
-    def __init__(self, api_client: MangaDexApiClient, semaphore: Semaphore, **kwargs):
+    def __init__(
+        self,
+        id: str,
+        input_queue: Queue[Job],
+        output_queue: Queue[Job] | None,
+        on_status_change: Callable[[str, JobStatus], None],
+        config: WorkerConfig | None,
+        api_client: MangaDexApiClient,
+        semaphore: Semaphore,
+    ):
         """
         Initialize the worker
 
         Args:
+            id (str): The ID of the worker
+            input_queue (Queue[Job]): The input queue for the worker
+            output_queue (Queue[Job] | None): The output queue for the worker
+            on_status_change (Callable[[str, JobStatus], None]): The callback function for progress updates
+            config (WorkerConfig): The configuration for the worker
             api_client (MangaDexApiClient): The API client for MangaDex
             semaphore (Semaphore): The semaphore to use for global rate limiting
         """
-        super().__init__(**kwargs)
+        super().__init__(id, input_queue, output_queue, on_status_change, config)
 
-        self.api_client = api_client
+        self._api_client = api_client
         self._semaphore = semaphore
 
     async def _do_work(self, job: FetchingResourcesJob) -> DownloadingJob:
@@ -41,6 +52,9 @@ class ResolveWorker(Worker):
 
         Returns:
             DownloadingJob: The next job in the pipeline
+
+        Raises:
+            ValueError: If the job is missing a chapter ID
         """
         (
             job_id,
@@ -65,13 +79,13 @@ class ResolveWorker(Worker):
         if not chapter_id:
             raise ValueError(f"Invalid FetchingResourcesJob missing chapter_id: {job}")
 
-        self.on_status_change(job.id, JobStatus.FETCHING_RESOURCES)
+        self._on_status_change(job.id, JobStatus.FETCHING_RESOURCES)
 
         start_time = time.perf_counter_ns()
 
         async with self._semaphore:
             resources: ProcessedDownloadResource = (
-                await self.api_client.get_download_resource(job.chapter_id)
+                await self._api_client.get_download_resource(job.chapter_id)
             )
 
         return DownloadingJob(

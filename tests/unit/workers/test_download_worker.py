@@ -1,5 +1,3 @@
-"""Unit tests for DownloadWorker."""
-
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -9,11 +7,8 @@ from src.mangadex_downloader.workers.jobs import DownloadingJob, JobStatus, Merg
 
 
 class TestDownloadWorkerDoWork:
-    """Test DownloadWorker._do_work method."""
-
     @pytest.mark.asyncio
     async def test_do_work_returns_merging_job(self):
-        """Test that _do_work returns a MergingJob with correct fields."""
         mock_download_client = MagicMock()
         mock_download_client.download_images = AsyncMock(
             return_value=[b"image1", b"image2"]
@@ -39,7 +34,7 @@ class TestDownloadWorkerDoWork:
         worker = DownloadWorker(
             download_client=mock_download_client,
             semaphore=mock_semaphore,
-            worker_id="download_worker_0",
+            id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             on_status_change=mock_on_status_change,
@@ -56,7 +51,6 @@ class TestDownloadWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_calls_download_client_with_urls(self):
-        """Test that download client is called with correct URLs."""
         mock_download_client = MagicMock()
         mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
 
@@ -78,7 +72,7 @@ class TestDownloadWorkerDoWork:
         worker = DownloadWorker(
             download_client=mock_download_client,
             semaphore=mock_semaphore,
-            worker_id="download_worker_0",
+            id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             on_status_change=MagicMock(),
@@ -93,7 +87,6 @@ class TestDownloadWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_calls_status_change_downloading(self):
-        """Test that on_status_change is called with DOWNLOADING."""
         mock_download_client = MagicMock()
         mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
 
@@ -117,7 +110,7 @@ class TestDownloadWorkerDoWork:
         worker = DownloadWorker(
             download_client=mock_download_client,
             semaphore=mock_semaphore,
-            worker_id="download_worker_0",
+            id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             on_status_change=mock_on_status_change,
@@ -130,7 +123,6 @@ class TestDownloadWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_raises_error_for_missing_urls(self):
-        """Test that ValueError is raised when urls is empty."""
         mock_download_client = MagicMock()
 
         mock_semaphore = MagicMock()
@@ -149,7 +141,7 @@ class TestDownloadWorkerDoWork:
         worker = DownloadWorker(
             download_client=mock_download_client,
             semaphore=mock_semaphore,
-            worker_id="download_worker_0",
+            id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             on_status_change=MagicMock(),
@@ -161,7 +153,6 @@ class TestDownloadWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_uses_semaphore(self):
-        """Test that semaphore is acquired before download."""
         mock_download_client = MagicMock()
         mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
 
@@ -183,7 +174,7 @@ class TestDownloadWorkerDoWork:
         worker = DownloadWorker(
             download_client=mock_download_client,
             semaphore=mock_semaphore,
-            worker_id="download_worker_0",
+            id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             on_status_change=MagicMock(),

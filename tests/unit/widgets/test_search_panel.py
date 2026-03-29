@@ -42,7 +42,6 @@ class SearchPanelApp(App):
 
 class TestSearchPanel:
     async def test_searching_for_query_sends_message(self) -> None:
-        """Test searching for a query sends a message to the parent."""
         app = SearchPanelApp()
 
         async with app.run_test():
@@ -58,7 +57,6 @@ class TestSearchPanel:
             assert message.query == "test"
 
     async def test_selecting_result_sends_message(self) -> None:
-        """Test selecting a result sends a message to the parent."""
         app = SearchPanelApp()
 
         async with app.run_test() as pilot:
@@ -80,7 +78,6 @@ class TestSearchPanel:
             assert message.value == "Value 1"
 
     async def test_search_results_displays_results(self) -> None:
-        """Test that the search results display the expected results."""
         app = SearchPanelApp()
 
         async with app.run_test():
@@ -96,7 +93,6 @@ class TestSearchPanel:
                 assert search_item.title == result[0]
 
     async def test_search_debounces_properly(self) -> None:
-        """Test that the search debounces properly."""
         app = SearchPanelApp()
 
         async with app.run_test():

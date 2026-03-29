@@ -170,7 +170,7 @@ class SearchPanel(Widget):
             self._debounce_task.cancel()
 
         search_query: str = event.input.value
-        self.debounce_task = asyncio.create_task(
+        self._debounce_task = asyncio.create_task(
             self._delayed_search_task(search_query)
         )
 
