@@ -3,7 +3,7 @@
 import re
 
 from .downloader import DownloadClient
-from .pdf_generator import PdfGenerator
+from .multi_format_exporter import MultiFormatExporter
 from .session_manager import SessionManager
 
 
@@ -12,8 +12,11 @@ def sanitize_filename(filename: str) -> str:
 
     Removes or replaces characters that are invalid or problematic in filenames.
 
-    :param filename: The filename to sanitize
-    :return: The sanitized filename
+    Args:
+        filename: The filename to sanitize
+
+    Returns:
+        The sanitized filename
     """
     # Remove invalid characters for Windows/Unix filesystems
     # Keeps alphanumeric, spaces, hyphens, underscores, periods, brackets
@@ -34,7 +37,7 @@ def sanitize_filename(filename: str) -> str:
 
 __all__ = [
     "DownloadClient",
-    "PdfGenerator",
+    "MultiFormatExporter",
     "SessionManager",
     "sanitize_filename",
 ]

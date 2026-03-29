@@ -1,24 +1,24 @@
 import time
 
-from ..utils.pdf_generator import PdfGenerator
+from ..utils.multi_format_exporter import MultiFormatExporter
 from .base import Worker
 from .jobs import BenchmarkJob, JobStatus, MergingJob
 
 
 class MergeWorker(Worker):
     """
-    Worker class for merging the downloaded images into a single PDF
+    Worker class for merging the downloaded images into a single PDF or CBZ
 
     Attributes:
-        pdf_generator (PdfGenerator): The PDF generator to use for merging
+        pdf_generator (MultiFormatExporter): The exporter to use for merging
     """
 
-    def __init__(self, pdf_generator: PdfGenerator, **kwargs):
+    def __init__(self, pdf_generator: MultiFormatExporter, **kwargs):
         """
         Initialize the worker
 
         Args:
-            pdf_generator (PdfGenerator): The PDF generator to use for merging
+            pdf_generator (MultiFormatExporter): The exporter to use for merging
         """
         super().__init__(**kwargs)
 

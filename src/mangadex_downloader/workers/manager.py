@@ -7,7 +7,7 @@ from typing import Callable
 
 from ..integrations.mangadex import MangaDexApiClient
 from ..utils.downloader import DownloadClient
-from ..utils.pdf_generator import PdfGenerator
+from ..utils.multi_format_exporter import MultiFormatExporter
 from .base import WorkerConfig
 from .benchmark_worker import BenchmarkWorker
 from .download_worker import DownloadWorker
@@ -111,7 +111,7 @@ class PipelineManager:
         ]
         self.merge_pool: list[MergeWorker] = [
             MergeWorker(
-                pdf_generator=PdfGenerator(),
+                pdf_generator=MultiFormatExporter(),
                 input_queue=self._merge_queue,
                 output_queue=(
                     self._benchmark_queue if config.benchmark_enabled else None

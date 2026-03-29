@@ -2,30 +2,20 @@
 
 
 class MangaDexError(Exception):
-    """Base exception for MangaDex API errors."""
-
-    pass
+    """Base exception for all MangaDex API errors."""
 
 
 class NotFoundError(MangaDexError):
-    """Raised when a requested resource is not found."""
-
-    pass
+    """Raised when a requested resource is not found (404)."""
 
 
 class RateLimitError(MangaDexError):
-    """Raised when rate limit is exceeded."""
-
-    pass
+    """Raised when the API rate limit is exceeded (429)."""
 
 
 class ApiError(MangaDexError):
     """Raised for general API errors."""
 
-    pass
-
 
 class DownloadError(Exception):
-    """Raised when image download fails."""
-
-    pass
+    """Raised when an image download fails."""

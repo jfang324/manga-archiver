@@ -20,17 +20,16 @@ class JobStatus(Enum):
 
 @dataclass
 class Job:
-    """
-    Base class for all jobs
+    """Base class for all jobs.
 
     Attributes:
-        id (str): The ID of the job
-        manga_title (str): The title of the manga
-        chapter_title (str): The title of the chapter
-        output_directory (str): The directory to output the chapter to
-        output_format (OutputFormat): The output format of the PDF file
-        start_time (int): The start time of the job in nanoseconds initialised at job creation
-        end_time (int): The end time of the job in nanoseconds initialised at job creation to -1
+        id: The unique identifier for the job
+        manga_title: The title of the manga
+        chapter_title: The title of the chapter
+        output_directory: The directory to save the output file
+        output_format: The output format (PDF, CBZ, etc.)
+        start_time: The start time in nanoseconds (-1 if not started)
+        end_time: The end time in nanoseconds (-1 if not completed)
     """
 
     id: str
@@ -44,11 +43,10 @@ class Job:
 
 @dataclass
 class FetchingResourcesJob(Job):
-    """
-    A job for fetching resources for a chapter
+    """Job for fetching chapter resources from MangaDex API.
 
     Attributes:
-        chapter_id (str): The ID of the chapter
+        chapter_id: The ID of the chapter to fetch
     """
 
     chapter_id: str
@@ -56,11 +54,10 @@ class FetchingResourcesJob(Job):
 
 @dataclass
 class DownloadingJob(Job):
-    """
-    A job for downloading a chapter
+    """Job for downloading images from URLs.
 
     Attributes:
-        urls (list[str]): The URLs of the images to download
+        urls: List of image URLs to download
     """
 
     urls: list[str]
@@ -68,11 +65,10 @@ class DownloadingJob(Job):
 
 @dataclass
 class MergingJob(Job):
-    """
-    A job for merging all the images for a chapter
+    """Job for merging images into output format.
 
     Attributes:
-        image_data (list[bytes]): The data of the images to merge
+        image_data: List of image bytes to merge
     """
 
     image_data: list[bytes]
@@ -80,8 +76,4 @@ class MergingJob(Job):
 
 @dataclass
 class BenchmarkJob(Job):
-    """
-    A job for benchmarking the performance of a batch of jobs.
-
-    Relays the start and end times of the jobs to the pipeline manager.
-    """
+    """Job for tracking job timing across the pipeline."""

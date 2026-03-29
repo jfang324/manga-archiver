@@ -36,6 +36,7 @@ class MangaDexDownloaderApp(App):
     BINDINGS = [("escape", "safe_pop_screen", "Go back")]
 
     def __init__(self) -> None:
+        """Initialize the MangaDex downloader application."""
         super().__init__()
 
         self.pipeline_manager: PipelineManager | None = None
@@ -101,19 +102,6 @@ class MangaDexDownloaderApp(App):
 
     def action_safe_pop_screen(self) -> None:
         """Safely pop the screen."""
-
-        # TODO: Remove this
-        if not self.pipeline_manager:
-            return
-        self.notify(f"resolve_pipeline: {self.pipeline_manager._resolve_queue.qsize()}")
-        self.notify(
-            f"download_pipeline: {self.pipeline_manager._download_queue.qsize()}"
-        )
-        self.notify(f"merge_pipeline: {self.pipeline_manager._merge_queue.qsize()}")
-        self.notify(
-            f"benchmark_pipeline: {self.pipeline_manager._benchmark_queue.qsize()}"
-        )
-
         if isinstance(self.screen_stack[-1], MenuScreen):
             return
 

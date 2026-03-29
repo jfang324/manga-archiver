@@ -3,13 +3,12 @@ from dataclasses import dataclass
 
 @dataclass
 class MenuOption:
-    """
-    A data container for each option in the main menu.
+    """A menu option for the main menu.
 
     Attributes:
-        display_name (str): The display name of the option.
-        description (str): A short description of the option.
-        screen (str): The Textual screen to display when the option is selected.
+        display_name: The text to display in the menu
+        description: Brief description of the option
+        screen: The Textual screen to navigate to
     """
 
     display_name: str

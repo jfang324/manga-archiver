@@ -1,4 +1,5 @@
 import re
+import zipfile
 from io import BytesIO
 from pathlib import Path
 
@@ -7,14 +8,14 @@ from PIL import Image
 from ..models.app_config import OutputFormat
 
 
-class PdfGenerator:
+class MultiFormatExporter:
     """
-    Generator for creating PDF files from images.
+    Exporter for creating PDF and CBZ files from images.
     """
 
     def __init__(self, quality: int = 75, optimize: bool = False) -> None:
         """
-        Initialize the PDF generator.
+        Initialize the multi-format exporter.
 
         Args:
             quality (int): The quality of the PDF (1-100, default: 75)
@@ -50,6 +51,7 @@ class PdfGenerator:
 
         return sanitized
 
+    # ruff: disable[C901] - This function is complex but we will refactor it after we add epub support
     def generate(
         self,
         image_data_list: list[bytes],
@@ -60,15 +62,15 @@ class PdfGenerator:
         optimize: bool = False,
     ) -> str:
         """
-        Generate a PDF file from the image data list.
+        Generate a PDF or CBZ file from the image data list.
 
         Loads images directly from bytes in memory without writing to disk.
 
         Args:
             image_data_list (list[bytes]): The list of image data to merge
-            output_directory (Path): The directory to save the PDF file
-            output_name (str): The name of the PDF file
-            output_format (OutputFormat): The format of the PDF file
+            output_directory (Path): The directory to save the file
+            output_name (str): The name of the output file
+            output_format (OutputFormat): The format of the output file
             quality (int): The quality of the PDF (1-100, default: 75)
             optimize (bool): Whether to optimize PDF file size (default: False)
 
@@ -113,18 +115,30 @@ class PdfGenerator:
                 images.append(img)
 
             if not images:
-                raise ValueError("No valid images to generate PDF")
+                raise ValueError("No valid images to generate output")
 
-            images[0].save(
-                full_output_path,
-                save_all=True,
-                append_images=images[1:],
-                quality=quality,
-                optimize=optimize,
-            )
+            if output_format == OutputFormat.CBZ:
+                with zipfile.ZipFile(
+                    full_output_path, "w", compression=zipfile.ZIP_DEFLATED
+                ) as cbz:
+                    for i, img in enumerate(images, start=1):
+                        img_buf = BytesIO()
+                        img.save(img_buf, format="PNG")  # or "JPEG" for smaller files
+                        img_buf.seek(0)
+                        cbz.writestr(f"page_{i:03}.png", img_buf.read())
+            else:
+                images[0].save(
+                    full_output_path,
+                    save_all=True,
+                    append_images=images[1:],
+                    quality=quality,
+                    optimize=optimize,
+                )
 
             return str(full_output_path)
         finally:
             # Ensure all images are closed to free memory
             for img in images:
                 img.close()
+
+    # ruff: enable[C901]
