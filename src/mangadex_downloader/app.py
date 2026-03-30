@@ -127,5 +127,5 @@ class MangaDexDownloaderApp(App):
             self._app_config = new_settings
             self.notify("Settings saved", severity="information")
         except ValueError as e:
-            self.log.error(f"Failed to save settings: {e}")
-            self.notify(f"Failed to save: {e}", severity="error")
+            self.log.error("Failed to save settings: %s", e)
+            self.notify("Failed to save settings", severity="error")

@@ -59,8 +59,12 @@ class SearchScreen(Screen):
                 ProcessedManga
             ] = await self._mangadex_client.search_manga(query)
 
-        except (NotFoundError, RateLimitError, ApiError) as e:
-            self.log.error(f"Error searching for manga in SearchScreen: {e}")
+        except RateLimitError:
+            self.log.error("Rate limited while searching for manga")
+            self.notify("Too many requests. Please wait a moment.", severity="error")
+            return
+        except (NotFoundError, ApiError) as e:
+            self.log.error("Error searching for manga: %s", e)
             self.notify("Error searching for manga", severity="error")
             return
 
