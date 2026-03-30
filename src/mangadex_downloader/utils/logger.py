@@ -1,5 +1,9 @@
 import logging
+import os
 from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
+
+LOG_DIR = Path(os.path.expanduser("~/.mangadex-downloader/logs"))
 
 
 def setup_logging() -> None:
@@ -12,8 +16,10 @@ def setup_logging() -> None:
 
     Keeps 7 days of log history (auto-deletes older logs).
     """
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
     debug_handler = TimedRotatingFileHandler(
-        "debug.log",
+        LOG_DIR / "debug.log",
         when="midnight",
         interval=1,
         backupCount=7,
@@ -24,7 +30,7 @@ def setup_logging() -> None:
     )
 
     error_handler = TimedRotatingFileHandler(
-        "error.log",
+        LOG_DIR / "error.log",
         when="midnight",
         interval=1,
         backupCount=7,
