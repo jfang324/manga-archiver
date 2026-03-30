@@ -137,26 +137,58 @@ Returns:
 """
 ```
 
+### Logging Patterns
+
+**Module-level logger:**
+- Always use module-level logger: `logger = logging.getLogger(__name__)`
+- Never use root logger (`logging.error(...)`) — it loses module context
+- Use `%s` formatting, not f-strings: `logger.error("Context: %s", e)`
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Good
+logger.error("Failed to process: %s", e)
+
+# Bad
+logging.error(f"Failed to process: {e}")  # Loses module name
+logger.error(f"Failed to process: {e}")   # Extra string interpolation
+```
+
 ### Error Handling
 
 **For API/Service Clients:**
-- Log the error with full exception details for debugging
-- Raise the exception to let consumers handle it appropriately
+- Log with module-level logger for debugging
+- Use bare `raise` (not `raise e`) to preserve traceback
+- Raise exceptions to let consumers handle them
 
-**For Screen/UI Consumers:**
 ```python
 try:
-    # API call
+    response = await self._request(url, params)
 except (NotFoundError, RateLimitError, ApiError) as e:
-    self.log.error(f"Context: {e}")  # Full exception for developers
-    self.notify("User-friendly message", severity="error")  # Simple for users
-    return
+    logger.error("Error searching manga: %s", e)
+    raise  # Bare raise preserves traceback
 ```
 
+**For Screen/UI Consumers:**
+- Catch exceptions, show user-friendly notifications
+- Don't log if the module already logs (avoids duplicate entries)
+- Distinguish RateLimitError with specific message
+
+```python
+try:
+    results = await self._client.search_manga(query)
+except RateLimitError:
+    self.notify("Too many requests. Please wait a moment.", severity="error")
+except (NotFoundError, ApiError):
+    self.notify("Error searching for manga", severity="error")
+```
+
+- Never expose raw exception details in `notify()` messages
 - Use specific exception types when catching
-- Log detailed error info (exception object) for debugging
-- Show simple, user-friendly notifications
-- Never expose or log secrets/keys
+- Don't duplicate logs — let modules handle logging
 
 ## Code Quality Standards
 
