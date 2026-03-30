@@ -9,6 +9,8 @@ from typing import Callable
 from ..enums import JobStatus
 from .jobs import Job
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class WorkerConfig:
@@ -80,12 +82,12 @@ class Worker(ABC):
                 self._input_queue.task_done()
             except TimeoutError:
                 if job is not None:
-                    logging.error(f"Job timed out: {job.id}")
+                    logger.error("Job timed out: %s", job.id)
 
                 continue
             except CancelledError:
                 if job is not None:
-                    logging.error(f"Job cancelled: {job.id}")
+                    logger.error("Job cancelled: %s", job.id)
 
                 self._running = False
                 break
@@ -113,8 +115,12 @@ class Worker(ABC):
                 await asyncio.sleep(delay)
                 await self._process_job(job, attempt + 1)
             else:
-                logging.error(
-                    f"Worker {self._id} failed: {job.id} after {attempt} attempts with error: {e}"
+                logger.error(
+                    "Worker %s failed: %s after %d attempts with error: %s",
+                    self._id,
+                    job.id,
+                    attempt,
+                    e,
                 )
                 self._on_status_change(job.id, JobStatus.FAILED)
                 return

@@ -115,8 +115,8 @@ class MangaDexApiClient(Provider):
 
             return self._process_manga_data(response)
         except (NotFoundError, RateLimitError, ApiError) as e:
-            logging.error(f"Error searching manga: {e}")
-            raise e
+            logger.error("Error searching manga: %s", e)
+            raise
 
     def _process_manga_data(self, manga_data: dict) -> list[ProcessedManga]:
         """
@@ -174,8 +174,8 @@ class MangaDexApiClient(Provider):
 
             return self._process_chapter_data(response)
         except (NotFoundError, RateLimitError, ApiError) as e:
-            logging.error(f"Error retrieving chapters: {e}")
-            raise e
+            logger.error("Error retrieving chapters: %s", e)
+            raise
 
     def _process_chapter_data(self, chapter_data: dict) -> list[ProcessedChapter]:
         """
@@ -236,8 +236,8 @@ class MangaDexApiClient(Provider):
 
             return self._process_download_resource_data(response)
         except (NotFoundError, RateLimitError, ApiError) as e:
-            logging.error(f"Error retrieving download resources: {e}")
-            raise e
+            logger.error("Error retrieving download resources: %s", e)
+            raise
 
     def _process_download_resource_data(
         self, download_resources: dict

@@ -48,7 +48,7 @@ class TestSearchPanel:
             search_input: Input = app.query_one("#search-input", Input)
 
             search_input.value = "test"
-            await asyncio.sleep(DEBOUNCE_DURATION / 1000)
+            await asyncio.sleep(0.1)
 
             search_records = app.search_records
             assert len(search_records) == 1
@@ -63,7 +63,7 @@ class TestSearchPanel:
             search_input: Input = app.query_one("#search-input", Input)
 
             search_input.value = "test"
-            await asyncio.sleep(DEBOUNCE_DURATION / 1000)
+            await asyncio.sleep(0.1)
 
             search_results: ListView = app.query_one("#search-results", ListView)
 
@@ -101,7 +101,7 @@ class TestSearchPanel:
             search_input.value = "first"
             search_input.value = "second"
 
-            await asyncio.sleep(DEBOUNCE_DURATION / 1000)
+            await asyncio.sleep(0.1)
 
             search_records = app.search_records
             assert len(search_records) == 1
