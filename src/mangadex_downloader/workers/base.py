@@ -146,7 +146,7 @@ class Worker(ABC):
             )
             self._on_status_change(job.id, JobStatus.FAILED)
             return
-        except (asyncio.TimeoutError, ClientError) as e:
+        except (TimeoutError, asyncio.TimeoutError, ClientError) as e:
             # Transient network errors: retry normally
             if attempt < self._config.max_retries:
                 delay = self._calculate_backoff(attempt)
