@@ -22,32 +22,70 @@ This project uses Poetry for dependency management:
 - Generate HTML coverage report: `coverage html`
 
 ### Code Quality Tools
+
+#### Ruff (Linting & Formatting)
 The project uses Ruff for linting and formatting:
 - Lint all files: `ruff check .`
 - Lint specific file: `ruff check src/mangadex_downloader/main.py`
 - Lint with auto-fix: `ruff check --fix .`
 - Format code: `ruff format .`
 
+**Ruff Configuration** (from pyproject.toml):
+- Enabled rules: E, F, W, I, N, UP, B, A, C4, T20, S, PERF, FIX, ARG
+- Ignored rules: E501, B008, PTH110, PTH112, PTH113, PTH118, PTH119, PTH208, PTH109, B904, T201
+- Line length: 100 characters
+- Docstring convention: Google
+- Max function complexity: 10
+
+#### Pyright (Type Checking)
+- Run type checking: `poetry run pyright`
+- Type checking mode: basic
+- Python version: 3.9+
+
 ## Project Structure
 ```
 mangadex-downloader/
 ├── src/mangadex_downloader/
 │   ├── __init__.py
-│   ├── main.py                    # Entry point, CLI initialization
-│   └── services/
-│       ├── api_access_service.py  # MangaDex API calls (aiohttp)
-│       ├── data_processing_service.py
-│       ├── file_access_service.py
-│       ├── session_manager.py      # aiohttp.ClientSession management
-│       └── user_interface_service.py # Curses UI handling
+│   ├── main.py                 # Entry point
+│   ├── app.py                  # Main Textual application
+│   ├── constants.py            # API URLs
+│   │   └── menu_options.py    # Menu option definitions
+│   ├── workers/                # Async worker pipeline
+│   │   ├── base.py           # Base worker class
+│   │   ├── manager.py        # Pipeline manager
+│   │   ├── resolve_worker.py # MangaDex API worker
+│   │   ├── download_worker.py # Image download worker
+│   │   ├── merge_worker.py   # PDF/CBZ generation worker
+│   │   ├── benchmark_worker.py # Timing tracker
+│   │   └── jobs.py           # Job dataclasses
+│   ├── screens/                # Textual screens
+│   │   ├── menu_screen.py
+│   │   ├── search_screen.py
+│   │   └── selection_screen.py
+│   ├── widgets/                # Custom Textual widgets
+│   │   ├── menu_selector.py
+│   │   ├── search_panel.py
+│   │   └── selection_panel.py
+│   ├── utils/                  # Utilities
+│   │   ├── downloader.py      # Image download client
+│   │   ├── multi_format_exporter.py # PDF/CBZ generation
+│   │   ├── session_manager.py # aiohttp.ClientSession
+│   │   └── logger.py         # Logging setup
+│   ├── models/                 # Data models
+│   │   └── app_config.py
+│   └── integrations/           # API clients
+│       ├── base.py            # Provider interface
+│       ├── exceptions.py      # Custom exceptions
+│       └── mangadex/         # MangaDex API
+│           └── client.py
 ├── tests/
-│   ├── unit/
-│   │   ├── test_api_access_services.py
-│   │   ├── test_data_processing_service.py
-│   │   └── test_file_access_service.py
-│   └── mock_data.py                # Shared test fixtures
-├── .env                            # Environment variables (not committed)
-├── pyproject.toml                  # Poetry configuration
+│   └── unit/
+│       ├── workers/           # Worker unit tests
+│       ├── widgets/           # Widget unit tests
+│       ├── utils/             # Utility tests
+│       └── integrations/      # API client tests
+├── pyproject.toml
 └── README.md
 ```
 
@@ -77,78 +115,120 @@ mangadex-downloader/
 - Indentation: 4 spaces (no tabs)
 - Line length: Recommended under 100 characters
 - Use parentheses for line continuation
+- Quote style: double quotes (per ruff format config)
 
 ### Docstrings
-All functions must include docstrings using this format:
+
+Use Google-style docstrings, but be pragmatic:
+- Document public APIs, complex logic, non-obvious behavior
+- Skip docstrings on test methods (test name is sufficient)
+- Skip docstrings on obvious functions (name explains itself)
+- 1-liner for simple things (exceptions, basic dataclasses)
+- Target: 15-20% comment ratio for this project size
 ```python
 """
 Short description of function purpose.
 
-:param param_name: Description of parameter
-:return: Description of return value
+Args:
+    param_name: Description of parameter
+
+Returns:
+    Description of return value
 """
 ```
 
-- Handle exceptions with try/except blocks
-- For expected failures: catch exception, print error, return `None`
-- For unexpected failures: consider raising with meaningful message
-- Async functions should handle exceptions internally unless re-raising is intentional
-- Log errors with print statements (current project pattern)
+### Error Handling
 
-### Async/Await Patterns
+**For API/Service Clients:**
+- Log the error with full exception details for debugging
+- Raise the exception to let consumers handle it appropriately
+
+**For Screen/UI Consumers:**
+```python
+try:
+    # API call
+except (NotFoundError, RateLimitError, ApiError) as e:
+    self.log.error(f"Context: {e}")  # Full exception for developers
+    self.notify("User-friendly message", severity="error")  # Simple for users
+    return
+```
+
+- Use specific exception types when catching
+- Log detailed error info (exception object) for debugging
+- Show simple, user-friendly notifications
+- Never expose or log secrets/keys
+
+## Code Quality Standards
+
+Target quality level for new code:
+- Code Quality: 8/10
+- Maintainability: 8/10
+- Best Practices: 8/10
+
+This means:
+- Build UI in `compose()`, not in `on_mount()`
+- Use reactive properties and built-in widget APIs (e.g., `ListView.index` instead of manual iteration)
+- Modern type hints: use `int | None` instead of `Union[int, None]`
+- Minimal, focused methods with single responsibility
+- Proper message-based communication (widgets emit messages, parent handles actions)
+- No redundant validation (e.g., don't manually check if `query_one()` found widgets - it throws `NoMatches`)
+
+## Async/Await Patterns
 - All I/O operations use async/await
 - Use `asyncio.gather()` for concurrent operations
 - Always pass session objects to async functions
 - Never block the event loop with synchronous operations
 
-## Code Structure
-
-### Service Architecture
-- All services in `src/mangadex_downloader/services/`
-- Each service should have a single, focused responsibility
-- Services communicate via function calls, not shared state
+## Service Architecture
+- All services in `src/mangadex_downloader/` (grouped by function)
+- Workers in `workers/` - each worker has single responsibility
+- Workers communicate via asyncio Queues
 - Use dependency injection (pass sessions, managers as parameters)
 
-### Session Management
+## Session Management
 - Always use the SessionManager for aiohttp.ClientSession
 - Sessions should be created once and reused
 - Close sessions when done to release resources
 
 ## Testing Patterns
-- Tests in `tests/unit/` mirror the services structure
+- Tests in `tests/unit/` mirror the module structure
 - Test classes named after the module/function being tested
 - Test methods: `test_<operation>_<expected_result>`
-- Use `unittest.mock.AsyncMock` for async functions, `MagicMock` for context managers
+- Don't test framework behavior (dataclass defaults, exception inheritance)
+- For retry logic: test `_process_job()` directly, not full `run()` loop
+- Use `unittest.mock.AsyncMock` for async functions, `MagicMock` for sync
 - Use `@patch` decorator for mocking module-level functions
 - Async test methods use pytest-asyncio (`asyncio_mode = "auto"`)
 
 ## Special Considerations
 
-### Curses CLI Application
-- This is a curses-based terminal UI application
-- On Windows, use `windows-curses` package
-- Always restore terminal state on exit (use try/finally)
+### Curses/Textual UI Application
+- This is a terminal UI application using Textual
+- On Windows, uses `windows-curses` package
+- Always restore terminal state on exit
 - Screen dimensions may vary - use dynamic sizing
 
 ### API Integration
 - Uses MangaDex API (https://api.mangadex.org)
-- Endpoints: `/manga`, `/manga/{id}/feed`, `/at-home/server/{id}`
-- Requires environment variables for API URLs
+- Endpoints: `/manga`, `/manga/{id}/feed`, `/at-home/server`
+- Base URLs defined in `src/mangadex_downloader/constants.py`
+- Rate limiting implemented via bounded worker pools and semaphores
+- Retry logic with exponential backoff and jitter
 
 ### Known Issues
 - Only supports English translations
 - Special characters in manga titles may cause PDF generation issues
 - Query parameters in user input may cause unexpected behavior
-- No rate limiting - be respectful of API
 
 ## Environment Requirements
-Base URLs are defined in `src/mangadex_downloader/constants.py`.
-
-Dependencies: Python 3.9+, aiohttp (speedups), Pillow, windows-curses (Windows), pytest/pytest-asyncio/coverage (dev)
+- Python 3.10+
+- Dependencies: aiohttp (speedups), Pillow, windows-curses (Windows), textual
+- Dev dependencies: pytest, pytest-asyncio, coverage, ruff, pyright
 
 ## Development Workflow
 1. Run existing tests to establish baseline
 2. Make changes following code style guidelines
 3. Run relevant tests, ensure all pass
 4. Run `ruff check .` and `ruff format .`
-5. Run `coverage report -m` to ensure no regressions
+5. Run `poetry run pyright` for type checking
+6. Run `coverage report -m` to ensure no regressions

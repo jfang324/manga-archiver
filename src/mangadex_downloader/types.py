@@ -1,17 +1,17 @@
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 
 class ProcessedManga(TypedDict):
-    title: str
     id: str
+    title: str
 
 
 class ProcessedChapter(TypedDict):
-    title: Optional[str]
     id: str
+    title: str | None
     chapter: str
 
 
 class ProcessedDownloadResource(TypedDict):
-    urls: list[str]
     hash: str
+    urls: list[str]

@@ -1,49 +1,35 @@
-"""Entry point for the MangaDex downloader CLI application."""
+import logging
+import sys
 
-import argparse
-
-from .cli import run_app
-from .cli.app import Config
+from .app import MangaDexDownloaderApp
+from .cli import parse_args
+from .utils import load_settings, setup_logging
+from .workers.manager import PipelineConfig
 
 
 def main():
-    """Run the MangaDex downloader application."""
-    parser = argparse.ArgumentParser(
-        description="Download manga chapters from MangaDex"
-    )
-    parser.add_argument(
-        "--page-size",
-        type=int,
-        default=10,
-        help="Number of items to display per page (default: 10)",
-    )
-    parser.add_argument(
-        "--quality",
-        type=int,
-        default=75,
-        help="PDF quality 1-100 (default: 75)",
-    )
-    parser.add_argument(
-        "--optimize",
-        action="store_true",
-        help="Optimize PDF file size",
-    )
-    parser.add_argument(
-        "--data-saver",
-        action="store_true",
-        help="Download lower quality images (data-saver mode)",
-    )
+    setup_logging()
 
-    args = parser.parse_args()
+    try:
+        args = parse_args()
+        pipeline_config = PipelineConfig(
+            num_resolve_workers=args.resolve_workers,
+            num_download_workers=args.download_workers,
+            num_merge_workers=args.merge_workers,
+            resolve_rate_limit=args.resolve_rate_limit,
+            download_rate_limit=args.download_rate_limit,
+        )
 
-    config = Config(
-        page_size=args.page_size,
-        quality=args.quality,
-        optimize=args.optimize,
-        data_saver=args.data_saver,
+        app_config = load_settings()
+    except Exception as e:
+        logging.error(f"Failed to load configs: {e}")
+        sys.exit(1)
+
+    app = MangaDexDownloaderApp(
+        pipeline_config=pipeline_config,
+        app_config=app_config,
     )
-
-    run_app(config)
+    app.run()
 
 
 if __name__ == "__main__":
