@@ -82,11 +82,9 @@ class SelectionScreen(Screen):
                 self._manga_id
             )
         except RateLimitError:
-            self.log.error("Rate limited while fetching chapters")
             self.notify("Too many requests. Please wait a moment.", severity="error")
             return
-        except (NotFoundError, ApiError) as e:
-            self.log.error("Error fetching chapters: %s", e)
+        except (NotFoundError, ApiError):
             self.notify("Error fetching chapters", severity="error")
             return
 
