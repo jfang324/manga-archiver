@@ -8,7 +8,6 @@ repository = "https://github.com/jfang324/mangadex-downloader"
 
 [tool.poetry.dependencies]
 python = ">=3.10 ,<4.0"
-python-dotenv = "^1.0.1"
 aiohttp = {extras = ["speedups"], version = "^3.10.5"}
 pillow = "^10.4.0"
 windows-curses = {version = "^2.3.3", markers = "sys_platform == 'win32'"}
