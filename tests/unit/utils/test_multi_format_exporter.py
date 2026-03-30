@@ -12,11 +12,8 @@ from src.mangadex_downloader.utils.multi_format_exporter import MultiFormatExpor
 
 class TestMultiFormatExporterGenerate:
     @patch("PIL.Image.open")
-    @patch("os.path.join")
-    def test_generate_with_valid_images(self, mock_join, mock_image_open):
+    def test_generate_with_valid_images(self, mock_image_open):
         temp_dir = Path(tempfile.gettempdir())
-
-        mock_join.return_value = str(temp_dir / "test.pdf")
 
         mock_img = MagicMock()
         mock_img.mode = "RGB"
@@ -46,10 +43,8 @@ class TestMultiFormatExporterGenerate:
             exporter.generate([], temp_dir, "test", OutputFormat.PDF)
 
     @patch("PIL.Image.open")
-    @patch("os.path.join")
-    def test_generate_converts_rgba_to_rgb(self, mock_join, mock_image_open):
+    def test_generate_converts_rgba_to_rgb(self, mock_image_open):
         temp_dir = Path(tempfile.gettempdir())
-        mock_join.return_value = str(temp_dir / "test.pdf")
 
         mock_img = MagicMock()
         mock_img.mode = "RGBA"
@@ -68,10 +63,8 @@ class TestMultiFormatExporterGenerate:
         mock_img.convert.assert_called_once_with("RGB")
 
     @patch("PIL.Image.open")
-    @patch("os.path.join")
-    def test_generate_converts_palette_to_rgb(self, mock_join, mock_image_open):
+    def test_generate_converts_palette_to_rgb(self, mock_image_open):
         temp_dir = Path(tempfile.gettempdir())
-        mock_join.return_value = str(temp_dir / "test.pdf")
 
         mock_img = MagicMock()
         mock_img.mode = "P"
@@ -85,10 +78,8 @@ class TestMultiFormatExporterGenerate:
         mock_img.convert.assert_called_once_with("RGB")
 
     @patch("PIL.Image.open")
-    @patch("os.path.join")
-    def test_generate_uses_custom_output_directory(self, mock_join, mock_image_open):
+    def test_generate_uses_custom_output_directory(self, mock_image_open):
         temp_dir = Path(tempfile.gettempdir())
-        mock_join.return_value = str(temp_dir / "test.pdf")
 
         mock_img = MagicMock()
         mock_img.mode = "RGB"
@@ -96,17 +87,13 @@ class TestMultiFormatExporterGenerate:
         mock_image_open.return_value = mock_img
 
         exporter = MultiFormatExporter()
-        exporter.generate([b"test_data"], temp_dir, "test", OutputFormat.PDF)
+        result = exporter.generate([b"test_data"], temp_dir, "test", OutputFormat.PDF)
 
-        mock_join.assert_called()
+        assert result.startswith(str(temp_dir))
 
     @patch("PIL.Image.open")
-    @patch("os.path.join")
-    def test_generate_uses_quality_and_optimize_settings(
-        self, mock_join, mock_image_open
-    ):
+    def test_generate_uses_quality_and_optimize_settings(self, mock_image_open):
         temp_dir = Path(tempfile.gettempdir())
-        mock_join.return_value = str(temp_dir / "test.pdf")
 
         mock_img = MagicMock()
         mock_img.mode = "RGB"
@@ -129,12 +116,8 @@ class TestMultiFormatExporterGenerate:
 
     @patch("src.mangadex_downloader.utils.multi_format_exporter.zipfile.ZipFile")
     @patch("PIL.Image.open")
-    @patch("os.path.join")
-    def test_generate_pdf_uses_pillow_save(
-        self, mock_join, mock_image_open, mock_zipfile
-    ):
+    def test_generate_pdf_uses_pillow_save(self, mock_image_open, mock_zipfile):
         temp_dir = Path(tempfile.gettempdir())
-        mock_join.return_value = str(temp_dir / "test.pdf")
 
         mock_img = MagicMock()
         mock_img.mode = "RGB"
@@ -156,10 +139,8 @@ class TestMultiFormatExporterGenerate:
 
     @patch("src.mangadex_downloader.utils.multi_format_exporter.zipfile.ZipFile")
     @patch("PIL.Image.open")
-    @patch("os.path.join")
-    def test_generate_cbz_uses_zipfile(self, mock_join, mock_image_open, mock_zipfile):
+    def test_generate_cbz_uses_zipfile(self, mock_image_open, mock_zipfile):
         temp_dir = Path(tempfile.gettempdir())
-        mock_join.return_value = str(temp_dir / "test.cbz")
 
         mock_img = MagicMock()
         mock_img.mode = "RGB"
