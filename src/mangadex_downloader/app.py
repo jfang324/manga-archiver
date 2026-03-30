@@ -6,8 +6,14 @@ from textual.reactive import reactive
 
 from .integrations import MangaDexApiClient
 from .models import AppConfig
-from .screens import MenuScreen, SearchScreen, SelectionScreen
-from .screens.settings_screen import SettingsScreen
+from .screens import (
+    DownloadsScreen,
+    FavoritesScreen,
+    MenuScreen,
+    SearchScreen,
+    SelectionScreen,
+    SettingsScreen,
+)
 from .utils import DownloadClient, SessionManager, save_settings
 from .workers import PipelineConfig, PipelineManager
 from .workers.jobs import FetchingResourcesJob
@@ -98,6 +104,8 @@ class MangaDexDownloaderApp(App):
             SettingsScreen().data_bind(app_config=MangaDexDownloaderApp._app_config),
             name="settings_screen",
         )
+        self.install_screen(DownloadsScreen(), name="downloads_screen")
+        self.install_screen(FavoritesScreen(), name="favorites_screen")
 
         self._setup_pipeline_manager()
         self.push_screen("menu_screen")
