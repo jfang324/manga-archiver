@@ -48,6 +48,10 @@ def _create_app_config(settings_data: dict) -> AppConfig:
         )
     except ValueError as e:
         logger.error("Invalid settings, using defaults: %s", e)
+        # Provide specific error messages to the user about what's wrong
+        logger.info(
+            "Configuration validation failed: %s. Using default settings instead.", e
+        )
         return AppConfig()
 
 
@@ -92,6 +96,7 @@ def save_settings(app_config: AppConfig) -> None:
     Raises:
         ValueError: If settings cannot be saved
     """
+    # Validate the settings before saving
     try:
         AppConfig(
             optimize=app_config.optimize,
