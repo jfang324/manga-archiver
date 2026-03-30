@@ -4,7 +4,7 @@ from textual import on, work
 from textual.app import App
 
 from .integrations import MangaDexApiClient
-from .screens import MenuScreen, SearchScreen, SelectionScreen
+from .screens import MenuScreen, SearchScreen, SelectionScreen, SettingsScreen
 from .utils import DownloadClient, SessionManager
 from .workers import PipelineConfig, PipelineManager
 
@@ -90,6 +90,7 @@ class MangaDexDownloaderApp(App):
     def on_mount(self) -> None:
         self.install_screen(MenuScreen(), name="menu_screen")
         self.install_screen(SearchScreen(), name="search_screen")
+        self.install_screen(SettingsScreen(), name="settings_screen")
 
         self._setup_pipeline_manager()
         self.push_screen("menu_screen")

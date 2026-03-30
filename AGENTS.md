@@ -47,28 +47,45 @@ The project uses Ruff for linting and formatting:
 mangadex-downloader/
 ├── src/mangadex_downloader/
 │   ├── __init__.py
-│   ├── main.py                 # Entry point, CLI argument parsing
-│   ├── app.py                  # Main application class
-│   ├── constants.py            # API URLs and constants
+│   ├── main.py                 # Entry point
+│   ├── app.py                  # Main Textual application
+│   ├── constants.py            # API URLs
 │   │   └── menu_options.py    # Menu option definitions
-│   ├── cli/                    # CLI components (legacy curses code)
-│   │   ├── app.py              # Config class for CLI
-│   │   └── run_app.py          # App runner
+│   ├── workers/                # Async worker pipeline
+│   │   ├── base.py           # Base worker class
+│   │   ├── manager.py        # Pipeline manager
+│   │   ├── resolve_worker.py # MangaDex API worker
+│   │   ├── download_worker.py # Image download worker
+│   │   ├── merge_worker.py   # PDF/CBZ generation worker
+│   │   ├── benchmark_worker.py # Timing tracker
+│   │   └── jobs.py           # Job dataclasses
+│   ├── screens/                # Textual screens
+│   │   ├── menu_screen.py
+│   │   ├── search_screen.py
+│   │   └── selection_screen.py
 │   ├── widgets/                # Custom Textual widgets
-│   │   └── menu_selector.py    # Main menu navigation widget
-│   └── services/
-│       ├── api_access_service.py      # MangaDex API calls (aiohttp)
-│       ├── data_processing_service.py
-│       ├── file_access_service.py
-│       ├── session_manager.py         # aiohttp.ClientSession management
-│       └── user_interface_service.py
+│   │   ├── menu_selector.py
+│   │   ├── search_panel.py
+│   │   └── selection_panel.py
+│   ├── utils/                  # Utilities
+│   │   ├── downloader.py      # Image download client
+│   │   ├── multi_format_exporter.py # PDF/CBZ generation
+│   │   ├── session_manager.py # aiohttp.ClientSession
+│   │   └── logger.py         # Logging setup
+│   ├── models/                 # Data models
+│   │   └── app_config.py
+│   └── integrations/           # API clients
+│       ├── base.py            # Provider interface
+│       ├── exceptions.py      # Custom exceptions
+│       └── mangadex/         # MangaDex API
+│           └── client.py
 ├── tests/
-│   ├── unit/
-│   │   ├── test_api_access_services.py
-│   │   ├── test_data_processing_service.py
-│   │   └── test_file_access_service.py
-│   └── mock_data.py            # Shared test fixtures
-├── pyproject.toml              # Poetry configuration
+│   └── unit/
+│       ├── workers/           # Worker unit tests
+│       ├── widgets/           # Widget unit tests
+│       ├── utils/             # Utility tests
+│       └── integrations/      # API client tests
+├── pyproject.toml
 └── README.md
 ```
 
@@ -101,7 +118,13 @@ mangadex-downloader/
 - Quote style: double quotes (per ruff format config)
 
 ### Docstrings
-All functions must include docstrings using Google format:
+
+Use Google-style docstrings, but be pragmatic:
+- Document public APIs, complex logic, non-obvious behavior
+- Skip docstrings on test methods (test name is sufficient)
+- Skip docstrings on obvious functions (name explains itself)
+- 1-liner for simple things (exceptions, basic dataclasses)
+- Target: 15-20% comment ratio for this project size
 ```python
 """
 Short description of function purpose.
@@ -157,9 +180,9 @@ This means:
 - Never block the event loop with synchronous operations
 
 ## Service Architecture
-- All services in `src/mangadex_downloader/services/`
-- Each service should have a single, focused responsibility
-- Services communicate via function calls, not shared state
+- All services in `src/mangadex_downloader/` (grouped by function)
+- Workers in `workers/` - each worker has single responsibility
+- Workers communicate via asyncio Queues
 - Use dependency injection (pass sessions, managers as parameters)
 
 ## Session Management
@@ -168,19 +191,14 @@ This means:
 - Close sessions when done to release resources
 
 ## Testing Patterns
-- Tests in `tests/unit/` mirror the services structure
+- Tests in `tests/unit/` mirror the module structure
 - Test classes named after the module/function being tested
 - Test methods: `test_<operation>_<expected_result>`
-- Use `unittest.mock.AsyncMock` for async functions, `MagicMock` for context managers
+- Don't test framework behavior (dataclass defaults, exception inheritance)
+- For retry logic: test `_process_job()` directly, not full `run()` loop
+- Use `unittest.mock.AsyncMock` for async functions, `MagicMock` for sync
 - Use `@patch` decorator for mocking module-level functions
 - Async test methods use pytest-asyncio (`asyncio_mode = "auto"`)
-
-## CLI Arguments
-The application accepts these command-line arguments:
-- `--page-size`: Number of items to display per page (default: 10)
-- `--quality`: PDF quality 1-100 (default: 75)
-- `--optimize`: Optimize PDF file size
-- `--data-saver`: Download lower quality images
 
 ## Special Considerations
 
@@ -194,12 +212,13 @@ The application accepts these command-line arguments:
 - Uses MangaDex API (https://api.mangadex.org)
 - Endpoints: `/manga`, `/manga/{id}/feed`, `/at-home/server`
 - Base URLs defined in `src/mangadex_downloader/constants.py`
+- Rate limiting implemented via bounded worker pools and semaphores
+- Retry logic with exponential backoff and jitter
 
 ### Known Issues
 - Only supports English translations
 - Special characters in manga titles may cause PDF generation issues
 - Query parameters in user input may cause unexpected behavior
-- No rate limiting - be respectful of API
 
 ## Environment Requirements
 - Python 3.10+
