@@ -106,7 +106,7 @@ class TestRetryLogic:
             async def _do_work(self, job: Job) -> Job | None:
                 nonlocal do_work_call_count
                 do_work_call_count += 1
-                raise ValueError("Simulated failure")
+                raise TimeoutError("Simulated timeout")
 
         worker = FailingWorker(
             id="test_worker",
@@ -158,7 +158,7 @@ class TestRetryLogic:
             async def _do_work(self, job: Job) -> Job | None:
                 nonlocal call_count
                 call_count += 1
-                raise ValueError("Simulated failure")
+                raise TimeoutError("Simulated timeout")
 
         worker = FailingWorker(
             id="test_worker",
