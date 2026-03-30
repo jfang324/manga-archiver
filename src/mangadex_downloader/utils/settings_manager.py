@@ -54,9 +54,11 @@ def load_settings() -> AppConfig:
     Load settings from settings.json.
 
     If settings.json doesn't exist, creates one with default settings.
+    If the file cannot be read or contains invalid values, falls back to
+    defaults and continues without raising an error.
 
     Returns:
-        AppConfig: The loaded configuration
+        AppConfig: The loaded configuration (may be defaults if loading failed)
     """
     settings_path: Path = _get_settings_path()
     config_dir: Path = settings_path.parent

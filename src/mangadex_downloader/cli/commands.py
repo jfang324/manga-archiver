@@ -30,35 +30,35 @@ def create_parser() -> ArgumentParser:
         "--resolve-workers",
         type=positive_int,
         default=DEFAULT_RESOLVE_WORKERS,
-        help="Number of workers retrieving download resources (default: 5)",
+        help=f"Number of workers retrieving download resources (default: {DEFAULT_RESOLVE_WORKERS})",
     )
 
     parser.add_argument(
         "--download-workers",
         type=positive_int,
         default=DEFAULT_DOWNLOAD_WORKERS,
-        help="Number of workers downloading images (default: 5)",
+        help=f"Number of workers downloading images (default: {DEFAULT_DOWNLOAD_WORKERS})",
     )
 
     parser.add_argument(
         "--merge-workers",
         type=positive_int,
         default=DEFAULT_MERGE_WORKERS,
-        help="Number of workers merging images into an output format (default: 5)",
+        help=f"Number of workers merging images into an output format (default: {DEFAULT_MERGE_WORKERS})",
     )
 
     parser.add_argument(
         "--resolve-rate-limit",
         type=positive_int,
         default=DEFAULT_RESOLVE_RATE_LIMIT,
-        help="Global rate limit for resolve workers (default: 5)",
+        help=f"Global rate limit for resolve workers (default: {DEFAULT_RESOLVE_RATE_LIMIT})",
     )
 
     parser.add_argument(
         "--download-rate-limit",
         type=positive_int,
         default=DEFAULT_DOWNLOAD_RATE_LIMIT,
-        help="Global rate limit for download workers (default: 5)",
+        help=f"Global rate limit for download workers (default: {DEFAULT_DOWNLOAD_RATE_LIMIT})",
     )
 
     return parser

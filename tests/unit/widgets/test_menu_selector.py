@@ -1,3 +1,4 @@
+import pytest
 from textual import on
 from textual.app import App, ComposeResult
 from textual.widgets import Label, ListView
@@ -26,6 +27,7 @@ class MenuSelectorApp(App):
 
 
 class TestMenuSelector:
+    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
     async def test_navigating_menu_changes_description(self) -> None:
         app = MenuSelectorApp()
 
