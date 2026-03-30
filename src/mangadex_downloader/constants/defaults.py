@@ -1,0 +1,20 @@
+from pathlib import Path
+
+from ..enums import OutputFormat
+
+DEFAULT_OUTPUT_PATH: Path = Path.home() / "Downloads"
+DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat.PDF
+DEFAULT_QUALITY: int = 75
+DEFAULT_OPTIMIZE: bool = False
+DEFAULT_DATA_SAVER: bool = False
+
+DEFAULT_RESOLVE_WORKERS: int = 5
+DEFAULT_DOWNLOAD_WORKERS: int = 5
+DEFAULT_MERGE_WORKERS: int = 5
+DEFAULT_BENCHMARK_WORKERS: int = 1
+
+DEFAULT_RESOLVE_RATE_LIMIT: int = 5
+DEFAULT_DOWNLOAD_RATE_LIMIT: int = 5
+
+DEFAULT_BENCHMARK_ENABLED: bool = False
+DEFAULT_BENCHMARK_EXPECTED_COUNT: int | None = None

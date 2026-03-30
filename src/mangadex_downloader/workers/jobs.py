@@ -1,21 +1,7 @@
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 
-from ..models.app_config import OutputFormat
-
-
-class JobStatus(Enum):
-    """
-    An enum class for the status of a job.
-    """
-
-    QUEUED = "queued"
-    FETCHING_RESOURCES = "fetching_resources"
-    DOWNLOADING = "downloading"
-    MERGING = "merging"
-    COMPLETED = "completed"
-    FAILED = "failed"
+from ..enums import OutputFormat
 
 
 @dataclass

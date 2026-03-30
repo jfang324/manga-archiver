@@ -2,9 +2,10 @@ import time
 from asyncio import Queue
 from typing import Callable
 
+from ..enums import JobStatus
 from ..utils import MultiFormatExporter
 from .base import Worker, WorkerConfig
-from .jobs import BenchmarkJob, Job, JobStatus, MergingJob
+from .jobs import BenchmarkJob, Job, MergingJob
 
 
 class MergeWorker(Worker):

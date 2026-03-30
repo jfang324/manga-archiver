@@ -1,10 +1,34 @@
+import logging
+import sys
+
 from .app import MangaDexDownloaderApp
-from .utils import setup_logging
+from .cli import parse_args
+from .utils import load_settings, setup_logging
+from .workers.manager import PipelineConfig
 
 
 def main():
     setup_logging()
-    app = MangaDexDownloaderApp()
+
+    try:
+        args = parse_args()
+        pipeline_config = PipelineConfig(
+            num_resolve_workers=args.resolve_workers,
+            num_download_workers=args.download_workers,
+            num_merge_workers=args.merge_workers,
+            resolve_rate_limit=args.resolve_rate_limit,
+            download_rate_limit=args.download_rate_limit,
+        )
+
+        app_config = load_settings()
+    except Exception as e:
+        logging.error(f"Failed to load configs: {e}")
+        sys.exit(1)
+
+    app = MangaDexDownloaderApp(
+        pipeline_config=pipeline_config,
+        app_config=app_config,
+    )
     app.run()
 
 

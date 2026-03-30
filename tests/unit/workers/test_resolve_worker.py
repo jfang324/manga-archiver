@@ -2,10 +2,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.mangadex_downloader.enums import JobStatus
 from src.mangadex_downloader.workers.jobs import (
     DownloadingJob,
     FetchingResourcesJob,
-    JobStatus,
 )
 from src.mangadex_downloader.workers.resolve_worker import ResolveWorker
 

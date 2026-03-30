@@ -1,3 +1,3 @@
-from .app_config import AppConfig, OutputFormat
+from .app_config import AppConfig
 
-__all__ = ["AppConfig", "OutputFormat"]
+__all__ = ["AppConfig"]

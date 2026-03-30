@@ -1,9 +1,10 @@
 from asyncio import Queue, Semaphore
 from typing import Callable
 
+from ..enums import JobStatus
 from ..utils import DownloadClient
 from .base import Worker, WorkerConfig
-from .jobs import DownloadingJob, Job, JobStatus, MergingJob
+from .jobs import DownloadingJob, Job, MergingJob
 
 
 class DownloadWorker(Worker):

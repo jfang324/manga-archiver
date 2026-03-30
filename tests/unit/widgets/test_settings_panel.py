@@ -4,6 +4,7 @@ from textual.app import App, ComposeResult
 from textual.validation import ValidationResult
 from textual.widgets import Input, Select, Switch
 
+from src.mangadex_downloader.enums import OutputFormat
 from src.mangadex_downloader.widgets.settings_panel import SettingsPanel
 
 
@@ -22,7 +23,12 @@ def invalid_result() -> ValidationResult:
 
 class SettingsPanelTestApp(App):
     def compose(self) -> ComposeResult:
-        yield SettingsPanel()
+        yield SettingsPanel(
+            output_directory=".",
+            output_format=str(OutputFormat.PDF),
+            quality=75,
+            optimize=False,
+        )
 
 
 class TestSettingsPanel:
@@ -39,7 +45,7 @@ class TestSettingsPanel:
 
             assert settings_panel._optimize != initial_value
 
-    async def test_select_output_format(self):
+    async def test_selectoutput_format(self):
         app = SettingsPanelTestApp()
 
         async with app.run_test() as pilot:
@@ -54,7 +60,7 @@ class TestSettingsPanel:
             await pilot.pause()
             assert settings_panel._output_format == "cbz"
 
-    async def test_input_quality_valid(self):
+    async def test_inputquality_valid(self):
         app = SettingsPanelTestApp()
 
         async with app.run_test() as pilot:
@@ -67,7 +73,7 @@ class TestSettingsPanel:
 
             assert settings_panel._quality == 50
 
-    async def test_input_quality_empty(self):
+    async def test_inputquality_empty(self):
         app = SettingsPanelTestApp()
 
         async with app.run_test() as pilot:
@@ -82,7 +88,7 @@ class TestSettingsPanel:
 
             assert settings_panel._quality == initial_value
 
-    async def test_input_quality_below_min(self):
+    async def test_inputquality_below_min(self):
         app = SettingsPanelTestApp()
 
         async with app.run_test() as pilot:
@@ -97,7 +103,7 @@ class TestSettingsPanel:
 
             assert settings_panel._quality == initial_value
 
-    async def test_input_quality_above_max(self):
+    async def test_inputquality_above_max(self):
         app = SettingsPanelTestApp()
 
         async with app.run_test() as pilot:

@@ -1,9 +1,10 @@
 from asyncio import Queue, Semaphore
 from typing import TYPE_CHECKING, Callable
 
+from ..enums import JobStatus
 from ..integrations import MangaDexApiClient
 from .base import Worker, WorkerConfig
-from .jobs import DownloadingJob, FetchingResourcesJob, Job, JobStatus
+from .jobs import DownloadingJob, FetchingResourcesJob, Job
 
 if TYPE_CHECKING:
     from ..types import ProcessedDownloadResource

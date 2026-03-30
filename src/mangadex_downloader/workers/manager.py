@@ -5,6 +5,17 @@ from asyncio import Queue, Semaphore
 from dataclasses import dataclass
 from typing import Callable
 
+from ..constants.defaults import (
+    DEFAULT_BENCHMARK_ENABLED,
+    DEFAULT_BENCHMARK_EXPECTED_COUNT,
+    DEFAULT_BENCHMARK_WORKERS,
+    DEFAULT_DOWNLOAD_RATE_LIMIT,
+    DEFAULT_DOWNLOAD_WORKERS,
+    DEFAULT_MERGE_WORKERS,
+    DEFAULT_RESOLVE_RATE_LIMIT,
+    DEFAULT_RESOLVE_WORKERS,
+)
+from ..enums import JobStatus
 from ..integrations import MangaDexApiClient
 from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
@@ -13,7 +24,6 @@ from .download_worker import DownloadWorker
 from .jobs import (
     FetchingResourcesJob,
     Job,
-    JobStatus,
 )
 from .merge_worker import MergeWorker
 from .resolve_worker import ResolveWorker
@@ -34,15 +44,15 @@ class PipelineConfig:
         benchmark_expected_count (int): Number of jobs expected in benchmark
     """
 
-    num_resolve_workers: int = 1
-    num_download_workers: int = 1
-    num_merge_workers: int = 1
+    num_resolve_workers: int = DEFAULT_RESOLVE_WORKERS
+    num_download_workers: int = DEFAULT_DOWNLOAD_WORKERS
+    num_merge_workers: int = DEFAULT_MERGE_WORKERS
 
-    resolve_rate_limit: int = 5
-    download_rate_limit: int = 5
+    resolve_rate_limit: int = DEFAULT_RESOLVE_RATE_LIMIT
+    download_rate_limit: int = DEFAULT_DOWNLOAD_RATE_LIMIT
 
-    benchmark_enabled: bool = False
-    benchmark_expected_count: int | None = None
+    benchmark_enabled: bool = DEFAULT_BENCHMARK_ENABLED
+    benchmark_expected_count: int | None = DEFAULT_BENCHMARK_EXPECTED_COUNT
 
 
 class PipelineManager:
@@ -136,7 +146,7 @@ class PipelineManager:
                     expected_count=config.benchmark_expected_count,
                     benchmark_callback=wrapped_callback,
                 )
-                for index in range(1)
+                for index in range(DEFAULT_BENCHMARK_WORKERS)
             ]
 
     async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]):

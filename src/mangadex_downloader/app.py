@@ -2,19 +2,18 @@ from typing import TYPE_CHECKING
 
 from textual import on, work
 from textual.app import App
+from textual.reactive import reactive
 
 from .integrations import MangaDexApiClient
-from .screens import MenuScreen, SearchScreen, SelectionScreen, SettingsScreen
-from .utils import DownloadClient, SessionManager
+from .models import AppConfig
+from .screens import MenuScreen, SearchScreen, SelectionScreen
+from .screens.settings_screen import SettingsScreen
+from .utils import DownloadClient, SessionManager, save_settings
 from .workers import PipelineConfig, PipelineManager
+from .workers.jobs import FetchingResourcesJob
 
 if TYPE_CHECKING:
     from .screens.selection_screen import PartialJob
-
-from pathlib import Path
-
-from .models import OutputFormat
-from .workers.jobs import FetchingResourcesJob
 
 
 class MangaDexDownloaderApp(App):
@@ -34,10 +33,21 @@ class MangaDexDownloaderApp(App):
 
     BINDINGS = [("escape", "safe_pop_screen", "Go back")]
 
-    def __init__(self, **kwargs) -> None:
+    _app_config: reactive[AppConfig] = reactive(AppConfig)
+
+    def __init__(
+        self,
+        pipeline_config: PipelineConfig,
+        app_config: AppConfig,
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
 
+        self._pipeline_config = pipeline_config
+        self._app_config = app_config
         self._pipeline_manager: PipelineManager | None = None
+
+        self.mutate_reactive(MangaDexDownloaderApp._app_config)
 
     @work
     async def _setup_pipeline_manager(self) -> None:
@@ -45,19 +55,13 @@ class MangaDexDownloaderApp(App):
         self._mangadex_client = MangaDexApiClient(self._session_manager)
         self._download_client = DownloadClient(self._session_manager)
 
+        config = self._pipeline_config
+
         self._pipeline_manager = PipelineManager(
             self._mangadex_client,
             self._download_client,
             lambda *args: None,
-            PipelineConfig(
-                num_resolve_workers=5,
-                num_download_workers=5,
-                num_merge_workers=5,
-                resolve_rate_limit=5,
-                download_rate_limit=5,
-                benchmark_enabled=True,
-                benchmark_expected_count=30,
-            ),
+            config,
         )
 
         await self._pipeline_manager.start()
@@ -77,8 +81,8 @@ class MangaDexDownloaderApp(App):
                 manga_title=partial_job["manga_title"],
                 chapter_id=partial_job["chapter_id"],
                 chapter_title=partial_job["chapter_title"],
-                output_directory=Path("C:\\Users\\JFang\\Desktop\\trash"),
-                output_format=OutputFormat.PDF,
+                output_directory=self._app_config.output_path,
+                output_format=self._app_config.output_format,
                 start_time=-1,
                 end_time=-1,
             )
@@ -90,7 +94,10 @@ class MangaDexDownloaderApp(App):
     def on_mount(self) -> None:
         self.install_screen(MenuScreen(), name="menu_screen")
         self.install_screen(SearchScreen(), name="search_screen")
-        self.install_screen(SettingsScreen(), name="settings_screen")
+        self.install_screen(
+            SettingsScreen().data_bind(app_config=MangaDexDownloaderApp._app_config),
+            name="settings_screen",
+        )
 
         self._setup_pipeline_manager()
         self.push_screen("menu_screen")
@@ -101,3 +108,16 @@ class MangaDexDownloaderApp(App):
             return
 
         self.pop_screen()
+
+    @on(SettingsScreen.ScheduleSettingsSave)
+    def _on_schedule_settings_save(
+        self, event: SettingsScreen.ScheduleSettingsSave
+    ) -> None:
+        try:
+            new_settings: AppConfig = event.app_config
+            save_settings(new_settings)
+            self._app_config = new_settings
+            self.notify("Settings saved", severity="information")
+        except ValueError as e:
+            self.log.error(f"Failed to save settings: {e}")
+            self.notify(f"Failed to save: {e}", severity="error")

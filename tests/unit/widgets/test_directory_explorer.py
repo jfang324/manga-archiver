@@ -26,7 +26,9 @@ class DirectoryExplorerApp(App):
         self.directory_records.append(message)
 
 
+# Decorator to ignore errors produced by using Textual widgets directly in tests
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 class TestFilteredDirectoryTree:
     def test_filters_hidden_directories(self):
         with TemporaryDirectory() as temp_dir:
@@ -78,6 +80,7 @@ class TestFilteredDirectoryTree:
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 class TestDirectoryExplorer:
     async def test_navigating_down_tree_sends_message(self) -> None:
         app = DirectoryExplorerApp()

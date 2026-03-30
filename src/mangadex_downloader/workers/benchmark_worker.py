@@ -1,8 +1,9 @@
 from asyncio import Queue
 from typing import Callable
 
+from ..enums import JobStatus
 from .base import Worker, WorkerConfig
-from .jobs import Job, JobStatus
+from .jobs import Job
 
 
 class BenchmarkWorker(Worker):

@@ -2,8 +2,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.mangadex_downloader.enums import JobStatus
 from src.mangadex_downloader.workers.base import Worker, WorkerConfig
-from src.mangadex_downloader.workers.jobs import Job, JobStatus
+from src.mangadex_downloader.workers.jobs import Job
 
 
 class ConcreteWorker(Worker):

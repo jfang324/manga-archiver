@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PIL import Image
 
-from src.mangadex_downloader.models.app_config import OutputFormat
+from src.mangadex_downloader.enums import OutputFormat
 from src.mangadex_downloader.utils.multi_format_exporter import MultiFormatExporter
 
 

@@ -1,23 +1,14 @@
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 
-
-class OutputFormat(Enum):
-    """
-    An enum class for the supported output formats.
-    """
-
-    PDF = "pdf"
-    CBZ = "cbz"
-    EPUB = "epub"
-
-    def __str__(self) -> str:
-        return self.value
-
-    @classmethod
-    def list_formats(cls) -> list[str]:
-        return [format.value for format in cls]
+from ..constants.defaults import (
+    DEFAULT_DATA_SAVER,
+    DEFAULT_OPTIMIZE,
+    DEFAULT_OUTPUT_FORMAT,
+    DEFAULT_OUTPUT_PATH,
+    DEFAULT_QUALITY,
+)
+from ..enums import OutputFormat
 
 
 @dataclass
@@ -33,13 +24,11 @@ class AppConfig:
         output_format (OutputFormat): The output format (PDF, CBZ, etc., validated)
     """
 
-    optimize: bool
-    data_saver: bool
-
-    # Properties that require validation
-    _output_path: Path
-    _quality: int
-    _output_format: OutputFormat
+    optimize: bool = DEFAULT_OPTIMIZE
+    data_saver: bool = DEFAULT_DATA_SAVER
+    _output_path: Path = DEFAULT_OUTPUT_PATH
+    _quality: int = DEFAULT_QUALITY
+    _output_format: OutputFormat = DEFAULT_OUTPUT_FORMAT
 
     def __post_init__(self):
         """Initialize validated properties."""

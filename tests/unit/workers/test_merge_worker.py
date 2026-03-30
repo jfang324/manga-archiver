@@ -1,12 +1,10 @@
-"""Unit tests for MergeWorker."""
-
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
-from src.mangadex_downloader.models.app_config import OutputFormat
-from src.mangadex_downloader.workers.jobs import BenchmarkJob, JobStatus, MergingJob
+from src.mangadex_downloader.enums import JobStatus, OutputFormat
+from src.mangadex_downloader.workers.jobs import BenchmarkJob, MergingJob
 from src.mangadex_downloader.workers.merge_worker import MergeWorker
 
 

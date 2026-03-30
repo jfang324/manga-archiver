@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from ..models import OutputFormat
+from ..enums import OutputFormat
 
 
 class MultiFormatExporter:

@@ -6,7 +6,8 @@ from asyncio import CancelledError, Queue, TimeoutError
 from dataclasses import dataclass
 from typing import Callable
 
-from .jobs import Job, JobStatus
+from ..enums import JobStatus
+from .jobs import Job
 
 
 @dataclass

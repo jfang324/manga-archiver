@@ -1,5 +1,3 @@
-from os import getcwd
-
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -8,7 +6,13 @@ from textual.validation import Number
 from textual.widget import Widget
 from textual.widgets import Input, Label, Select, Switch
 
-from ..models.app_config import OutputFormat
+from ..constants.defaults import (
+    DEFAULT_OPTIMIZE,
+    DEFAULT_OUTPUT_FORMAT,
+    DEFAULT_OUTPUT_PATH,
+    DEFAULT_QUALITY,
+)
+from ..enums import OutputFormat
 from .directory_explorer import DirectoryExplorer
 
 
@@ -61,34 +65,51 @@ class SettingsPanel(Widget):
     }
     """
 
-    _output_directory: reactive[str] = reactive(".")
-    _output_format: reactive[str] = reactive(str(OutputFormat.PDF))
-    _quality: reactive[int] = reactive(75)
-    _optimize: reactive[bool] = reactive(False)
+    _output_directory: reactive[str] = reactive(str(DEFAULT_OUTPUT_PATH))
+    _output_format: reactive[str] = reactive(str(DEFAULT_OUTPUT_FORMAT))
+    _quality: reactive[int] = reactive(DEFAULT_QUALITY)
+    _optimize: reactive[bool] = reactive(DEFAULT_OPTIMIZE)
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(
+        self,
+        output_directory: str,
+        output_format: str,
+        quality: int,
+        optimize: bool,
+        **kwargs,
+    ) -> None:
+        """
+        Initialize the settings panel.
+
+        Args:
+            output_directory (str): The directory to save output files
+            output_format (str): The output format (PDF, CBZ, etc.)
+            quality (int): The quality setting for output
+            optimize (bool): Whether to optimize output file size
+        """
         super().__init__(**kwargs)
 
-        self._output_directory = getcwd()
-        self._output_format = str(OutputFormat.PDF)
-        self._quality = 75
-        self._optimize = False
+        self._output_directory = output_directory
+        self._output_format = output_format
+        self._quality = quality
+        self._optimize = optimize
 
     def compose(self) -> ComposeResult:
         with Horizontal():
             yield DirectoryExplorer(
                 title="Output Directory", id="directory-explorer"
             ).data_bind(current_directory=SettingsPanel._output_directory)
+
             with Vertical(id="other-settings"):
                 with Vertical(classes="field-container"):
                     yield Label(
                         "Output Format:",
                         classes="field-label",
                     )
-                    yield (
-                        Select(options=[], classes="field-select")
-                        .from_values(OutputFormat.list_formats())
-                        .data_bind(value=SettingsPanel._output_format)
+                    yield Select.from_values(
+                        OutputFormat.list_formats(),
+                        value=str(self._output_format),
+                        classes="field-select",
                     )
 
                 with Vertical(classes="field-container"):
@@ -98,9 +119,10 @@ class SettingsPanel(Widget):
                     )
                     yield Input(
                         type="integer",
-                        value=str(self._quality),
                         classes="field-select",
+                        value=str(self._quality),
                         validators=[Number(minimum=1, maximum=100)],
+                        id="quality-input",
                     )
 
                 with Horizontal(classes="field-container"):
@@ -108,9 +130,7 @@ class SettingsPanel(Widget):
                         "Optimize:",
                         id="optimize-label",
                     )
-                    yield Switch(value=self._optimize, id="optimize-switch").data_bind(
-                        value=SettingsPanel._optimize
-                    )
+                    yield Switch(value=self._optimize, id="optimize-switch")
 
     @on(DirectoryExplorer.DirectoryChanged)
     def _update_output_directory(
@@ -128,6 +148,10 @@ class SettingsPanel(Widget):
             return
 
         self._output_format = str_format
+
+    def watch_quality(self, quality: int) -> None:
+        quality_input: Input = self.query_one("#quality-input", Input)
+        quality_input.value = str(quality)
 
     @on(Input.Changed)
     def _update_quality(self, event: Input.Changed) -> None:
@@ -148,3 +172,13 @@ class SettingsPanel(Widget):
     @on(Switch.Changed)
     def _update_optimize(self, event: Switch.Changed) -> None:
         self._optimize = event.value
+
+    def get_settings(self) -> dict:
+        settings: dict = {
+            "output_directory": self._output_directory,
+            "output_format": self._output_format,
+            "quality": self._quality,
+            "optimize": self._optimize,
+        }
+
+        return settings
