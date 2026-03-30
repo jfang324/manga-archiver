@@ -78,7 +78,8 @@ For more options, run `mangadex-downloader --help`.
 
 ## Gallery
 
-https://github.com/user-attachments/assets/90d6f14f-1847-4bd9-9de3-947c70ff6060
+https://github.com/user-attachments/assets/b4270b0a-4677-48b0-94fc-74b8eb0b0fc9
+
 
 ## Acknowledgements
 
