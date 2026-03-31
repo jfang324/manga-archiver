@@ -170,7 +170,7 @@ class Worker(ABC):
             )
             self._on_status_change(job.id, JobStatus.FAILED)
             return
-        except (ValueError, IndexError, AttributeError) as e:
+        except ValueError as e:
             # Data validation errors: don't retry
             logger.error(
                 "Worker %s: Job %s validation error: %s - failing immediately",

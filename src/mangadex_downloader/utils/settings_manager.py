@@ -47,9 +47,7 @@ def _create_app_config(settings_data: dict) -> AppConfig:
             data_saver=settings_data.get("data_saver", DEFAULT_DATA_SAVER),
         )
     except ValueError as e:
-        logger.error("Invalid settings, using defaults: %s", e)
-        # Provide specific error messages to the user about what's wrong
-        logger.info(
+        logger.error(
             "Configuration validation failed: %s. Using default settings instead.", e
         )
         return AppConfig()
