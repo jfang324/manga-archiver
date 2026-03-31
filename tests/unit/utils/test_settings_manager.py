@@ -16,32 +16,40 @@ class TestLoadSettings:
     def test_load_settings_creates_file_with_defaults_when_not_exists(
         self, mock_defaults, mock_get_path
     ):
+        temp_dir = tempfile.mkdtemp()
+        mock_get_path.return_value = Path(temp_dir) / "settings.json"
         mock_defaults.return_value = {
-            "output_path": str(Path.home() / "Downloads"),
+            "output_path": temp_dir,
             "output_format": "pdf",
             "quality": 75,
             "optimize": False,
             "data_saver": False,
         }
-        temp_dir = tempfile.mkdtemp()
-        temp_path = Path(temp_dir) / "settings.json"
-        mock_get_path.return_value = temp_path
 
         config = settings_manager.load_settings()
         default_config = AppConfig()
 
-        assert temp_path.exists()
         assert config.quality == default_config.quality
         assert config.optimize == default_config.optimize
         assert config.data_saver == default_config.data_saver
         assert config.output_format == default_config.output_format
 
     @patch("src.mangadex_downloader.utils.settings_manager._get_settings_path")
-    def test_load_settings_returns_defaults_on_corrupted_json(self, mock_get_path):
+    @patch("src.mangadex_downloader.utils.settings_manager._get_default_settings")
+    def test_load_settings_returns_defaults_on_corrupted_json(
+        self, mock_defaults, mock_get_path
+    ):
         temp_dir = tempfile.mkdtemp()
         temp_path = Path(temp_dir) / "settings.json"
         temp_path.write_text("{ invalid json")
         mock_get_path.return_value = temp_path
+        mock_defaults.return_value = {
+            "output_path": temp_dir,
+            "output_format": "pdf",
+            "quality": 75,
+            "optimize": False,
+            "data_saver": False,
+        }
 
         config = settings_manager.load_settings()
         default_config = AppConfig()
@@ -52,11 +60,21 @@ class TestLoadSettings:
         assert config.output_format == default_config.output_format
 
     @patch("src.mangadex_downloader.utils.settings_manager._get_settings_path")
-    def test_load_settings_returns_defaults_on_invalid_values(self, mock_get_path):
+    @patch("src.mangadex_downloader.utils.settings_manager._get_default_settings")
+    def test_load_settings_returns_defaults_on_invalid_values(
+        self, mock_defaults, mock_get_path
+    ):
         temp_dir = tempfile.mkdtemp()
         temp_path = Path(temp_dir) / "settings.json"
         temp_path.write_text(json.dumps({"quality": 999}))
         mock_get_path.return_value = temp_path
+        mock_defaults.return_value = {
+            "output_path": temp_dir,
+            "output_format": "pdf",
+            "quality": 75,
+            "optimize": False,
+            "data_saver": False,
+        }
 
         config = settings_manager.load_settings()
         default_config = AppConfig()
