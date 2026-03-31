@@ -27,7 +27,7 @@ class TestLoadSettings:
         }
 
         config = settings_manager.load_settings()
-        default_config = AppConfig()
+        default_config = AppConfig(_output_path=Path(temp_dir))
 
         assert config.quality == default_config.quality
         assert config.optimize == default_config.optimize
@@ -52,7 +52,7 @@ class TestLoadSettings:
         }
 
         config = settings_manager.load_settings()
-        default_config = AppConfig()
+        default_config = AppConfig(_output_path=Path(temp_dir))
 
         assert config.quality == default_config.quality
         assert config.optimize == default_config.optimize
@@ -77,7 +77,7 @@ class TestLoadSettings:
         }
 
         config = settings_manager.load_settings()
-        default_config = AppConfig()
+        default_config = AppConfig(_output_path=Path(temp_dir))
 
         assert config.quality == default_config.quality
 
