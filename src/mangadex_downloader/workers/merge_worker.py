@@ -66,10 +66,17 @@ class MergeWorker(Worker):
 
         self._on_status_change(job.id, JobStatus.MERGING)
 
-        chapter_number, chapter_title = chapter_title.split(" ", 1)
+        # Quick fail on malformed chapter titles, however this isn't strictly necessary instead we could use default value + a counter to prevent collisions
+        try:
+            chapter_number, stripped_title = chapter_title.split(" ", 1)
+        except ValueError as e:
+            raise ValueError(
+                f"Malformed chapter_title format (expected '<num> <title>'): '{chapter_title}'"
+            ) from e
+
         chapter_number = chapter_number.rstrip(".")
 
-        output_name: str = f"{manga_title} [{chapter_number}] - {chapter_title}"
+        output_name: str = f"{manga_title} [{chapter_number}] - {stripped_title}"
 
         self._multi_format_exporter.generate(
             image_data_list=image_data,
@@ -82,7 +89,7 @@ class MergeWorker(Worker):
         return BenchmarkJob(
             id=job_id,
             manga_title=manga_title,
-            chapter_title=chapter_title,
+            chapter_title=stripped_title,
             output_directory=output_directory,
             output_format=output_format,
             start_time=start_time,

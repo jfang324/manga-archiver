@@ -28,6 +28,8 @@ from .jobs import (
 from .merge_worker import MergeWorker
 from .resolve_worker import ResolveWorker
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class PipelineConfig:
@@ -162,9 +164,10 @@ class PipelineManager:
             if self._track_memory:
                 _, peak = tracemalloc.get_traced_memory()
                 peak_mb = peak / 1024 / 1024
-                logging.debug(
-                    f"Benchmark: time={(latest_end - earliest_start) / 1_000_000:.2f}ms, "
-                    f"peak_memory={peak_mb:.2f}MB"
+                logger.debug(
+                    "Benchmark: time=%.2fms, peak_memory=%.2fMB",
+                    (latest_end - earliest_start) / 1_000_000,
+                    peak_mb,
                 )
 
             if original_callback:

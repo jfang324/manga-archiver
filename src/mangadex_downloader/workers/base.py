@@ -2,12 +2,20 @@ import asyncio
 import logging
 import random
 from abc import ABC, abstractmethod
-from asyncio import CancelledError, Queue, TimeoutError
+from asyncio import CancelledError, Queue
 from dataclasses import dataclass
 from typing import Callable
 
+from aiohttp import ClientError
+
 from ..enums import JobStatus
+from ..integrations.exceptions import (
+    NotFoundError,
+    RateLimitError,
+)
 from .jobs import Job
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -80,12 +88,12 @@ class Worker(ABC):
                 self._input_queue.task_done()
             except TimeoutError:
                 if job is not None:
-                    logging.error(f"Job timed out: {job.id}")
+                    logger.error("Job timed out: %s", job.id)
 
                 continue
             except CancelledError:
                 if job is not None:
-                    logging.error(f"Job cancelled: {job.id}")
+                    logger.error("Job cancelled: %s", job.id)
 
                 self._running = False
                 break
@@ -106,18 +114,83 @@ class Worker(ABC):
                 return
 
             await self._output_queue.put(next_job)
-        except Exception as e:
+        except NotFoundError:
+            # 404: Fail fast, don't retry
+            logger.error(
+                "Worker %s: Job %s failed with 404 NotFound - failing immediately",
+                self._id,
+                job.id,
+            )
+            self._on_status_change(job.id, JobStatus.FAILED)
+            return
+        except RateLimitError:
+            # 429: Retry with standard backoff
             if attempt < self._config.max_retries:
                 delay = self._calculate_backoff(attempt)
-
+                logger.error(
+                    "Worker %s: Job %s rate limited, retrying in %.1fs (attempt %d/%d)",
+                    self._id,
+                    job.id,
+                    delay,
+                    attempt + 1,
+                    self._config.max_retries,
+                )
                 await asyncio.sleep(delay)
                 await self._process_job(job, attempt + 1)
-            else:
-                logging.error(
-                    f"Worker {self._id} failed: {job.id} after {attempt} attempts with error: {e}"
-                )
-                self._on_status_change(job.id, JobStatus.FAILED)
                 return
+            logger.error(
+                "Worker %s: Job %s rate limited after %d attempts - failing",
+                self._id,
+                job.id,
+                self._config.max_retries,
+            )
+            self._on_status_change(job.id, JobStatus.FAILED)
+            return
+        except (TimeoutError, asyncio.TimeoutError, ClientError) as e:
+            # Transient network errors: retry normally
+            if attempt < self._config.max_retries:
+                delay = self._calculate_backoff(attempt)
+                logger.error(
+                    "Worker %s: Job %s network error: %s, retrying in %.1fs (attempt %d/%d)",
+                    self._id,
+                    job.id,
+                    type(e).__name__,
+                    delay,
+                    attempt + 1,
+                    self._config.max_retries,
+                )
+                await asyncio.sleep(delay)
+                await self._process_job(job, attempt + 1)
+                return
+            logger.error(
+                "Worker %s: Job %s network failed after %d attempts",
+                self._id,
+                job.id,
+                self._config.max_retries,
+            )
+            self._on_status_change(job.id, JobStatus.FAILED)
+            return
+        except ValueError as e:
+            # Data validation errors: don't retry
+            logger.error(
+                "Worker %s: Job %s validation error: %s - failing immediately",
+                self._id,
+                job.id,
+                e,
+            )
+            self._on_status_change(job.id, JobStatus.FAILED)
+            return
+        except Exception as e:
+            # Unknown errors: fail immediately (don't retry bugs)
+            logger.error(
+                "Worker %s: Job %s unexpected error: %s",
+                self._id,
+                job.id,
+                e,
+                exc_info=True,
+            )
+            self._on_status_change(job.id, JobStatus.FAILED)
+            return
 
     def _calculate_backoff(self, attempt: int) -> float:
         """

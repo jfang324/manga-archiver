@@ -81,8 +81,10 @@ class SelectionScreen(Screen):
             chapters: list[ProcessedChapter] = await self._mangadex_client.get_chapters(
                 self._manga_id
             )
-        except (NotFoundError, RateLimitError, ApiError) as e:
-            self.log.error(f"Error fetching chapters for SelectionScreen: {e}")
+        except RateLimitError:
+            self.notify("Too many requests. Please wait a moment.", severity="error")
+            return
+        except (NotFoundError, ApiError):
             self.notify("Error fetching chapters", severity="error")
             return
 

@@ -6,6 +6,8 @@ from .cli import parse_args
 from .utils import load_settings, setup_logging
 from .workers.manager import PipelineConfig
 
+logger = logging.getLogger(__name__)
+
 
 def main():
     setup_logging()
@@ -22,7 +24,7 @@ def main():
 
         app_config = load_settings()
     except Exception as e:
-        logging.error(f"Failed to load configs: {e}")
+        logger.error("Failed to load configs: %s", e)
         sys.exit(1)
 
     app = MangaDexDownloaderApp(

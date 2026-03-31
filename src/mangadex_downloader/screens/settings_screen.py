@@ -86,8 +86,8 @@ class SettingsScreen(Screen):
                 optimize=new_settings["optimize"],
                 data_saver=DEFAULT_DATA_SAVER,
             )
-        except ValueError as e:
-            self.app.notify(f"Invalid settings: {e}", severity="error")
+        except ValueError:
+            self.app.notify("Invalid settings values", severity="error")
             return
 
         self.post_message(SettingsScreen.ScheduleSettingsSave(config))
