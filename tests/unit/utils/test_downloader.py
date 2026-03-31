@@ -1,4 +1,5 @@
-from unittest.mock import AsyncMock, MagicMock
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -37,10 +38,8 @@ class TestDownloadClientDownloadImage:
 
         client = DownloadClient(mock_session)
 
-        with pytest.raises(DownloadError) as exc_info:
+        with pytest.raises(DownloadError, match="404"):
             await client.download_image("https://test.com/image.jpg")
-
-        assert "404" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_download_image_500_raises_error(self, mock_session):
@@ -51,16 +50,13 @@ class TestDownloadClientDownloadImage:
 
         client = DownloadClient(mock_session)
 
-        with pytest.raises(DownloadError) as exc_info:
+        with pytest.raises(DownloadError, match="500"):
             await client.download_image("https://test.com/image.jpg")
-
-        assert "500" in str(exc_info.value)
 
 
 class TestDownloadClientDownloadImages:
     @pytest.mark.asyncio
     async def test_download_images_success(self, mock_session):
-        """Test successful batch download of multiple images."""
         mock_response = MagicMock()
         mock_response.status = 200
         mock_response.read = AsyncMock(return_value=b"image_data")
@@ -108,5 +104,21 @@ class TestDownloadClientDownloadImages:
             "https://test.com/3.jpg",
         ]
 
-        with pytest.raises(DownloadError, match="404"):
+        tasks_created = []
+
+        original_create_task = asyncio.create_task
+
+        def fake_create_task(coro):
+            task = original_create_task(coro)
+            task.cancel = MagicMock(wraps=task.cancel)
+            tasks_created.append(task)
+            return task
+
+        with patch(
+            "asyncio.create_task", side_effect=fake_create_task
+        ) and pytest.raises(DownloadError, match="404"):
             await client.download_images(urls)
+
+        for task in tasks_created:
+            if not task.done():
+                task.cancel.assert_called_once()

@@ -10,6 +10,8 @@ from src.mangadex_downloader.enums import OutputFormat
 from src.mangadex_downloader.utils.multi_format_exporter import MultiFormatExporter
 
 
+## TODO: add stronger tests after adding support for more formats and refactoring
+# current test is weak and doesn't actually test the merging step
 class TestMultiFormatExporterGenerate:
     @patch("PIL.Image.open")
     def test_generate_with_valid_images(self, mock_image_open):
@@ -39,8 +41,33 @@ class TestMultiFormatExporterGenerate:
         temp_dir = Path(tempfile.gettempdir())
         exporter = MultiFormatExporter()
 
-        with pytest.raises(ValueError, match="Image data list cannot be empty"):
+        with pytest.raises(ValueError, match="cannot be empty"):
             exporter.generate([], temp_dir, "test", OutputFormat.PDF)
+
+    def test_generate_invalid_output_directory_raises_error(self):
+        temp_dir = Path(tempfile.gettempdir())
+        exporter = MultiFormatExporter()
+
+        with pytest.raises(ValueError, match="valid directory"):
+            exporter.generate(
+                [b"test_data"], temp_dir / "invalid", "test", OutputFormat.PDF
+            )
+
+    def test_generate_invalid_output_name_raises_error(self):
+        temp_dir = Path(tempfile.gettempdir())
+        exporter = MultiFormatExporter()
+
+        with pytest.raises(ValueError, match="cannot be empty"):
+            exporter.generate([b"test_data"], temp_dir, "", OutputFormat.PDF)
+
+    def test_generate_invalid_quality_raises_error(self):
+        temp_dir = Path(tempfile.gettempdir())
+        exporter = MultiFormatExporter()
+
+        with pytest.raises(ValueError, match="between 1 and 100"):
+            exporter.generate(
+                [b"test_data"], temp_dir, "test", OutputFormat.PDF, quality=0
+            )
 
     @patch("PIL.Image.open")
     def test_generate_converts_rgba_to_rgb(self, mock_image_open):
@@ -91,6 +118,7 @@ class TestMultiFormatExporterGenerate:
 
         assert result.startswith(str(temp_dir))
 
+    # TODO: add tests for other formats
     @patch("PIL.Image.open")
     def test_generate_uses_quality_and_optimize_settings(self, mock_image_open):
         temp_dir = Path(tempfile.gettempdir())

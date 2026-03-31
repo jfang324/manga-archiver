@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..enums import OutputFormat
+from ..enums import JobStatus, OutputFormat
 
 
 @dataclass
@@ -66,3 +66,21 @@ class MergingJob(Job):
 @dataclass
 class BenchmarkJob(Job):
     """Job for tracking job timing across the pipeline."""
+
+
+@dataclass
+class JobMetadata:
+    """Metadata for tracking job progress in the Downloads screen."""
+
+    chapter_id: str
+    manga_title: str
+    chapter_title: str
+    start_time: float  # initialized to -1 on enqueue, workers set to time.perf_counter_ns() on start
+    end_time: float  # initialized to -1 on enqueue, workers set to time.perf_counter_ns() on end
+
+
+@dataclass
+class NotificationJob(Job):
+    """Job for notifying status changes in the pipeline."""
+
+    status: JobStatus

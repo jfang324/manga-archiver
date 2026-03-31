@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -23,8 +23,8 @@ class TestBackoffCalculation:
             id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
             config=config,
+            notification_queue=AsyncMock(),
         )
 
         # Test backoff for attempts 0-4: 2, 4, 8, 16, 32
@@ -42,8 +42,8 @@ class TestBackoffCalculation:
             id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
             config=config,
+            notification_queue=AsyncMock(),
         )
 
         backoff = worker._calculate_backoff(0)
@@ -60,23 +60,21 @@ class TestBackoffCalculation:
             id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
             config=config,
+            notification_queue=AsyncMock(),
         )
 
         assert worker._calculate_backoff(0) == 5.0
         assert worker._calculate_backoff(1) == 10.0
         assert worker._calculate_backoff(2) == 20.0
 
-
-class TestWorkerLifecycle:
     def test_stop_sets_running_false(self):
         worker = ConcreteWorker(
             id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
             config=WorkerConfig(),
+            notification_queue=AsyncMock(),
         )
 
         # Initially running should be False (set in __init__)
@@ -95,10 +93,15 @@ class TestRetryLogic:
     @pytest.mark.asyncio
     async def test_retries_up_to_max_retries(self):
         config = WorkerConfig(max_retries=3, base_delay=0)
-        on_status_change = MagicMock()
 
         mock_job = MagicMock(spec=Job)
         mock_job.id = "test_job"
+        mock_job.manga_title = "Test Manga"
+        mock_job.chapter_title = "Chapter 1"
+        mock_job.output_directory = MagicMock()
+        mock_job.output_format = MagicMock()
+        mock_job.start_time = -1
+        mock_job.end_time = -1
 
         do_work_call_count = 0
 
@@ -112,8 +115,8 @@ class TestRetryLogic:
             id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=on_status_change,
             config=config,
+            notification_queue=AsyncMock(),
         )
 
         await worker._process_job(mock_job)
@@ -121,12 +124,19 @@ class TestRetryLogic:
         assert do_work_call_count == config.max_retries + 1
 
     @pytest.mark.asyncio
-    async def test_calls_on_status_change_failed_after_max_retries(self):
+    async def test_posts_failed_status_to_notification_queue_on_fail(self):
         config = WorkerConfig(max_retries=2, base_delay=0)
-        on_status_change = MagicMock()
 
         mock_job = MagicMock(spec=Job)
         mock_job.id = "test_job"
+        mock_job.manga_title = "Test Manga"
+        mock_job.chapter_title = "Chapter 1"
+        mock_job.output_directory = MagicMock()
+        mock_job.output_format = MagicMock()
+        mock_job.start_time = -1
+        mock_job.end_time = -1
+
+        mock_notification_queue = AsyncMock()
 
         class FailingWorker(Worker):
             async def _do_work(self, job: Job) -> Job | None:
@@ -136,21 +146,28 @@ class TestRetryLogic:
             id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=on_status_change,
             config=config,
+            notification_queue=mock_notification_queue,
         )
 
         await worker._process_job(mock_job)
 
-        on_status_change.assert_called_with("test_job", JobStatus.FAILED)
+        mock_notification_queue.put.assert_called_once()
+        call_args = mock_notification_queue.put.call_args[0][0]
+        assert call_args.status == JobStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_backoff_called_between_retries(self):
         config = WorkerConfig(max_retries=2, base_delay=0)
-        on_status_change = MagicMock()
 
         mock_job = MagicMock(spec=Job)
         mock_job.id = "test_job"
+        mock_job.manga_title = "Test Manga"
+        mock_job.chapter_title = "Chapter 1"
+        mock_job.output_directory = MagicMock()
+        mock_job.output_format = MagicMock()
+        mock_job.start_time = -1
+        mock_job.end_time = -1
 
         call_count = 0
 
@@ -164,10 +181,17 @@ class TestRetryLogic:
             id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=on_status_change,
             config=config,
+            notification_queue=AsyncMock(),
         )
 
-        await worker._process_job(mock_job)
+        mock_calculate_backoff = MagicMock(return_value=0.1)
 
-        assert call_count == config.max_retries + 1
+        with patch(
+            "src.mangadex_downloader.workers.base.Worker._calculate_backoff",
+            mock_calculate_backoff,
+        ):
+            await worker._process_job(mock_job)
+
+            assert call_count == config.max_retries + 1
+            assert mock_calculate_backoff.call_count == config.max_retries

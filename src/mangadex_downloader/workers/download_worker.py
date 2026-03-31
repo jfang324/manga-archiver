@@ -1,10 +1,9 @@
 from asyncio import Queue, Semaphore
-from typing import Callable
 
 from ..enums import JobStatus
 from ..utils import DownloadClient
 from .base import Worker, WorkerConfig
-from .jobs import DownloadingJob, Job, MergingJob
+from .jobs import DownloadingJob, Job, MergingJob, NotificationJob
 
 
 class DownloadWorker(Worker):
@@ -17,7 +16,7 @@ class DownloadWorker(Worker):
         id: str,
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
-        on_status_change: Callable[[str, JobStatus], None],
+        notification_queue: Queue[NotificationJob],
         config: WorkerConfig | None,
         download_client: DownloadClient,
         semaphore: Semaphore,
@@ -29,12 +28,12 @@ class DownloadWorker(Worker):
             id (str): The ID of the worker
             input_queue (Queue[Job]): The input queue for the worker
             output_queue (Queue[Job] | None): The output queue for the worker
-            on_status_change (Callable[[str, JobStatus], None]): The callback function for progress updates
+            notification_queue (Queue[NotificationJob]): The queue for notification jobs
             config (WorkerConfig): The configuration for the worker
             download_client (DownloadClient): The client for downloading images
             semaphore (Semaphore): The semaphore to use for global rate limiting
         """
-        super().__init__(id, input_queue, output_queue, on_status_change, config)
+        super().__init__(id, input_queue, output_queue, config, notification_queue)
 
         self._download_client = download_client
         self._semaphore = semaphore
@@ -75,7 +74,18 @@ class DownloadWorker(Worker):
         if not urls:
             raise ValueError(f"Invalid DownloadingJob missing urls: {job}")
 
-        self._on_status_change(job.id, JobStatus.DOWNLOADING)
+        await self._notification_queue.put(
+            NotificationJob(
+                id=job_id,
+                manga_title=manga_title,
+                chapter_title=chapter_title,
+                output_directory=output_directory,
+                output_format=output_format,
+                start_time=start_time,
+                end_time=end_time,
+                status=JobStatus.DOWNLOADING,
+            )
+        )
 
         async with self._semaphore:
             image_data: list[bytes] = await self._download_client.download_images(urls)

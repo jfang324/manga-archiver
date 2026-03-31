@@ -66,7 +66,6 @@ class MangaDexDownloaderApp(App):
         self._pipeline_manager = PipelineManager(
             self._mangadex_client,
             self._download_client,
-            lambda *args: None,
             config,
         )
 

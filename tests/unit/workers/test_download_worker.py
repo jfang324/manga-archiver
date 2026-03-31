@@ -19,7 +19,7 @@ class TestDownloadWorkerDoWork:
         mock_semaphore.__aenter__ = AsyncMock()
         mock_semaphore.__aexit__ = AsyncMock()
 
-        mock_on_status_change = MagicMock()
+        mock_notification_queue = AsyncMock()
 
         job = DownloadingJob(
             id="job_123",
@@ -38,7 +38,7 @@ class TestDownloadWorkerDoWork:
             id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=mock_on_status_change,
+            notification_queue=mock_notification_queue,
             config=MagicMock(),
         )
 
@@ -76,7 +76,7 @@ class TestDownloadWorkerDoWork:
             id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=MagicMock(),
         )
 
@@ -95,7 +95,7 @@ class TestDownloadWorkerDoWork:
         mock_semaphore.__aenter__ = AsyncMock()
         mock_semaphore.__aexit__ = AsyncMock()
 
-        mock_on_status_change = MagicMock()
+        mock_notification_queue = AsyncMock()
 
         job = DownloadingJob(
             id="job_123",
@@ -114,13 +114,15 @@ class TestDownloadWorkerDoWork:
             id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=mock_on_status_change,
+            notification_queue=mock_notification_queue,
             config=MagicMock(),
         )
 
         await worker._do_work(job)
 
-        mock_on_status_change.assert_called_once_with("job_123", JobStatus.DOWNLOADING)
+        mock_notification_queue.put.assert_called_once()
+        call_args = mock_notification_queue.put.call_args[0][0]
+        assert call_args.status == JobStatus.DOWNLOADING
 
     @pytest.mark.asyncio
     async def test_do_work_raises_error_for_missing_urls(self):
@@ -145,7 +147,7 @@ class TestDownloadWorkerDoWork:
             id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=MagicMock(),
         )
 
@@ -178,7 +180,7 @@ class TestDownloadWorkerDoWork:
             id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=MagicMock(),
         )
 
