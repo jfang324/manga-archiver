@@ -4,7 +4,6 @@ import random
 from abc import ABC, abstractmethod
 from asyncio import CancelledError, Queue
 from dataclasses import dataclass
-from typing import Callable
 
 from aiohttp import ClientError
 
@@ -13,7 +12,7 @@ from ..integrations.exceptions import (
     NotFoundError,
     RateLimitError,
 )
-from .jobs import Job
+from .jobs import Job, NotificationJob
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +45,8 @@ class Worker(ABC):
         id: str,
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
-        on_status_change: Callable[[str, JobStatus], None],
         config: WorkerConfig | None,
+        notification_queue: Queue[NotificationJob],
     ) -> None:
         """
         Initialize the worker
@@ -56,13 +55,13 @@ class Worker(ABC):
             id (str): The ID of the worker
             input_queue (Queue[Job]): The input queue for the worker
             output_queue (Queue[Job] | None): The output queue for the worker
-            on_status_change (Callable[[str, JobStatus], None]): The callback function for progress updates
             config (WorkerConfig): The configuration for the worker
+            notification_queue (Queue[NotificationJob]): The queue for notification jobs
         """
         self._id = id
         self._input_queue = input_queue
         self._output_queue = output_queue
-        self._on_status_change = on_status_change
+        self._notification_queue = notification_queue
 
         self._config = config or WorkerConfig()
         self._running = False
@@ -110,7 +109,9 @@ class Worker(ABC):
             next_job: Job | None = await self._do_work(job)
 
             if not self._output_queue or not next_job:
-                self._on_status_change(job.id, JobStatus.COMPLETED)
+                end_time = next_job.end_time if next_job else job.end_time
+                job.end_time = end_time
+                await self._send_notification(job, JobStatus.COMPLETED)
                 return
 
             await self._output_queue.put(next_job)
@@ -121,7 +122,7 @@ class Worker(ABC):
                 self._id,
                 job.id,
             )
-            self._on_status_change(job.id, JobStatus.FAILED)
+            await self._send_notification(job, JobStatus.FAILED)
             return
         except RateLimitError:
             # 429: Retry with standard backoff
@@ -144,7 +145,7 @@ class Worker(ABC):
                 job.id,
                 self._config.max_retries,
             )
-            self._on_status_change(job.id, JobStatus.FAILED)
+            await self._send_notification(job, JobStatus.FAILED)
             return
         except (TimeoutError, asyncio.TimeoutError, ClientError) as e:
             # Transient network errors: retry normally
@@ -168,7 +169,7 @@ class Worker(ABC):
                 job.id,
                 self._config.max_retries,
             )
-            self._on_status_change(job.id, JobStatus.FAILED)
+            await self._send_notification(job, JobStatus.FAILED)
             return
         except ValueError as e:
             # Data validation errors: don't retry
@@ -178,7 +179,7 @@ class Worker(ABC):
                 job.id,
                 e,
             )
-            self._on_status_change(job.id, JobStatus.FAILED)
+            await self._send_notification(job, JobStatus.FAILED)
             return
         except Exception as e:
             # Unknown errors: fail immediately (don't retry bugs)
@@ -189,8 +190,23 @@ class Worker(ABC):
                 e,
                 exc_info=True,
             )
-            self._on_status_change(job.id, JobStatus.FAILED)
+            await self._send_notification(job, JobStatus.FAILED)
             return
+
+    async def _send_notification(self, job: Job, status: JobStatus) -> None:
+        """Send a notification job to the notification queue."""
+        await self._notification_queue.put(
+            NotificationJob(
+                id=job.id,
+                manga_title=job.manga_title,
+                chapter_title=job.chapter_title,
+                output_directory=job.output_directory,
+                output_format=job.output_format,
+                start_time=job.start_time,
+                end_time=job.end_time,
+                status=status,
+            )
+        )
 
     def _calculate_backoff(self, attempt: int) -> float:
         """
@@ -221,7 +237,5 @@ class Worker(ABC):
         pass
 
     def stop(self) -> None:
-        """
-        Stop the worker.
-        """
+        """Stop the worker."""
         self._running = False

@@ -1,11 +1,10 @@
 import time
 from asyncio import Queue
-from typing import Callable
 
 from ..enums import JobStatus
 from ..utils import MultiFormatExporter
 from .base import Worker, WorkerConfig
-from .jobs import BenchmarkJob, Job, MergingJob
+from .jobs import BenchmarkJob, Job, MergingJob, NotificationJob
 
 
 class MergeWorker(Worker):
@@ -18,7 +17,7 @@ class MergeWorker(Worker):
         id: str,
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
-        on_status_change: Callable[[str, JobStatus], None],
+        notification_queue: Queue[NotificationJob],
         config: WorkerConfig | None,
         multi_format_exporter: MultiFormatExporter,
     ):
@@ -29,11 +28,11 @@ class MergeWorker(Worker):
             id (str): The ID of the worker
             input_queue (Queue[Job]): The input queue for the worker
             output_queue (Queue[Job] | None): The output queue for the worker
-            on_status_change (Callable[[str, JobStatus], None]): The callback function for progress updates
+            notification_queue (Queue[NotificationJob]): The queue for notification jobs
             config (WorkerConfig): The configuration for the worker
             pdf_generator (MultiFormatExporter): The exporter to use for merging
         """
-        super().__init__(id, input_queue, output_queue, on_status_change, config)
+        super().__init__(id, input_queue, output_queue, config, notification_queue)
 
         self._multi_format_exporter = multi_format_exporter
 
@@ -64,9 +63,6 @@ class MergeWorker(Worker):
             job.end_time,
         )
 
-        self._on_status_change(job.id, JobStatus.MERGING)
-
-        # Quick fail on malformed chapter titles, however this isn't strictly necessary instead we could use default value + a counter to prevent collisions
         try:
             chapter_number, stripped_title = chapter_title.split(" ", 1)
         except ValueError as e:
@@ -85,6 +81,21 @@ class MergeWorker(Worker):
             output_format=output_format,
         )
         end_time = time.perf_counter_ns()
+
+        # technically the merge is already done but either we send the notification early with inaccurate end_time
+        # or we send the notification late with accurate end_time
+        await self._notification_queue.put(
+            NotificationJob(
+                id=job_id,
+                manga_title=manga_title,
+                chapter_title=chapter_title,
+                output_directory=output_directory,
+                output_format=output_format,
+                start_time=start_time,
+                end_time=end_time,
+                status=JobStatus.MERGING,
+            )
+        )
 
         return BenchmarkJob(
             id=job_id,

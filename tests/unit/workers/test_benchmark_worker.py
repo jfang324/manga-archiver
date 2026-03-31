@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -10,12 +10,11 @@ from src.mangadex_downloader.workers.jobs import BenchmarkJob
 class TestBenchmarkWorkerDoWork:
     @pytest.mark.asyncio
     async def test_do_work_tracks_valid_job_timing(self):
-        """Test that valid job timing is recorded."""
         worker = BenchmarkWorker(
             id="benchmark_worker_0",
             input_queue=MagicMock(),
             output_queue=None,
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=WorkerConfig(),
         )
 
@@ -40,7 +39,7 @@ class TestBenchmarkWorkerDoWork:
             id="benchmark_worker_0",
             input_queue=MagicMock(),
             output_queue=None,
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=WorkerConfig(),
         )
 
@@ -64,7 +63,7 @@ class TestBenchmarkWorkerDoWork:
             id="benchmark_worker_0",
             input_queue=MagicMock(),
             output_queue=None,
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=WorkerConfig(),
         )
 
@@ -90,7 +89,7 @@ class TestBenchmarkWorkerDoWork:
             id="benchmark_worker_0",
             input_queue=MagicMock(),
             output_queue=None,
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=WorkerConfig(),
             expected_count=2,
             benchmark_callback=mock_callback,
@@ -120,7 +119,7 @@ class TestBenchmarkWorkerDoWork:
             id="benchmark_worker_0",
             input_queue=MagicMock(),
             output_queue=None,
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=WorkerConfig(),
             expected_count=3,
             benchmark_callback=mock_callback,
@@ -148,7 +147,7 @@ class TestBenchmarkWorkerDoWork:
             id="benchmark_worker_0",
             input_queue=MagicMock(),
             output_queue=None,
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=WorkerConfig(),
             expected_count=2,
             benchmark_callback=mock_callback,
@@ -171,7 +170,7 @@ class TestBenchmarkWorkerDoWork:
             id="benchmark_worker_0",
             input_queue=MagicMock(),
             output_queue=None,
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=WorkerConfig(),
             benchmark_callback=mock_callback,
         )
@@ -187,7 +186,7 @@ class TestBenchmarkWorkerDoWork:
             id="benchmark_worker_0",
             input_queue=MagicMock(),
             output_queue=None,
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=WorkerConfig(),
         )
 

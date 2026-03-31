@@ -62,10 +62,16 @@ class DownloadClient:
         Raises:
             DownloadError: If the download fails
         """
-        tasks = [self.download_image(url) for url in urls]
+        tasks = [asyncio.create_task(self.download_image(url)) for url in urls]
 
         try:
             return await asyncio.gather(*tasks)
-        except DownloadError as e:
+        except Exception as e:
             logger.error("Error downloading images: %s", e)
+
+            for task in tasks:
+                task.cancel()
+
+            await asyncio.gather(*tasks, return_exceptions=True)
+
             raise

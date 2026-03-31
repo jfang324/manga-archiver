@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import time
 import tracemalloc
 from asyncio import Queue, Semaphore
+from collections import deque
 from dataclasses import dataclass
 from typing import Callable
 
@@ -11,6 +13,7 @@ from ..constants.defaults import (
     DEFAULT_BENCHMARK_WORKERS,
     DEFAULT_DOWNLOAD_RATE_LIMIT,
     DEFAULT_DOWNLOAD_WORKERS,
+    DEFAULT_JOB_EXPIRY_SECONDS,
     DEFAULT_MERGE_WORKERS,
     DEFAULT_RESOLVE_RATE_LIMIT,
     DEFAULT_RESOLVE_WORKERS,
@@ -24,8 +27,11 @@ from .download_worker import DownloadWorker
 from .jobs import (
     FetchingResourcesJob,
     Job,
+    JobMetadata,
+    NotificationJob,
 )
 from .merge_worker import MergeWorker
+from .notification_worker import NotificationWorker
 from .resolve_worker import ResolveWorker
 
 logger = logging.getLogger(__name__)
@@ -64,7 +70,6 @@ class PipelineManager:
     Attributes:
         mangadex_api_client (MangaDexApiClient): The API client for MangaDex
         download_client (DownloadClient): The client for downloading images
-        on_status_change (Callable[[str, JobStatus], None]): The callback function for progress updates
         config (PipelineConfig): The configuration for the pipeline
     """
 
@@ -72,7 +77,6 @@ class PipelineManager:
         self,
         mangadex_api_client: MangaDexApiClient,
         download_client: DownloadClient,
-        on_status_change: Callable[[str, JobStatus], None],
         config: PipelineConfig,
         benchmark_callback: Callable[[float, float], None] | None = None,
     ):
@@ -82,7 +86,6 @@ class PipelineManager:
         Args:
             mangadex_api_client (MangaDexApiClient): The API client for MangaDex
             download_client (DownloadClient): The client for downloading images
-            on_status_change (Callable[[str, JobStatus], None]): The callback function for progress updates
             config (PipelineConfig): The configuration for the pipeline
             benchmark_callback (Callable[[float, float], None]): Optional callback for benchmark results
         """
@@ -90,6 +93,11 @@ class PipelineManager:
         self._download_queue: Queue[Job] = Queue()
         self._merge_queue: Queue[Job] = Queue()
         self._benchmark_queue: Queue[Job] = Queue()
+        self._notification_queue: Queue[NotificationJob] = Queue()
+
+        self._job_statuses: dict[str, tuple[JobStatus, JobMetadata]] = {}
+        self._job_expiry_queue: deque[tuple[float, str]] = deque()
+        self._job_expiry_seconds: int = DEFAULT_JOB_EXPIRY_SECONDS
 
         self._resolve_semaphore: Semaphore = Semaphore(config.resolve_rate_limit)
         self._download_semaphore: Semaphore = Semaphore(config.download_rate_limit)
@@ -99,7 +107,7 @@ class PipelineManager:
                 id=f"resolve_worker_{index}",
                 input_queue=self._resolve_queue,
                 output_queue=self._download_queue,
-                on_status_change=on_status_change,
+                notification_queue=self._notification_queue,
                 config=WorkerConfig(),
                 api_client=mangadex_api_client,
                 semaphore=self._resolve_semaphore,
@@ -111,7 +119,7 @@ class PipelineManager:
                 id=f"download_worker_{index}",
                 input_queue=self._download_queue,
                 output_queue=self._merge_queue,
-                on_status_change=on_status_change,
+                notification_queue=self._notification_queue,
                 config=WorkerConfig(),
                 download_client=download_client,
                 semaphore=self._download_semaphore,
@@ -125,7 +133,7 @@ class PipelineManager:
                 output_queue=(
                     self._benchmark_queue if config.benchmark_enabled else None
                 ),
-                on_status_change=on_status_change,
+                notification_queue=self._notification_queue,
                 config=WorkerConfig(),
                 multi_format_exporter=MultiFormatExporter(),
             )
@@ -136,6 +144,12 @@ class PipelineManager:
         self._track_memory = config.benchmark_enabled
         self._benchmark_callback = benchmark_callback
 
+        self._notification_worker = NotificationWorker(
+            id="notification_worker",
+            input_queue=self._notification_queue,
+            on_status_update=self._on_status_update,
+        )
+
         if config.benchmark_enabled:
             wrapped_callback = self._wrap_benchmark_callback(benchmark_callback)
             self._benchmark_pool = [
@@ -143,7 +157,7 @@ class PipelineManager:
                     id=f"benchmark_worker_{index}",
                     input_queue=self._benchmark_queue,
                     output_queue=None,
-                    on_status_change=on_status_change,
+                    notification_queue=self._notification_queue,
                     config=WorkerConfig(),
                     expected_count=config.benchmark_expected_count,
                     benchmark_callback=wrapped_callback,
@@ -151,9 +165,53 @@ class PipelineManager:
                 for index in range(DEFAULT_BENCHMARK_WORKERS)
             ]
 
+    def _on_status_update(
+        self, job_id: str, status: JobStatus, metadata: JobMetadata
+    ) -> None:
+        """
+        Callback to update job status in the internal dict with automatic expiry.
+        Modification of state MUST be done here to avoid race conditions.
+        """
+        self._job_statuses[job_id] = (status, metadata)
+
+        # Only add to expiry queue if terminal state
+        if status in (JobStatus.COMPLETED, JobStatus.FAILED):
+            self._job_expiry_queue.append((time.time(), job_id))
+
+        # Check oldest entries - O(1) amortized
+        while self._job_expiry_queue:
+            oldest_timestamp, oldest_job_id = self._job_expiry_queue[0]
+
+            if time.time() - oldest_timestamp > self._job_expiry_seconds:
+                self._job_expiry_queue.popleft()
+                self._job_statuses.pop(oldest_job_id, None)
+            else:
+                break
+
+    def get_jobs(self) -> dict[str, tuple[JobStatus, JobMetadata]]:
+        """Return a copy of the current job statuses."""
+        return self._job_statuses.copy()
+
     async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]):
+        # Sequential to maintain ordering; parallel would save negligible time
         for job in jobs:
-            await self._resolve_queue.put(job)
+            notification_job = NotificationJob(
+                id=job.chapter_id,
+                manga_title=job.manga_title,
+                chapter_title=job.chapter_title,
+                output_directory=job.output_directory,
+                output_format=job.output_format,
+                start_time=-1,
+                end_time=-1,
+                status=JobStatus.QUEUED,
+            )
+
+            await asyncio.gather(
+                *[
+                    self._notification_queue.put(notification_job),
+                    self._resolve_queue.put(job),
+                ]
+            )
 
     def _wrap_benchmark_callback(
         self, original_callback: Callable[[float, float], None] | None
@@ -180,7 +238,8 @@ class PipelineManager:
             tracemalloc.start()
 
         all_workers = (
-            self._resolve_pool
+            [self._notification_worker]
+            + self._resolve_pool
             + self._download_pool
             + self._merge_pool
             + self._benchmark_pool

@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -14,7 +14,7 @@ class TestMergeWorkerDoWork:
         mock_multi_format_exporter = MagicMock()
         mock_multi_format_exporter.generate.return_value = "/output/path/test.pdf"
 
-        mock_on_status_change = MagicMock()
+        mock_notification_queue = AsyncMock()
 
         job = MergingJob(
             id="job_123",
@@ -32,7 +32,7 @@ class TestMergeWorkerDoWork:
             id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=mock_on_status_change,
+            notification_queue=mock_notification_queue,
             config=MagicMock(),
         )
 
@@ -65,7 +65,7 @@ class TestMergeWorkerDoWork:
             id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=MagicMock(),
         )
 
@@ -83,7 +83,7 @@ class TestMergeWorkerDoWork:
         mock_multi_format_exporter = MagicMock()
         mock_multi_format_exporter.generate.return_value = "/output/path/test.pdf"
 
-        mock_on_status_change = MagicMock()
+        mock_notification_queue = AsyncMock()
 
         job = MergingJob(
             id="job_123",
@@ -101,13 +101,15 @@ class TestMergeWorkerDoWork:
             id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=mock_on_status_change,
+            notification_queue=mock_notification_queue,
             config=MagicMock(),
         )
 
         await worker._do_work(job)
 
-        mock_on_status_change.assert_called_once_with("job_123", JobStatus.MERGING)
+        mock_notification_queue.put.assert_called_once()
+        call_args = mock_notification_queue.put.call_args[0][0]
+        assert call_args.status == JobStatus.MERGING
 
     @pytest.mark.asyncio
     async def test_do_work_parses_chapter_title_with_number(self):
@@ -130,7 +132,7 @@ class TestMergeWorkerDoWork:
             id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=MagicMock(),
         )
 
@@ -163,7 +165,7 @@ class TestMergeWorkerDoWork:
             id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=MagicMock(),
         )
 
@@ -193,7 +195,7 @@ class TestMergeWorkerDoWork:
             id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=MagicMock(),
         )
 

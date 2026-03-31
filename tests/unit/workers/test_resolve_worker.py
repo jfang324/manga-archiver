@@ -2,7 +2,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.mangadex_downloader.enums import JobStatus
 from src.mangadex_downloader.workers.jobs import (
     DownloadingJob,
     FetchingResourcesJob,
@@ -24,7 +23,7 @@ class TestResolveWorkerDoWork:
         mock_semaphore.__aenter__ = AsyncMock()
         mock_semaphore.__aexit__ = AsyncMock()
 
-        mock_on_status_change = MagicMock()
+        mock_notification_queue = AsyncMock()
 
         job = FetchingResourcesJob(
             id="job_123",
@@ -43,7 +42,7 @@ class TestResolveWorkerDoWork:
             id="resolve_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=mock_on_status_change,
+            notification_queue=mock_notification_queue,
             config=MagicMock(),
         )
 
@@ -83,7 +82,7 @@ class TestResolveWorkerDoWork:
             id="resolve_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=MagicMock(),
         )
 
@@ -102,7 +101,7 @@ class TestResolveWorkerDoWork:
         mock_semaphore.__aenter__ = AsyncMock()
         mock_semaphore.__aexit__ = AsyncMock()
 
-        mock_on_status_change = MagicMock()
+        mock_notification_queue = AsyncMock()
 
         job = FetchingResourcesJob(
             id="job_123",
@@ -121,15 +120,13 @@ class TestResolveWorkerDoWork:
             id="resolve_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=mock_on_status_change,
+            notification_queue=mock_notification_queue,
             config=MagicMock(),
         )
 
         await worker._do_work(job)
 
-        mock_on_status_change.assert_called_once_with(
-            "job_123", JobStatus.FETCHING_RESOURCES
-        )
+        mock_notification_queue.put.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_do_work_raises_error_for_missing_chapter_id(self):
@@ -154,7 +151,7 @@ class TestResolveWorkerDoWork:
             id="resolve_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=MagicMock(),
         )
 
@@ -191,7 +188,7 @@ class TestResolveWorkerDoWork:
             id="resolve_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            on_status_change=MagicMock(),
+            notification_queue=AsyncMock(),
             config=MagicMock(),
         )
 

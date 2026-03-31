@@ -223,14 +223,75 @@ This means:
 - Close sessions when done to release resources
 
 ## Testing Patterns
+
+### Core Principles
+
+**Test behavior, not infrastructure.** Focus on what the code *does* (callback invoked
+with correct data, file written with correct content) rather than *how* it does it
+(queue processing, thread management).
+
+**No fake tests.** A test that doesn't actually run the code being tested is worthless:
+- Manually invoking a callback instead of letting the worker invoke it
+- Creating a worker but never calling `run()` or `_do_work()`
+- Mocking queue.get() to return a value, then manually calling the callback instead
+  of letting the worker call it
+
+**No half-baked assertions.** Verify actual values, not just types or existence:
+- Good: `assert config.quality == 75` or `mock_callback.assert_called_once_with(...)`
+- Bad: `assert isinstance(config, AppConfig)` (only checks type, not values)
+
+**No pointless tests.** Don't test framework behavior:
+- Don't test dataclass default values (Python handles this)
+- Don't test exception inheritance
+- Don't test that `pytest.raises` works
+
+### Testing Workers with Callbacks
+
+For workers that invoke callbacks (like NotificationWorker):
+
+```python
+# Mock queue to return a known job
+mock_queue = MagicMock()
+mock_queue.get = AsyncMock(return_value=NotificationJob(
+    id="job_123",
+    manga_title="Test Manga",
+    ...
+))
+
+# Create worker and run
+worker = NotificationWorker(..., input_queue=mock_queue, on_status_callback=mock_callback)
+await worker._do_work(await mock_queue.get())
+
+# Verify callback was invoked with correct extracted data
+mock_callback.assert_called_once_with("job_123", JobStatus.COMPLETED, expected_metadata)
+```
+
+This tests that job data flows correctly from queue → worker → callback, and that
+metadata is properly extracted.
+
+### Testing Utilities (File I/O, etc.)
+
+- Use temp directories for real file operations where possible
+- Only mock when simulating failures (OSError, corrupted JSON, etc.)
+- Verify actual content, not just "file exists"
+
+### Getting Default Values Dynamically
+
+```python
+default_config = AppConfig()  # Don't hardcode defaults
+assert config.quality == default_config.quality
+```
+
+### Test Structure
+
 - Tests in `tests/unit/` mirror the module structure
 - Test classes named after the module/function being tested
 - Test methods: `test_<operation>_<expected_result>`
-- Don't test framework behavior (dataclass defaults, exception inheritance)
 - For retry logic: test `_process_job()` directly, not full `run()` loop
 - Use `unittest.mock.AsyncMock` for async functions, `MagicMock` for sync
 - Use `@patch` decorator for mocking module-level functions
 - Async test methods use pytest-asyncio (`asyncio_mode = "auto"`)
+- Don't test framework behavior (dataclass defaults, exception inheritance)
 
 ## Special Considerations
 

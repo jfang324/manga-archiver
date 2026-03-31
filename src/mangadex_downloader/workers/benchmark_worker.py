@@ -3,7 +3,7 @@ from typing import Callable
 
 from ..enums import JobStatus
 from .base import Worker, WorkerConfig
-from .jobs import Job
+from .jobs import Job, NotificationJob
 
 
 class BenchmarkWorker(Worker):
@@ -14,7 +14,7 @@ class BenchmarkWorker(Worker):
         id: str,
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
-        on_status_change: Callable[[str, JobStatus], None],
+        notification_queue: Queue[NotificationJob],
         config: WorkerConfig | None = None,
         expected_count: int | None = None,
         benchmark_callback: Callable[[float, float], None] | None = None,
@@ -26,12 +26,12 @@ class BenchmarkWorker(Worker):
             id: The ID of the worker
             input_queue: The input queue for the worker
             output_queue: The output queue for the worker
-            on_status_change: The callback function for progress updates
+            notification_queue: The queue for notification jobs
             expected_count: Number of jobs expected in the benchmark
             benchmark_callback: Callback to invoke with (earliest_start, latest_end) when complete
             config: The configuration for the worker
         """
-        super().__init__(id, input_queue, output_queue, on_status_change, config)
+        super().__init__(id, input_queue, output_queue, config, notification_queue)
 
         self._expected_count = expected_count
         self._benchmark_callback = benchmark_callback
@@ -46,6 +46,19 @@ class BenchmarkWorker(Worker):
         """
         if job.start_time != -1 and job.end_time != -1:
             self._job_timings.append((job.start_time, job.end_time))
+
+        await self._notification_queue.put(
+            NotificationJob(
+                id=job.id,
+                manga_title=job.manga_title,
+                chapter_title=job.chapter_title,
+                output_directory=job.output_directory,
+                output_format=job.output_format,
+                start_time=job.start_time,
+                end_time=job.end_time,
+                status=JobStatus.COMPLETED,
+            )
+        )
 
         if (
             self._expected_count is not None

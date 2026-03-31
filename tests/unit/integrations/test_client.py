@@ -128,6 +128,7 @@ class TestMangaDexApiClientSearchManga:
 
         assert len(result) == len(mock_processed_manga_data)
         assert result[0]["title"] == "Attack on Titan"
+        assert result[0]["id"] == "1"
 
     @pytest.mark.asyncio
     async def test_search_manga_empty_results(self, mock_session):
@@ -169,6 +170,9 @@ class TestMangaDexApiClientGetChapters:
 
         # Should be sorted by chapter number
         assert len(result) == len(mock_processed_chapter_data)
+        assert result[0]["id"] == mock_processed_chapter_data[0]["id"]
+        assert result[0]["title"] == mock_processed_chapter_data[0]["title"]
+        assert result[0]["chapter"] == mock_processed_chapter_data[0]["chapter"]
 
     @pytest.mark.asyncio
     async def test_get_chapters_empty(self, mock_session):

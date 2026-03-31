@@ -50,7 +50,10 @@ def _create_app_config(settings_data: dict) -> AppConfig:
         logger.error(
             "Configuration validation failed: %s. Using default settings instead.", e
         )
-        return AppConfig()
+        # Use current working directory as fallback since DEFAULT_OUTPUT_PATH
+        # may not exist (e.g., CI environment or deleted Downloads folder).
+        # This is a safe fallback as cwd is guaranteed to exist.
+        return AppConfig(_output_path=Path.cwd())
 
 
 def load_settings() -> AppConfig:
