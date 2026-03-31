@@ -65,10 +65,12 @@ class TestLoadSettings:
 
     @patch("src.mangadex_downloader.utils.settings_manager._get_settings_path")
     @patch("src.mangadex_downloader.utils.settings_manager._get_default_settings")
+    @patch("src.mangadex_downloader.utils.settings_manager.DEFAULT_OUTPUT_PATH")
     def test_load_settings_returns_defaults_on_invalid_values(
-        self, mock_defaults, mock_get_path
+        self, mock_default_path, mock_defaults, mock_get_path
     ):
         temp_dir = tempfile.mkdtemp()
+        mock_default_path.__fspath__ = lambda: temp_dir
         temp_path = Path(temp_dir) / "settings.json"
         temp_path.write_text(json.dumps({"quality": 999}))
         mock_get_path.return_value = temp_path
