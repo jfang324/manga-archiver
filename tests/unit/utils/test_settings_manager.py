@@ -27,6 +27,8 @@ class TestLoadSettings:
         }
 
         config = settings_manager.load_settings()
+        # Must provide valid output_path since AppConfig validates it exists.
+        # In CI, DEFAULT_OUTPUT_PATH (/home/runner/Downloads) doesn't exist.
         default_config = AppConfig(_output_path=Path(temp_dir))
 
         assert config.quality == default_config.quality
@@ -52,6 +54,8 @@ class TestLoadSettings:
         }
 
         config = settings_manager.load_settings()
+        # Must provide valid output_path since AppConfig validates it exists.
+        # In CI, DEFAULT_OUTPUT_PATH (/home/runner/Downloads) doesn't exist.
         default_config = AppConfig(_output_path=Path(temp_dir))
 
         assert config.quality == default_config.quality
@@ -77,6 +81,8 @@ class TestLoadSettings:
         }
 
         config = settings_manager.load_settings()
+        # Must provide valid output_path since AppConfig validates it exists.
+        # In CI, DEFAULT_OUTPUT_PATH (/home/runner/Downloads) doesn't exist.
         default_config = AppConfig(_output_path=Path(temp_dir))
 
         assert config.quality == default_config.quality
