@@ -1,4 +1,5 @@
 from .directory_explorer import DirectoryExplorer
+from .favorites_panel import FavoritesPanel
 from .menu_selector import MenuSelector
 from .search_panel import SearchPanel
 from .selection_panel import SelectionPanel
@@ -10,4 +11,5 @@ __all__ = [
     "SelectionPanel",
     "SettingsPanel",
     "DirectoryExplorer",
+    "FavoritesPanel",
 ]

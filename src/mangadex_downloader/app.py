@@ -28,6 +28,7 @@ class MangaDexDownloaderApp(App):
 
     Attributes:
         pipeline_manager (PipelineManager | None): The pipeline manager instance
+        favorites: List of favorited manga with manga_id and manga_title
     """
 
     DEFAULT_CSS = """
@@ -40,6 +41,7 @@ class MangaDexDownloaderApp(App):
     BINDINGS = [("escape", "safe_pop_screen", "Go back")]
 
     _app_config: reactive[AppConfig] = reactive(AppConfig)
+    favorites: reactive[list[dict[str, str]]] = reactive([])
 
     def __init__(
         self,
@@ -52,8 +54,14 @@ class MangaDexDownloaderApp(App):
         self._pipeline_config = pipeline_config
         self._app_config = app_config
         self._pipeline_manager: PipelineManager | None = None
+        self.favorites = [
+            {"manga_id": "1", "manga_title": "Attack on Titan"},
+            {"manga_id": "2", "manga_title": "One Piece"},
+            {"manga_id": "3", "manga_title": "Naruto"},
+        ]
 
         self.mutate_reactive(MangaDexDownloaderApp._app_config)
+        self.mutate_reactive(MangaDexDownloaderApp.favorites)
 
     @work
     async def _setup_pipeline_manager(self) -> None:
@@ -104,7 +112,10 @@ class MangaDexDownloaderApp(App):
             name="settings_screen",
         )
         self.install_screen(DownloadsScreen(), name="downloads_screen")
-        self.install_screen(FavoritesScreen(), name="favorites_screen")
+        self.install_screen(
+            FavoritesScreen().data_bind(favorites=MangaDexDownloaderApp.favorites),
+            name="favorites_screen",
+        )
 
         self._setup_pipeline_manager()
         self.push_screen("menu_screen")
@@ -127,3 +138,24 @@ class MangaDexDownloaderApp(App):
             self.notify("Settings saved", severity="information")
         except ValueError:
             self.notify("Failed to save settings", severity="error")
+
+    @on(FavoritesScreen.Deleted)
+    def _on_favorite_deleted(self, event: FavoritesScreen.Deleted) -> None:
+        self.favorites = [f for f in self.favorites if f["manga_id"] != event.manga_id]
+        self.mutate_reactive(MangaDexDownloaderApp.favorites)
+        self.notify(
+            f"Removed '{event.manga_title}' from favorites", severity="information"
+        )
+
+    @on(FavoritesScreen.Selected)
+    def _on_favorite_selected(self, event: FavoritesScreen.Selected) -> None:
+        manga = {"id": event.manga_id, "title": event.manga_title}
+        self.push_screen(SelectionScreen(manga))  # type: ignore[arg-type]
+
+    @on(SearchScreen.FavoriteAdded)
+    def _on_favorite_added(self, event: SearchScreen.FavoriteAdded) -> None:
+        self.favorites.append(
+            {"manga_id": event.manga_id, "manga_title": event.manga_title}
+        )
+        self.mutate_reactive(MangaDexDownloaderApp.favorites)
+        self.notify(f"Added '{event.manga_title}' to favorites", severity="information")

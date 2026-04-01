@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Vertical
+from textual.message import Message
 from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Footer
@@ -31,6 +32,14 @@ class SearchScreen(Screen):
     """
 
     results: reactive[list[tuple[str, str]]] = reactive([])
+
+    class FavoriteAdded(Message):
+        """Message sent when a manga should be added to favorites."""
+
+        def __init__(self, manga_id: str, manga_title: str, **kwargs) -> None:
+            super().__init__(**kwargs)
+            self.manga_id = manga_id
+            self.manga_title = manga_title
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -76,3 +85,12 @@ class SearchScreen(Screen):
         manga: ProcessedManga = {"title": manga_title, "id": manga_id}
 
         self.app.push_screen(SelectionScreen(manga))
+
+    @on(SearchPanel.Favorite)
+    def _favorite_manga(self, event: SearchPanel.Favorite) -> None:
+        index = event.index
+        if index < 0 or index >= len(self.results):
+            return
+
+        title, manga_id = self.results[index]
+        self.post_message(self.FavoriteAdded(manga_id=manga_id, manga_title=title))

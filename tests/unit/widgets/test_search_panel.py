@@ -24,6 +24,7 @@ class SearchPanelApp(App):
         super().__init__()
         self.search_records: list[SearchPanel.Search] = []
         self.selected_records: list[SearchPanel.Selected] = []
+        self.favorite_records: list[SearchPanel.Favorite] = []
 
     def compose(self) -> ComposeResult:
         # smaller debounce duration to avoid sync issues
@@ -38,6 +39,10 @@ class SearchPanelApp(App):
     @on(SearchPanel.Selected)
     def _record_selected_message(self, message: SearchPanel.Selected) -> None:
         self.selected_records.append(message)
+
+    @on(SearchPanel.Favorite)
+    def _record_favorite_message(self, message: SearchPanel.Favorite) -> None:
+        self.favorite_records.append(message)
 
 
 class TestSearchPanel:
@@ -108,3 +113,20 @@ class TestSearchPanel:
 
             message = search_records.pop()
             assert message.query == "second"
+
+    async def test_favorite_action_sends_message(self) -> None:
+        app = SearchPanelApp()
+
+        async with app.run_test() as pilot:
+            panel = app.query_one(SearchPanel)
+            list_view = app.query_one("#search-results", ListView)
+
+            list_view.index = 0
+            panel.focus()
+            await pilot.pause()
+
+            panel.action_favorite()
+            await pilot.pause()
+
+            assert len(app.favorite_records) == 1
+            assert app.favorite_records[0].index == 0
