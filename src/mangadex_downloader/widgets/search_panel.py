@@ -98,6 +98,10 @@ class SearchPanel(Widget):
 
     results: reactive[list[tuple[str, str]]] = reactive([])
 
+    BINDINGS = [
+        ("ctrl+f", "favorite", "Favorite"),
+    ]
+
     class Search(Message):
         """
         Message to indicate that a search query has been made.
@@ -138,6 +142,18 @@ class SearchPanel(Widget):
 
             self.title = title
             self.value = value
+
+    class Favorite(Message):
+        """
+        Message to indicate that a search result should be favorited.
+
+        Attributes:
+            index (int): The index of the result to favorite
+        """
+
+        def __init__(self, index: int, **kwargs) -> None:
+            super().__init__(**kwargs)
+            self.index = index
 
     def __init__(self, debounce_duration: int = 500, **kwargs) -> None:
         """
@@ -202,3 +218,9 @@ class SearchPanel(Widget):
 
         title, value = self.results[index]
         self.post_message(self.Selected(title, value))
+
+    def action_favorite(self) -> None:
+        list_view = self.query_one("#search-results", ListView)
+        index = list_view.index
+        if index is not None and index >= 0:
+            self.post_message(self.Favorite(index))
