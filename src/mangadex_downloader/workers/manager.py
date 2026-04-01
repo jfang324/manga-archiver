@@ -192,6 +192,14 @@ class PipelineManager:
         """Return a copy of the current job statuses."""
         return self._job_statuses.copy()
 
+    def incomplete_job_count(self) -> int:
+        """Return the number of jobs not in a terminal state."""
+        return sum(
+            1
+            for status, _ in self._job_statuses.values()
+            if status not in (JobStatus.COMPLETED, JobStatus.FAILED)
+        )
+
     async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]):
         # Sequential to maintain ordering; parallel would save negligible time
         for job in jobs:
