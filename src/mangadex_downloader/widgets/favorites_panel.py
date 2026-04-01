@@ -1,3 +1,4 @@
+from textual import on
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.message import Message
@@ -42,7 +43,6 @@ class FavoritesPanel(Widget):
 
     BINDINGS = [
         ("ctrl+d", "delete", "Delete favorite"),
-        ("enter", "select", "Select favorite"),
     ]
 
     class DeleteAt(Message):
@@ -85,13 +85,14 @@ class FavoritesPanel(Widget):
         self._build_favorites(new_favorites)
 
     def action_delete(self) -> None:
-        list_view = self.query_one("#favorites-panel-list", ListView)
+        list_view: ListView = self.query_one("#favorites-panel-list", ListView)
         index = list_view.index
         if index is not None and index >= 0:
             self.post_message(self.DeleteAt(index))
 
-    def action_select(self) -> None:
-        list_view = self.query_one("#favorites-panel-list", ListView)
+    @on(ListView.Selected)
+    def _on_selected(self, event: ListView.Selected) -> None:
+        list_view: ListView = event.list_view
         index = list_view.index
         if index is not None and index >= 0:
             self.post_message(self.SelectAt(index))

@@ -10,6 +10,7 @@ A terminal-based tool that makes it easy to search for and download manga.
 
 - Textual-based terminal UI
 - Search for manga
+- Favorites for quick access to saved manga
 - Download chapters in PDF or CBZ format
 - Configurable output settings via in-app Settings screen
 - Asynchronous download pipeline with configurable workers
@@ -38,8 +39,8 @@ mangadex-downloader
 The application uses a menu-driven interface:
 
 - **Search**: Search for manga
-- **Favorites**: View saved favorites (coming soon)
-- **Downloads**: View download progress (coming soon)
+- **Favorites**: View saved favorites
+- **Downloads**: View download progress
 - **Settings**: Configure output settings
 
 Use arrow keys to navigate, Enter to select, and Escape to go back.
@@ -137,6 +138,7 @@ pyright
 - aiohttp
 - asyncio
 - Pillow
+- SQLite
 
 ### UI
 

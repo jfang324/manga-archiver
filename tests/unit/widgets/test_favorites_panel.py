@@ -71,12 +71,12 @@ class TestFavoritesPanel:
         app = FavoritesPanelApp()
 
         async with app.run_test() as pilot:
-            panel = app.query_one(FavoritesPanel)
             list_view = app.query_one("#favorites-panel-list", ListView)
 
             list_view.index = 1
 
-            panel.action_select()
+            await pilot.press("down")
+            await pilot.press("enter")
             await pilot.pause()
 
             assert len(app.select_at_records) == 1

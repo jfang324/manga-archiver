@@ -118,14 +118,10 @@ class TestSearchPanel:
         app = SearchPanelApp()
 
         async with app.run_test() as pilot:
-            panel = app.query_one(SearchPanel)
             list_view = app.query_one("#search-results", ListView)
-
             list_view.index = 0
-            panel.focus()
-            await pilot.pause()
 
-            panel.action_favorite()
+            app.query_one(SearchPanel).action_favorite()
             await pilot.pause()
 
             assert len(app.favorite_records) == 1
