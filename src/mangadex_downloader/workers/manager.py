@@ -247,6 +247,12 @@ class PipelineManager:
 
         await asyncio.gather(*[w.run() for w in all_workers])
 
-    async def stop(self):
-        for worker in self._resolve_pool:
+    def stop(self) -> None:
+        for worker in (
+            [self._notification_worker]
+            + self._resolve_pool
+            + self._download_pool
+            + self._merge_pool
+            + self._benchmark_pool
+        ):
             worker.stop()

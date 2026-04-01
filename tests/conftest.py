@@ -38,12 +38,3 @@ def mock_response():
     response.read = AsyncMock(return_value=b"mock_image_data")
 
     return response
-
-
-@pytest.fixture(autouse=True)
-def reset_session_manager():
-    from src.mangadex_downloader.utils.session_manager import SessionManager
-
-    SessionManager._session = None
-    yield
-    SessionManager._session = None

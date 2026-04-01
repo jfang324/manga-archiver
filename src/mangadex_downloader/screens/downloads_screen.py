@@ -1,3 +1,5 @@
+from typing import Callable
+
 from textual.app import ComposeResult
 from textual.reactive import reactive
 from textual.screen import Screen
@@ -23,6 +25,21 @@ class DownloadsScreen(Screen):
 
     jobs: reactive[dict[str, tuple[JobStatus, JobMetadata]]] = reactive({})
 
+    def __init__(
+        self,
+        get_jobs: Callable[[], dict[str, tuple[JobStatus, JobMetadata]]],
+        **kwargs,
+    ) -> None:
+        """
+        Initialize the DownloadsScreen.
+
+        Args:
+            get_jobs: Callable that returns the current job statuses
+        """
+        super().__init__(**kwargs)
+
+        self._get_jobs = get_jobs
+
     def compose(self) -> ComposeResult:
         yield DataTable(id="downloads_table", cursor_type="row")
         yield Footer()
@@ -33,13 +50,7 @@ class DownloadsScreen(Screen):
         self.set_interval(1, self._poll_jobs)
 
     def _poll_jobs(self) -> None:
-        # direct access is required as pipeline_manager cannot be a reactive and thus can't be data-bound
-        pipeline_manager = self.app._pipeline_manager  # type: ignore[attr-defined]
-        if not pipeline_manager:
-            return
-
-        jobs = pipeline_manager.get_jobs()
-        self.jobs = jobs
+        self.jobs = self._get_jobs()
 
     def watch_jobs(self) -> None:
         table = self.query_one(DataTable)

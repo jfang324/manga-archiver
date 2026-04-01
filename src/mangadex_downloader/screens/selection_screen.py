@@ -15,7 +15,6 @@ from ..integrations.mangadex.client import (
     RateLimitError,
 )
 from ..types import ProcessedChapter, ProcessedManga
-from ..utils.session_manager import SessionManager
 from ..widgets import SelectionPanel
 
 
@@ -30,7 +29,9 @@ class SelectionScreen(Screen):
     The selection screen of the application.
 
     Attributes:
-        manga (ProcessedManga): The selected manga that this screen is displaying chapters for.
+        _mangadex_client: API client for fetching chapter information
+        _manga_id: The ID of the manga to display chapters for
+        _manga_title: The title of the manga for display purposes
 
     Reactive Attributes:
         results (list[tuple[str | None, str, str]]): A list of chapters for the selected manga. Each result is a tuple of (title, chapter_id, chapter_number)
@@ -59,17 +60,19 @@ class SelectionScreen(Screen):
         []
     )  # chapter title, chapter id, chapter number
 
-    def __init__(self, manga: ProcessedManga, **kwargs) -> None:
+    def __init__(
+        self, manga: ProcessedManga, mangadex_client: MangaDexApiClient, **kwargs
+    ) -> None:
         """
         Initialize the SelectionScreen.
 
         Args:
             manga (ProcessedManga): The manga to display chapters for
+            mangadex_client (MangaDexApiClient): The API client for MangaDex
         """
         super().__init__(**kwargs)
 
-        self._session_manager = SessionManager().create_session()
-        self._mangadex_client = MangaDexApiClient(self._session_manager)
+        self._mangadex_client = mangadex_client
 
         self._manga_id = manga["id"]
         self._manga_title = manga["title"]

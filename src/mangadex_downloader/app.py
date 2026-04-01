@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import aiohttp
 from textual import on, work
 from textual.app import App
 from textual.reactive import reactive
@@ -16,12 +17,13 @@ from .screens import (
     SelectionScreen,
     SettingsScreen,
 )
-from .utils import DownloadClient, SessionManager, save_settings
+from .utils import DownloadClient, save_settings
 from .workers import PipelineConfig, PipelineManager
 from .workers.jobs import FetchingResourcesJob
 
 if TYPE_CHECKING:
     from .screens.selection_screen import PartialJob
+    from .types import ProcessedManga
 
 
 class MangaDexDownloaderApp(App):
@@ -71,16 +73,10 @@ class MangaDexDownloaderApp(App):
 
     @work
     async def _setup_pipeline_manager(self) -> None:
-        self._session_manager = SessionManager().create_session()
-        self._mangadex_client = MangaDexApiClient(self._session_manager)
-        self._download_client = DownloadClient(self._session_manager)
-
-        config = self._pipeline_config
-
         self._pipeline_manager = PipelineManager(
             self._mangadex_client,
             self._download_client,
-            config,
+            self._pipeline_config,
         )
 
         await self._pipeline_manager.start()
@@ -110,14 +106,27 @@ class MangaDexDownloaderApp(App):
 
         await self._pipeline_manager.enqueue_jobs(jobs)
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
+        self._session = aiohttp.ClientSession()
+        self._mangadex_client = MangaDexApiClient(self._session)
+        self._download_client = DownloadClient(self._session)
+
         self.install_screen(MenuScreen(), name="menu_screen")
-        self.install_screen(SearchScreen(), name="search_screen")
+        self.install_screen(SearchScreen(self._mangadex_client), name="search_screen")
         self.install_screen(
             SettingsScreen().data_bind(app_config=MangaDexDownloaderApp._app_config),
             name="settings_screen",
         )
-        self.install_screen(DownloadsScreen(), name="downloads_screen")
+        self.install_screen(
+            DownloadsScreen(
+                # Lambda captures self by reference; null guard handles the window
+                # between screen install and pipeline initialization
+                lambda: (
+                    self._pipeline_manager.get_jobs() if self._pipeline_manager else {}
+                )
+            ),
+            name="downloads_screen",
+        )
         self.install_screen(
             FavoritesScreen().data_bind(favorites=MangaDexDownloaderApp.favorites),
             name="favorites_screen",
@@ -125,6 +134,12 @@ class MangaDexDownloaderApp(App):
 
         self._setup_pipeline_manager()
         self.push_screen("menu_screen")
+
+    async def on_close(self) -> None:
+        if self._pipeline_manager:
+            self._pipeline_manager.stop()
+        if self._session:
+            await self._session.close()
 
     def action_safe_pop_screen(self) -> None:
         """A safe version of pop_screen that checks if the current screen is a MenuScreen before popping."""
@@ -161,8 +176,8 @@ class MangaDexDownloaderApp(App):
 
     @on(FavoritesScreen.Selected)
     def _on_favorite_selected(self, event: FavoritesScreen.Selected) -> None:
-        manga = {"id": event.manga_id, "title": event.manga_title}
-        self.push_screen(SelectionScreen(manga))  # type: ignore[arg-type]
+        manga: ProcessedManga = {"id": event.manga_id, "title": event.manga_title}
+        self.push_screen(SelectionScreen(manga, self._mangadex_client))
 
     @on(SearchScreen.FavoriteAdded)
     def _on_favorite_added(self, event: SearchScreen.FavoriteAdded) -> None:
