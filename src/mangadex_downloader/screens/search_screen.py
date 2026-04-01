@@ -20,12 +20,13 @@ from .selection_screen import SelectionScreen
 if TYPE_CHECKING:
     from ..types import ProcessedManga
 
-from ..utils import SessionManager
-
 
 class SearchScreen(Screen):
     """
     The search screen of the application.
+
+    Attributes:
+        _mangadex_client: API client for MangaDex searches
 
     Reactive Attributes:
         results (list[tuple[str, str]]): A list of results for the current query. Each result is a tuple of (title, manga_id)
@@ -41,11 +42,16 @@ class SearchScreen(Screen):
             self.manga_id = manga_id
             self.manga_title = manga_title
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, mangadex_client: MangaDexApiClient, **kwargs) -> None:
+        """
+        Initialize the SearchScreen.
+
+        Args:
+            mangadex_client: The API client for MangaDex searches
+        """
         super().__init__(**kwargs)
 
-        self._session_manager = SessionManager().create_session()
-        self._mangadex_client = MangaDexApiClient(self._session_manager)
+        self._mangadex_client = mangadex_client
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -58,10 +64,6 @@ class SearchScreen(Screen):
     @on(SearchPanel.Search)
     async def _search_query(self, event: SearchPanel.Search) -> None:
         query: str = event.query
-
-        if not self._mangadex_client:
-            self.log.error("MangaDex API client not initialized")
-            return
 
         try:
             search_results: list[
@@ -84,7 +86,7 @@ class SearchScreen(Screen):
         manga_id: str = event.value
         manga: ProcessedManga = {"title": manga_title, "id": manga_id}
 
-        self.app.push_screen(SelectionScreen(manga))
+        self.app.push_screen(SelectionScreen(manga, self._mangadex_client))
 
     @on(SearchPanel.Favorite)
     def _favorite_manga(self, event: SearchPanel.Favorite) -> None:
