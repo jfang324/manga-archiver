@@ -14,9 +14,8 @@ class QuitScreen(ModalScreen[bool]):
     }
 
     #dialog {
-        width: 50;
-        height: auto;
-        border: thick $background 80%;
+        width: 40%;
+        height: 40%;
         background: $surface;
         padding: 1 2;
     }
@@ -31,12 +30,10 @@ class QuitScreen(ModalScreen[bool]):
     #message {
         width: 1fr;
         content-align: center middle;
-        padding: 0 0 1 0;
+        padding: 0 1;
     }
 
     #buttons {
-        width: 1fr;
-        height: auto;
         align: center middle;
     }
 
