@@ -3,6 +3,7 @@ import sys
 
 from .app import MangaDexDownloaderApp
 from .cli import parse_args
+from .repositories import FavoriteRepository
 from .utils import load_settings, setup_logging
 from .workers.manager import PipelineConfig
 
@@ -27,9 +28,12 @@ def main():
         logger.error("Failed to load configs: %s", e)
         sys.exit(1)
 
+    favorite_repository = FavoriteRepository()
+
     app = MangaDexDownloaderApp(
         pipeline_config=pipeline_config,
         app_config=app_config,
+        favorite_repository=favorite_repository,
     )
     app.run()
 

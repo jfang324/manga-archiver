@@ -4,8 +4,10 @@ from textual import on, work
 from textual.app import App
 from textual.reactive import reactive
 
+from .db import init_db
 from .integrations import MangaDexApiClient
 from .models import AppConfig
+from .repositories import FavoriteRepository
 from .screens import (
     DownloadsScreen,
     FavoritesScreen,
@@ -47,6 +49,7 @@ class MangaDexDownloaderApp(App):
         self,
         pipeline_config: PipelineConfig,
         app_config: AppConfig,
+        favorite_repository: FavoriteRepository,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -54,11 +57,14 @@ class MangaDexDownloaderApp(App):
         self._pipeline_config = pipeline_config
         self._app_config = app_config
         self._pipeline_manager: PipelineManager | None = None
-        self.favorites = [
-            {"manga_id": "1", "manga_title": "Attack on Titan"},
-            {"manga_id": "2", "manga_title": "One Piece"},
-            {"manga_id": "3", "manga_title": "Naruto"},
-        ]
+        self._favorite_repository = favorite_repository
+
+        init_db()
+        try:
+            self.favorites = self._favorite_repository.get_all()
+        except Exception:
+            self.notify("Failed to load favorites from database", severity="error")
+            self.favorites = []
 
         self.mutate_reactive(MangaDexDownloaderApp._app_config)
         self.mutate_reactive(MangaDexDownloaderApp.favorites)
@@ -141,6 +147,12 @@ class MangaDexDownloaderApp(App):
 
     @on(FavoritesScreen.Deleted)
     def _on_favorite_deleted(self, event: FavoritesScreen.Deleted) -> None:
+        try:
+            self._favorite_repository.delete_by_id(event.manga_id)
+        except Exception:
+            self.notify("Failed to remove favorite", severity="error")
+            return
+
         self.favorites = [f for f in self.favorites if f["manga_id"] != event.manga_id]
         self.mutate_reactive(MangaDexDownloaderApp.favorites)
         self.notify(
@@ -154,6 +166,12 @@ class MangaDexDownloaderApp(App):
 
     @on(SearchScreen.FavoriteAdded)
     def _on_favorite_added(self, event: SearchScreen.FavoriteAdded) -> None:
+        try:
+            self._favorite_repository.create_one(event.manga_id, event.manga_title)
+        except Exception:
+            self.notify("Failed to add favorite", severity="error")
+            return
+
         self.favorites.append(
             {"manga_id": event.manga_id, "manga_title": event.manga_title}
         )
