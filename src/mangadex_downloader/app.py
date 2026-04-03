@@ -87,10 +87,10 @@ class MangaDexDownloaderApp(App):
         init_db()
 
         try:
-            self.favorites = self._favorite_repository.get_all()
+            self._favorites = self._favorite_repository.get_all()
         except Exception:
             self.notify("Failed to load favorites from database", severity="error")
-            self.favorites = []
+            self._favorites = []
 
         self.mutate_reactive(MangaDexDownloaderApp._app_config)
         self.mutate_reactive(MangaDexDownloaderApp._favorites)

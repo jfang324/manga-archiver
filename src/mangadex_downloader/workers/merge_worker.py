@@ -1,6 +1,5 @@
 import time
 from asyncio import Queue
-from pathlib import Path
 
 from ..enums import JobStatus
 from ..utils import MultiFormatExporter
@@ -87,11 +86,6 @@ class MergeWorker(Worker):
             output_format=output_format,
             return_bytes=self._output_queue is not None,
         )
-
-        if isinstance(file_data, list) and not file_data:
-            file_data = Path(output_directory / full_name).read_bytes()
-        elif isinstance(file_data, list):
-            file_data = file_data[0]
 
         end_time = time.perf_counter_ns()
 

@@ -118,7 +118,7 @@ class TestMultiFormatExporterGenerate:
 
         full_name, file_data = result
         assert full_name.startswith("test")
-        assert file_data == []
+        assert file_data == b""
 
     # TODO: add tests for other formats
     @patch("PIL.Image.open")

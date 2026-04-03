@@ -26,3 +26,13 @@ class OutputFormat(Enum):
     @classmethod
     def list_formats(cls) -> list[str]:
         return [format.value for format in cls]
+
+    @property
+    def mime_type(self) -> str:
+        return _MIME_TYPE_MAP[self]
+
+
+_MIME_TYPE_MAP = {
+    OutputFormat.PDF: "application/pdf",
+    OutputFormat.CBZ: "application/x-cbz",
+}

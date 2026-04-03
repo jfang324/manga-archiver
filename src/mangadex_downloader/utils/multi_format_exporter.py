@@ -2,6 +2,7 @@ import re
 import zipfile
 from io import BytesIO
 from pathlib import Path
+from typing import cast
 
 from PIL import Image
 
@@ -47,7 +48,7 @@ class MultiFormatExporter:
         quality: int = 75,
         optimize: bool = False,
         return_bytes: bool = False,
-    ) -> tuple[str, bytes | list[bytes]]:
+    ) -> tuple[str, bytes]:
         """Merge the image data list into a merged format.
 
         Loads images directly from bytes in memory without writing to disk.
@@ -62,9 +63,9 @@ class MultiFormatExporter:
             return_bytes: If True, return file bytes instead of writing to disk (default: False)
 
         Returns:
-            tuple[str, bytes | list[bytes]]: (full_name, file_bytes)
+            tuple[str, bytes]: (full_name, file_bytes)
                 - full_name: The full filename with extension
-                - file_bytes: If return_bytes=True, the file bytes; otherwise empty list
+                - file_bytes: If return_bytes=True, the file bytes; otherwise empty bytes
 
         Raises:
             ValueError: If any of the arguments are invalid
@@ -90,6 +91,8 @@ class MultiFormatExporter:
 
         images: list[Image.Image] = []
 
+        output_data: bytes = b""
+
         try:
             for image_data in image_data_list:
                 try:
@@ -106,47 +109,33 @@ class MultiFormatExporter:
                 raise ValueError("No valid images to generate output")
 
             if output_format == OutputFormat.CBZ:
-                if return_bytes:
-                    cbz_buffer = BytesIO()
-                    with zipfile.ZipFile(
-                        cbz_buffer, "w", compression=zipfile.ZIP_DEFLATED
-                    ) as cbz:
-                        for i, img in enumerate(images, start=1):
-                            img_buf = BytesIO()
-                            img.save(img_buf, format="PNG")
-                            img_buf.seek(0)
-                            cbz.writestr(f"page_{i:03}.png", img_buf.read())
-                    return full_name, cbz_buffer.getvalue()
-                else:
-                    with zipfile.ZipFile(
-                        full_output_path, "w", compression=zipfile.ZIP_DEFLATED
-                    ) as cbz:
-                        for i, img in enumerate(images, start=1):
-                            img_buf = BytesIO()
-                            img.save(img_buf, format="PNG")
-                            img_buf.seek(0)
-                            cbz.writestr(f"page_{i:03}.png", img_buf.read())
-            else:
-                if return_bytes:
-                    pdf_buffer = BytesIO()
-                    images[0].save(
-                        pdf_buffer,
-                        save_all=True,
-                        append_images=images[1:],
-                        quality=quality,
-                        optimize=optimize,
-                    )
-                    return full_name, pdf_buffer.getvalue()
-                else:
-                    images[0].save(
-                        full_output_path,
-                        save_all=True,
-                        append_images=images[1:],
-                        quality=quality,
-                        optimize=optimize,
-                    )
+                write_location = BytesIO() if return_bytes else full_output_path
+                with zipfile.ZipFile(
+                    write_location, "w", compression=zipfile.ZIP_DEFLATED
+                ) as cbz:
+                    for i, img in enumerate(images, start=1):
+                        img_buf = BytesIO()
+                        img.save(img_buf, format="PNG")
+                        img_buf.seek(0)
+                        cbz.writestr(f"page_{i:03}.png", img_buf.read())
 
-            return full_name, []
+                if return_bytes:
+                    output_data = cast("BytesIO", write_location).getvalue()
+            else:
+                write_location = BytesIO() if return_bytes else full_output_path
+                images[0].save(
+                    write_location,
+                    format=str(output_format),
+                    save_all=True,
+                    append_images=images[1:],
+                    quality=quality,
+                    optimize=optimize,
+                )
+
+                if return_bytes:
+                    output_data = cast("BytesIO", write_location).getvalue()
+
+            return full_name, output_data
         finally:
             for img in images:
                 img.close()

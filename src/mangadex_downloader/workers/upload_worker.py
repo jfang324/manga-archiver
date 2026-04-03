@@ -82,19 +82,11 @@ class UploadWorker(Worker):
                 )
             )
 
-            file_data = complete_file_data
-
-            mimetype = (
-                "application/vnd.comicbook+zip"
-                if full_name.endswith(".cbz")
-                else "application/pdf"
-            )
-
             uploaded_id = await self._google_drive_client.upload_file(
-                file_data=file_data,
+                file_data=complete_file_data,
                 file_name=full_name,
                 folder_id=folder_id,
-                mimetype=mimetype,
+                mimetype=output_format.mime_type,
             )
 
             end_time = time.perf_counter_ns()

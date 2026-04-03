@@ -94,7 +94,7 @@ class GoogleDriveClient:
         Returns:
             list[GoogleDriveDirectory]: List of folder dictionaries with 'id' and 'name' keys
         """
-        query = "mimeType='application/vnd.google-apps.folder' and trashed=false"
+        query = f"name='{ROOT_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
 
         results = (
             self._service.files()
