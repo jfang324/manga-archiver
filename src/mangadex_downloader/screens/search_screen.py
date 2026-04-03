@@ -8,12 +8,10 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Footer
 
-from ..integrations import (
-    ApiError,
+from ..integrations.content_providers import (
     MangaDexApiClient,
-    NotFoundError,
-    RateLimitError,
 )
+from ..integrations.exceptions import ApiError, NotFoundError, RateLimitError
 from ..widgets import SearchPanel
 from .selection_screen import SelectionScreen
 

@@ -4,6 +4,7 @@ from pathlib import Path
 
 
 def _get_db_path() -> Path:
+    """Get the path to the SQLite database file."""
     config_dir = Path(os.path.expanduser("~/.mangadex-downloader"))
     config_dir.mkdir(parents=True, exist_ok=True)
     return config_dir / "mangadex.db"
@@ -19,11 +20,13 @@ def init_db() -> None:
     with get_connection() as conn:
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS favorite_manga (
                 manga_id TEXT PRIMARY KEY,
                 manga_title TEXT NOT NULL
             )
-        """)
+        """
+        )
 
         conn.commit()

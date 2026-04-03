@@ -3,7 +3,7 @@ import time
 from asyncio import Queue
 
 from ..enums import JobStatus
-from ..integrations.google_drive import GoogleDriveClient
+from ..integrations.storage_providers.google_drive import GoogleDriveClient
 from .base import Worker, WorkerConfig
 from .jobs import Job, NotificationJob, UploadJob
 

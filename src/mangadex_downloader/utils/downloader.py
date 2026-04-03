@@ -3,9 +3,11 @@ import logging
 
 from aiohttp import ClientSession
 
-from ..integrations import DownloadError
-
 logger = logging.getLogger(__name__)
+
+
+class DownloadError(Exception):
+    """Raised when an image download fails."""
 
 
 class DownloadClient:

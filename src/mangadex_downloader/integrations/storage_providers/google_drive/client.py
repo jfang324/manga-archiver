@@ -8,45 +8,38 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseUpload
 
-logger = logging.getLogger(__name__)
+from .constants import (
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_ROOT_PAGE_SIZE,
+    DEFAULT_SUB_FOLDER_PAGE_SIZE,
+    ROOT_FOLDER_NAME,
+)
+from .types import GoogleApiStoredToken, GoogleDriveDirectory
 
-ROOT_FOLDER_NAME = "MangaDex-Downloader"
-DEFAULT_CHUNK_SIZE = 5 * 1024 * 1024  # 5MB chunks
-DEFAULT_ROOT_PAGE_SIZE = 1
-DEFAULT_SUB_FOLDER_PAGE_SIZE = 1
-DEFAULT_MAX_RETRIES = 5
+logger = logging.getLogger(__name__)
 
 
 class GoogleDriveClient:
-    """Client for interacting with Google Drive API for cloud storage.
-
-    Provides methods for folder management and file uploads to Google Drive.
-    Must call initialize() after construction before using other methods.
-    """
+    """Client for interacting with Google Drive API for cloud storage. Must call initialize() after construction before using other methods."""
 
     def __init__(
         self,
-        refresh_token: str,
-        client_id: str,
-        client_secret: str,
-        token_uri: str,
+        stored_token: GoogleApiStoredToken,
         max_retries: int = DEFAULT_MAX_RETRIES,
     ):
         """Initialize the Google Drive client.
 
         Args:
-            refresh_token: OAuth refresh token for authentication
-            client_id: OAuth client ID
-            client_secret: OAuth client secret
-            token_uri: OAuth token endpoint URL
+            stored_token: The token stored by the corresponding auth util
             max_retries: Maximum number of retries for failed uploads (default: 5)
         """
         self._credentials = Credentials(
             token=None,
-            refresh_token=refresh_token,
-            client_id=client_id,
-            client_secret=client_secret,
-            token_uri=token_uri,
+            refresh_token=stored_token["refresh_token"],
+            client_id=stored_token["client_id"],
+            client_secret=stored_token["client_secret"],
+            token_uri=stored_token["token_uri"],
         )
         self._service = build("drive", "v3", credentials=self._credentials)
         self._root_folder_id: str | None = None
@@ -60,10 +53,7 @@ class GoogleDriveClient:
         found, then caches all existing manga subfolders.
 
         Returns:
-            The ID of the root folder
-
-        Raises:
-            Exception: If initialization fails
+            str: The ID of the root folder
         """
         print("Initializing Google Drive...")
 
@@ -92,14 +82,16 @@ class GoogleDriveClient:
 
         return self._root_folder_id
 
-    def _get_root_folders(self, page_size: int | None = None) -> list[dict[str, str]]:
-        """List all folders in My Drive (the "drive" space).
+    def _get_root_folders(
+        self, page_size: int | None = None
+    ) -> list[GoogleDriveDirectory]:
+        """List all folders in My Drive.
 
         Args:
             page_size: Maximum number of results to return (default: None)
 
         Returns:
-            List of folder dictionaries with 'id' and 'name' keys
+            list[GoogleDriveDirectory]: List of folder dictionaries with 'id' and 'name' keys
         """
         query = "mimeType='application/vnd.google-apps.folder' and trashed=false"
 
@@ -107,17 +99,18 @@ class GoogleDriveClient:
             self._service.files()
             .list(
                 q=query,
-                spaces="drive",
+                spaces="drive",  # "drive" space is the root folder
                 fields="files(id, name)",
                 pageSize=page_size,
             )
             .execute()
         )
+
         return results.get("files", [])
 
     def _get_sub_folders(
         self, parent_id: str, page_size: int | None = None
-    ) -> list[dict[str, str]]:
+    ) -> list[GoogleDriveDirectory]:
         """List all subfolders under a specific folder by parent ID.
 
         Args:
@@ -125,7 +118,7 @@ class GoogleDriveClient:
             page_size: Maximum number of results to return (default: None)
 
         Returns:
-            List of folder dictionaries with 'id' and 'name' keys
+            list[GoogleDriveDirectory]: List of folder dictionaries with 'id' and 'name' keys
         """
         query = f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
 
@@ -138,6 +131,7 @@ class GoogleDriveClient:
             )
             .execute()
         )
+
         return results.get("files", [])
 
     def _create_folder_sync(self, name: str, parent_id: str | None = None) -> str:
@@ -148,7 +142,7 @@ class GoogleDriveClient:
             parent_id: The ID of the parent folder. If None, creates in My Drive root
 
         Returns:
-            The ID of the created folder
+            str: The ID of the created folder
         """
         metadata: dict = {
             "name": name,
@@ -158,6 +152,7 @@ class GoogleDriveClient:
             metadata["parents"] = [parent_id]
 
         folder = self._service.files().create(body=metadata).execute()
+
         return folder["id"]
 
     async def get_or_create_manga_folder(self, manga_title: str) -> str:
@@ -169,7 +164,7 @@ class GoogleDriveClient:
             manga_title: The title of the manga
 
         Returns:
-            The ID of the folder
+            str: The ID of the folder
 
         Raises:
             RuntimeError: If the client has not been initialized
@@ -184,6 +179,7 @@ class GoogleDriveClient:
             self._create_folder_sync, manga_title, self._root_folder_id
         )
         self._folder_cache[manga_title] = folder_id
+
         return folder_id
 
     def _upload_file_sync(
@@ -208,7 +204,7 @@ class GoogleDriveClient:
             attempts: Current attempt number for recursive retries (default: 1)
 
         Returns:
-            The ID of the uploaded file, or None if upload failed
+            str | None: The ID of the uploaded file, or None if upload failed
         """
         name = Path(file_name).stem
         extension = Path(file_name).suffix
@@ -244,6 +240,7 @@ class GoogleDriveClient:
                     file_name,
                 )
                 return None
+
             logger.error("Upload failed: %s", e)
             return None
 
@@ -265,7 +262,7 @@ class GoogleDriveClient:
             chunk_size: The chunk size for resumable upload (default: 5MB)
 
         Returns:
-            The ID of the uploaded file, or None if upload failed
+            str | None: The ID of the uploaded file, or None if upload failed
         """
         return await asyncio.to_thread(
             self._upload_file_sync,

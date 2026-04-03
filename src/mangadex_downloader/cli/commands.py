@@ -9,18 +9,8 @@ from ..constants.defaults import (
 )
 
 
-def positive_int(value: str) -> int:
-    """Validate that a string is a positive integer.
-
-    Args:
-        value: String value from command line
-
-    Returns:
-        The parsed integer value
-
-    Raises:
-        ArgumentTypeError: If value is not a valid positive integer
-    """
+def _positive_int(value: str) -> int:
+    """Validate that a string is a positive integer."""
     try:
         n = int(value)
     except ValueError as e:
@@ -38,7 +28,7 @@ def create_parser() -> ArgumentParser:
     Defines all CLI arguments and subcommands for the MangaDex Downloader.
 
     Returns:
-        Configured ArgumentParser instance
+        ArgumentParser: Configured ArgumentParser instance
     """
     parser = ArgumentParser(
         description="MangaDex Downloader - Download manga from MangaDex"
@@ -50,42 +40,40 @@ def create_parser() -> ArgumentParser:
     auth_subparsers = auth_parser.add_subparsers(
         dest="subcommand", help="Auth subcommands"
     )
-
     auth_subparsers.add_parser("login", help="Log in to Google Drive")
-
     auth_subparsers.add_parser("logout", help="Log out of Google Drive")
 
     parser.add_argument(
         "--resolve-workers",
-        type=positive_int,
+        type=_positive_int,
         default=DEFAULT_RESOLVE_WORKERS,
         help=f"Number of workers retrieving download resources (default: {DEFAULT_RESOLVE_WORKERS})",
     )
 
     parser.add_argument(
         "--download-workers",
-        type=positive_int,
+        type=_positive_int,
         default=DEFAULT_DOWNLOAD_WORKERS,
         help=f"Number of workers downloading images (default: {DEFAULT_DOWNLOAD_WORKERS})",
     )
 
     parser.add_argument(
         "--merge-workers",
-        type=positive_int,
+        type=_positive_int,
         default=DEFAULT_MERGE_WORKERS,
         help=f"Number of workers merging images into an output format (default: {DEFAULT_MERGE_WORKERS})",
     )
 
     parser.add_argument(
         "--resolve-rate-limit",
-        type=positive_int,
+        type=_positive_int,
         default=DEFAULT_RESOLVE_RATE_LIMIT,
         help=f"Global rate limit for resolve workers (default: {DEFAULT_RESOLVE_RATE_LIMIT})",
     )
 
     parser.add_argument(
         "--download-rate-limit",
-        type=positive_int,
+        type=_positive_int,
         default=DEFAULT_DOWNLOAD_RATE_LIMIT,
         help=f"Global rate limit for download workers (default: {DEFAULT_DOWNLOAD_RATE_LIMIT})",
     )
@@ -103,7 +91,7 @@ def parse_args() -> Namespace:
     """Parse command-line arguments.
 
     Returns:
-        Parsed arguments namespace
+        Namespace: Parsed command-line arguments
     """
     parser = create_parser()
 

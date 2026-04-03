@@ -3,7 +3,7 @@ import sys
 
 from .app import MangaDexDownloaderApp
 from .cli import parse_args
-from .integrations.google_drive import GoogleDriveClient
+from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .repositories import FavoriteRepository
 from .utils import load_settings, setup_logging
 from .utils.auth.google_drive import handle_auth_login, handle_auth_logout, load_token
@@ -45,12 +45,7 @@ def main():
             sys.exit(1)
 
         try:
-            google_drive_client = GoogleDriveClient(
-                refresh_token=token["refresh_token"],
-                client_id=token["client_id"],
-                client_secret=token["client_secret"],
-                token_uri=token["token_uri"],
-            )
+            google_drive_client = GoogleDriveClient(token)
             google_drive_client.initialize()
         except Exception as e:
             logger.error("Failed to initialize Google Drive: %s", e)

@@ -2,7 +2,7 @@ from asyncio import Queue, Semaphore
 from typing import TYPE_CHECKING
 
 from ..enums import JobStatus
-from ..integrations import MangaDexApiClient
+from ..integrations.content_providers import MangaDexApiClient
 from .base import Worker, WorkerConfig
 from .jobs import (
     DownloadingJob,

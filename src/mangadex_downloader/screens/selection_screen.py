@@ -8,7 +8,7 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Footer
 
-from ..integrations.mangadex.client import (
+from ..integrations.content_providers.mangadex.client import (
     ApiError,
     MangaDexApiClient,
     NotFoundError,

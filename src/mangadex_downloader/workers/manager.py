@@ -17,8 +17,8 @@ from ..constants.defaults import (
     DEFAULT_UPLOAD_WORKERS,
 )
 from ..enums import JobStatus
-from ..integrations import MangaDexApiClient
-from ..integrations.google_drive import GoogleDriveClient
+from ..integrations.content_providers import MangaDexApiClient
+from ..integrations.storage_providers.google_drive import GoogleDriveClient
 from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
 from .download_worker import DownloadWorker

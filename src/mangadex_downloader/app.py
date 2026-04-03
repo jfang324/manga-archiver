@@ -6,8 +6,8 @@ from textual.app import App
 from textual.reactive import reactive
 
 from .db import init_db
-from .integrations import MangaDexApiClient
-from .integrations.google_drive import GoogleDriveClient
+from .integrations.content_providers import MangaDexApiClient
+from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .models import AppConfig
 from .repositories import FavoriteRepository
 from .screens import (
