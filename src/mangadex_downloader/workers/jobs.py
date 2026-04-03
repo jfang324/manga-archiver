@@ -84,3 +84,11 @@ class NotificationJob(Job):
     """Job for notifying status changes in the pipeline."""
 
     status: JobStatus
+
+
+@dataclass
+class UploadJob(Job):
+    """Job for uploading merged files to a cloud storage provider."""
+
+    complete_file_data: list[bytes]
+    full_name: str

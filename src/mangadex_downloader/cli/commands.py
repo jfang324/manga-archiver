@@ -72,6 +72,12 @@ def create_parser() -> ArgumentParser:
         help=f"Global rate limit for download workers (default: {DEFAULT_DOWNLOAD_RATE_LIMIT})",
     )
 
+    parser.add_argument(
+        "--archive",
+        action="store_true",
+        help="Enable archive mode (upload to Google Drive instead of local save)",
+    )
+
     return parser
 
 

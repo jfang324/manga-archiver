@@ -8,21 +8,19 @@ from dataclasses import dataclass
 from typing import Callable
 
 from ..constants.defaults import (
-    DEFAULT_BENCHMARK_ENABLED,
-    DEFAULT_BENCHMARK_EXPECTED_COUNT,
-    DEFAULT_BENCHMARK_WORKERS,
     DEFAULT_DOWNLOAD_RATE_LIMIT,
     DEFAULT_DOWNLOAD_WORKERS,
     DEFAULT_JOB_EXPIRY_SECONDS,
     DEFAULT_MERGE_WORKERS,
     DEFAULT_RESOLVE_RATE_LIMIT,
     DEFAULT_RESOLVE_WORKERS,
+    DEFAULT_UPLOAD_WORKERS,
 )
 from ..enums import JobStatus
 from ..integrations import MangaDexApiClient
+from ..integrations.google_drive import GoogleDriveClient
 from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
-from .benchmark_worker import BenchmarkWorker
 from .download_worker import DownloadWorker
 from .jobs import (
     FetchingResourcesJob,
@@ -33,44 +31,41 @@ from .jobs import (
 from .merge_worker import MergeWorker
 from .notification_worker import NotificationWorker
 from .resolve_worker import ResolveWorker
+from .upload_worker import UploadWorker
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class PipelineConfig:
-    """
-    A data container for the configuration of a pipeline.
+    """A data container for the configuration of a pipeline.
 
     Attributes:
-        num_resolve_workers (int): The number of resolve workers to use
-        num_download_workers (int): The number of download workers to use
-        num_merge_workers (int): The number of merge workers to use
-        resolve_rate_limit (int): The global rate limit for resolve workers (requests per second)
-        download_rate_limit (int): The global rate limit for download workers (requests per second)
-        benchmark_enabled (bool): Whether to enable benchmark worker for timing
-        benchmark_expected_count (int): Number of jobs expected in benchmark
+        num_resolve_workers: The number of resolve workers to use
+        num_download_workers: The number of download workers to use
+        num_merge_workers: The number of merge workers to use
+        num_upload_workers: The number of upload workers to use
+        resolve_rate_limit: The global rate limit for resolve workers (requests per second)
+        download_rate_limit: The global rate limit for download workers (requests per second)
     """
 
     num_resolve_workers: int = DEFAULT_RESOLVE_WORKERS
     num_download_workers: int = DEFAULT_DOWNLOAD_WORKERS
     num_merge_workers: int = DEFAULT_MERGE_WORKERS
+    num_upload_workers: int = DEFAULT_UPLOAD_WORKERS
 
     resolve_rate_limit: int = DEFAULT_RESOLVE_RATE_LIMIT
     download_rate_limit: int = DEFAULT_DOWNLOAD_RATE_LIMIT
 
-    benchmark_enabled: bool = DEFAULT_BENCHMARK_ENABLED
-    benchmark_expected_count: int | None = DEFAULT_BENCHMARK_EXPECTED_COUNT
-
 
 class PipelineManager:
-    """
-    A class that controls the processing pipeline, managing and configuring workers and queues.
+    """A class that controls the processing pipeline, managing and configuring workers and queues.
 
     Attributes:
-        mangadex_api_client (MangaDexApiClient): The API client for MangaDex
-        download_client (DownloadClient): The client for downloading images
-        config (PipelineConfig): The configuration for the pipeline
+        mangadex_api_client: The API client for MangaDex
+        download_client: The client for downloading images
+        config: The configuration for the pipeline
+        google_drive_client: The Google Drive client for uploads (optional)
     """
 
     def __init__(
@@ -78,21 +73,21 @@ class PipelineManager:
         mangadex_api_client: MangaDexApiClient,
         download_client: DownloadClient,
         config: PipelineConfig,
+        google_drive_client: GoogleDriveClient | None = None,
         benchmark_callback: Callable[[float, float], None] | None = None,
     ):
-        """
-        Initialize the pipeline manager.
+        """Initialize the pipeline manager.
 
         Args:
-            mangadex_api_client (MangaDexApiClient): The API client for MangaDex
-            download_client (DownloadClient): The client for downloading images
-            config (PipelineConfig): The configuration for the pipeline
-            benchmark_callback (Callable[[float, float], None]): Optional callback for benchmark results
+            mangadex_api_client: The API client for MangaDex
+            download_client: The client for downloading images
+            config: The configuration for the pipeline
+            benchmark_callback: Optional callback for benchmark results
         """
         self._resolve_queue: Queue[Job] = Queue()
         self._download_queue: Queue[Job] = Queue()
         self._merge_queue: Queue[Job] = Queue()
-        self._benchmark_queue: Queue[Job] = Queue()
+        self._upload_queue: Queue[Job] = Queue()
         self._notification_queue: Queue[NotificationJob] = Queue()
 
         self._job_statuses: dict[str, tuple[JobStatus, JobMetadata]] = {}
@@ -130,9 +125,7 @@ class PipelineManager:
             MergeWorker(
                 id=f"merge_worker_{index}",
                 input_queue=self._merge_queue,
-                output_queue=(
-                    self._benchmark_queue if config.benchmark_enabled else None
-                ),
+                output_queue=self._upload_queue if google_drive_client else None,
                 notification_queue=self._notification_queue,
                 config=WorkerConfig(),
                 multi_format_exporter=MultiFormatExporter(),
@@ -140,30 +133,28 @@ class PipelineManager:
             for index in range(config.num_merge_workers)
         ]
 
-        self._benchmark_pool: list[BenchmarkWorker] = []
-        self._track_memory = config.benchmark_enabled
+        self._track_memory = False
         self._benchmark_callback = benchmark_callback
+
+        self._upload_pool: list[UploadWorker] = []
+        if google_drive_client:
+            self._upload_pool = [
+                UploadWorker(
+                    id=f"upload_worker_{index}",
+                    input_queue=self._upload_queue,
+                    output_queue=None,
+                    notification_queue=self._notification_queue,
+                    config=WorkerConfig(),
+                    google_drive_client=google_drive_client,
+                )
+                for index in range(config.num_upload_workers)
+            ]
 
         self._notification_worker = NotificationWorker(
             id="notification_worker",
             input_queue=self._notification_queue,
             on_status_update=self._on_status_update,
         )
-
-        if config.benchmark_enabled:
-            wrapped_callback = self._wrap_benchmark_callback(benchmark_callback)
-            self._benchmark_pool = [
-                BenchmarkWorker(
-                    id=f"benchmark_worker_{index}",
-                    input_queue=self._benchmark_queue,
-                    output_queue=None,
-                    notification_queue=self._notification_queue,
-                    config=WorkerConfig(),
-                    expected_count=config.benchmark_expected_count,
-                    benchmark_callback=wrapped_callback,
-                )
-                for index in range(DEFAULT_BENCHMARK_WORKERS)
-            ]
 
     def _on_status_update(
         self, job_id: str, status: JobStatus, metadata: JobMetadata
@@ -250,7 +241,7 @@ class PipelineManager:
             + self._resolve_pool
             + self._download_pool
             + self._merge_pool
-            + self._benchmark_pool
+            + self._upload_pool
         )
 
         await asyncio.gather(*[w.run() for w in all_workers])
@@ -261,6 +252,6 @@ class PipelineManager:
             + self._resolve_pool
             + self._download_pool
             + self._merge_pool
-            + self._benchmark_pool
+            + self._upload_pool
         ):
             worker.stop()

@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class WorkerConfig:
-    """
-    A data container for the configuration of a worker.
+    """A data container for the configuration of a worker.
 
     Attributes:
         max_retries (int): The maximum number of retries for failed downloads

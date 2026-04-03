@@ -1,16 +1,20 @@
 import time
 from asyncio import Queue
+from pathlib import Path
 
 from ..enums import JobStatus
 from ..utils import MultiFormatExporter
 from .base import Worker, WorkerConfig
-from .jobs import BenchmarkJob, Job, MergingJob, NotificationJob
+from .jobs import (
+    Job,
+    MergingJob,
+    NotificationJob,
+    UploadJob,
+)
 
 
 class MergeWorker(Worker):
-    """
-    Worker class for merging the downloaded images into a single PDF or CBZ
-    """
+    """Worker class for merging the downloaded images into a single PDF or CBZ."""
 
     def __init__(
         self,
@@ -21,27 +25,25 @@ class MergeWorker(Worker):
         config: WorkerConfig | None,
         multi_format_exporter: MultiFormatExporter,
     ):
-        """
-        Initialize the worker
+        """Initialize the worker.
 
         Args:
-            id (str): The ID of the worker
-            input_queue (Queue[Job]): The input queue for the worker
-            output_queue (Queue[Job] | None): The output queue for the worker
-            notification_queue (Queue[NotificationJob]): The queue for notification jobs
-            config (WorkerConfig): The configuration for the worker
-            pdf_generator (MultiFormatExporter): The exporter to use for merging
+            id: The ID of the worker
+            input_queue: The input queue for the worker
+            output_queue: The output queue for the worker
+            notification_queue: The queue for notification jobs
+            config: The configuration for the worker
+            multi_format_exporter: The exporter to use for merging
         """
         super().__init__(id, input_queue, output_queue, config, notification_queue)
 
         self._multi_format_exporter = multi_format_exporter
 
-    async def _do_work(self, job: MergingJob) -> BenchmarkJob:
-        """
-        Merge the downloaded images into a single PDF
+    async def _do_work(self, job: MergingJob) -> Job | None:
+        """Merge the downloaded images into a single PDF.
 
         Args:
-            job (MergingJob): The job to process
+            job: The job to process
         """
         (
             job_id,
@@ -71,19 +73,20 @@ class MergeWorker(Worker):
             ) from e
 
         chapter_number = chapter_number.rstrip(".")
+        stripped_title = stripped_title.rstrip(".")
 
         output_name: str = f"{manga_title} [{chapter_number}] - {stripped_title}"
 
-        self._multi_format_exporter.generate(
+        file_path = self._multi_format_exporter.generate(
             image_data_list=image_data,
             output_directory=output_directory,
             output_name=output_name,
             output_format=output_format,
         )
+
+        file_bytes = Path(file_path).read_bytes()
         end_time = time.perf_counter_ns()
 
-        # technically the merge is already done but either we send the notification early with inaccurate end_time
-        # or we send the notification late with accurate end_time
         await self._notification_queue.put(
             NotificationJob(
                 id=job_id,
@@ -97,7 +100,9 @@ class MergeWorker(Worker):
             )
         )
 
-        return BenchmarkJob(
+        full_name = f"{output_name}.{output_format.value}"
+
+        return UploadJob(
             id=job_id,
             manga_title=manga_title,
             chapter_title=stripped_title,
@@ -105,4 +110,6 @@ class MergeWorker(Worker):
             output_format=output_format,
             start_time=start_time,
             end_time=end_time,
+            complete_file_data=[file_bytes],
+            full_name=full_name,
         )

@@ -4,8 +4,9 @@ import sys
 from .app import MangaDexDownloaderApp
 from .cli import parse_args
 from .cli.auth import handle_auth_login, handle_auth_logout
+from .integrations.google_drive import GoogleDriveClient
 from .repositories import FavoriteRepository
-from .utils import load_settings, setup_logging
+from .utils import load_settings, load_token, setup_logging
 from .workers.manager import PipelineConfig
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,31 @@ def main():
             logger.error("Please specify 'auth login' or 'auth logout'")
             sys.exit(1)
 
+    google_drive_client = None
+
+    if args.archive:
+        token = load_token()
+        if token is None:
+            print(
+                "Archive mode requires authentication. Run: mangadex-downloader auth login"
+            )
+            sys.exit(1)
+
+        try:
+            google_drive_client = GoogleDriveClient(
+                refresh_token=token["refresh_token"],
+                client_id=token["client_id"],
+                client_secret=token["client_secret"],
+                token_uri=token["token_uri"],
+            )
+            google_drive_client.initialize()
+        except Exception as e:
+            logger.error("Failed to initialize Google Drive: %s", e)
+            print(
+                "Failed to initialize Google Drive. Run: mangadex-downloader auth logout && auth login"
+            )
+            sys.exit(1)
+
     try:
         pipeline_config = PipelineConfig(
             num_resolve_workers=args.resolve_workers,
@@ -48,6 +74,7 @@ def main():
         pipeline_config=pipeline_config,
         app_config=app_config,
         favorite_repository=favorite_repository,
+        google_drive_client=google_drive_client,
     )
     app.run()
 

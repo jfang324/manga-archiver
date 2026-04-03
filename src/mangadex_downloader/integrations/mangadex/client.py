@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from aiohttp import ClientSession
 
@@ -194,7 +193,7 @@ class MangaDexApiClient(Provider):
         for element in data:
             if "id" in element:
                 attributes = element.get("attributes", {})
-                title: Optional[str] = attributes.get("title")
+                title: str | None = attributes.get("title")
                 chapter: str = (
                     attributes.get("chapter")
                     if attributes.get("chapter") is not None

@@ -87,10 +87,9 @@ def handle_auth_login() -> int:
 
     if not os.path.exists(credentials_path):
         print(
-            "Credentials file not found: %s\n"
+            f"Credentials file not found: {credentials_path}\n"
             "Please download your OAuth client credentials from Google Cloud Console "
-            "and save them to this location.",
-            credentials_path,
+            "and save them to this location."
         )
         return 1
 
@@ -136,7 +135,14 @@ def handle_auth_login() -> int:
             print("Authentication timed out. Please try again.")
             return 1
         if result:
-            save_token({"refresh_token": result})
+            save_token(
+                {
+                    "refresh_token": result,
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "token_uri": TOKEN_URL,
+                }
+            )
             print("Authentication successful!")
             return 0
 

@@ -7,6 +7,7 @@ from textual.reactive import reactive
 
 from .db import init_db
 from .integrations import MangaDexApiClient
+from .integrations.google_drive import GoogleDriveClient
 from .models import AppConfig
 from .repositories import FavoriteRepository
 from .screens import (
@@ -53,6 +54,7 @@ class MangaDexDownloaderApp(App):
         pipeline_config: PipelineConfig,
         app_config: AppConfig,
         favorite_repository: FavoriteRepository,
+        google_drive_client: GoogleDriveClient | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -61,6 +63,7 @@ class MangaDexDownloaderApp(App):
         self._app_config = app_config
         self._pipeline_manager: PipelineManager | None = None
         self._favorite_repository = favorite_repository
+        self._google_drive_client = google_drive_client
 
         init_db()
         try:
@@ -78,6 +81,7 @@ class MangaDexDownloaderApp(App):
             self._mangadex_client,
             self._download_client,
             self._pipeline_config,
+            google_drive_client=self._google_drive_client,
         )
 
         await self._pipeline_manager.start()

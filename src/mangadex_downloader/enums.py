@@ -10,6 +10,7 @@ class JobStatus(Enum):
     FETCHING_RESOURCES = "fetching_resources"
     DOWNLOADING = "downloading"
     MERGING = "merging"
+    UPLOADING = "uploading"
     COMPLETED = "completed"
     FAILED = "failed"
 
