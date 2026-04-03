@@ -28,8 +28,10 @@ def main():
     if hasattr(args, "command") and args.command == "auth":
         if args.subcommand == "login":
             sys.exit(handle_auth_login())
+
         elif args.subcommand == "logout":
             sys.exit(handle_auth_logout())
+
         else:
             logger.error("Please specify 'auth login' or 'auth logout'")
             sys.exit(1)
@@ -38,6 +40,7 @@ def main():
 
     if args.archive:
         token = load_token()
+
         if token is None:
             print(
                 "Archive mode requires authentication. Run: mangadex-downloader auth login"

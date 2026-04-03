@@ -2,9 +2,7 @@ from enum import Enum
 
 
 class JobStatus(Enum):
-    """
-    An enum class for the status of a job.
-    """
+    """An enum class for the status of a job."""
 
     QUEUED = "queued"
     FETCHING_RESOURCES = "fetching_resources"
@@ -16,9 +14,7 @@ class JobStatus(Enum):
 
 
 class OutputFormat(Enum):
-    """
-    An enum class for the supported output formats.
-    """
+    """An enum class for the supported output formats."""
 
     PDF = "pdf"
     CBZ = "cbz"
