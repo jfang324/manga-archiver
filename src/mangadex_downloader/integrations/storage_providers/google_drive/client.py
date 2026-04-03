@@ -8,6 +8,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseUpload
 
+from ...exceptions import RateLimitError
 from .constants import (
     DEFAULT_CHUNK_SIZE,
     DEFAULT_MAX_RETRIES,
@@ -201,10 +202,10 @@ class GoogleDriveClient:
             folder_id: The ID of the destination folder
             mimetype: The MIME type of the file
             chunk_size: The chunk size for resumable upload (default: 5MB)
-            attempts: Current attempt number for recursive retries (default: 1)
+            attempts: Current attempt number for recursive retries in name collision (default: 1)
 
         Returns:
-            str | None: The ID of the uploaded file, or None if upload failed
+            str: The ID of the uploaded file
         """
         name = Path(file_name).stem
         extension = Path(file_name).suffix
@@ -223,6 +224,7 @@ class GoogleDriveClient:
                 .create(body=file_metadata, media_body=media)
                 .execute()
             )
+
             return file.get("id")
         except HttpError as e:
             if e.resp.status == 409:
@@ -239,10 +241,15 @@ class GoogleDriveClient:
                     "Upload failed: max retries exceeded due to file conflicts for %s",
                     file_name,
                 )
-                return None
 
-            logger.error("Upload failed: %s", e)
-            return None
+            if e.resp.status == 429:
+                logger.error(
+                    "Upload failed: rate limit exceeded after internal retries for %s",
+                    file_name,
+                )
+                raise RateLimitError(f"Rate limit exceeded: {file_name}") from e
+
+            raise
 
     async def upload_file(
         self,

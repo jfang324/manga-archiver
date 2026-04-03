@@ -15,7 +15,7 @@ from .constants import (
 )
 from .enums import GoogleAuthDeviceFlowResult
 from .token_storage import delete_token, load_token, save_token
-from .types import GoogleAuthCredentials, GoogleAuthDeviceCode
+from .types import GoogleApiStoredToken, GoogleAuthCredentials, GoogleAuthDeviceCode
 
 logger = logging.getLogger(__name__)
 
@@ -188,12 +188,12 @@ def handle_auth_login() -> int:
 
         if result:
             save_token(
-                {
-                    "refresh_token": str(result),
-                    "client_id": client_id,
-                    "client_secret": client_secret,
-                    "token_uri": TOKEN_URL,
-                }
+                GoogleApiStoredToken(
+                    token_uri=TOKEN_URL,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    refresh_token=str(result),
+                )
             )
             print("Authentication successful!")
             return 0

@@ -134,10 +134,9 @@ class MangaDexApiClient(Provider):
                     or self._get_nested(attributes, "title")
                     or "Unknown"
                 )
-                manga: ProcessedManga = {
-                    "title": title,
-                    "id": element["id"],
-                }
+                id = element["id"]
+
+                manga = ProcessedManga(title=title, id=id)
                 processed_manga_data.append(manga)
 
         return processed_manga_data
@@ -189,21 +188,13 @@ class MangaDexApiClient(Provider):
         for element in data:
             if "id" in element:
                 attributes = element.get("attributes", {})
-                title: str | None = attributes.get("title")
-                chapter: str = (
-                    attributes.get("chapter")
-                    if attributes.get("chapter") is not None
-                    else "0"
-                )
+                title: str = attributes.get("title", "")
+                chapter: str = attributes.get("chapter", "0")
 
                 if chapter not in already_contains:
                     already_contains.add(chapter)
                     processed_chapter_data.append(
-                        {
-                            "title": title,
-                            "id": element["id"],
-                            "chapter": chapter,
-                        }
+                        ProcessedChapter(title=title, id=element["id"], chapter=chapter)
                     )
 
         processed_chapter_data.sort(key=lambda x: float(x["chapter"]))
@@ -262,7 +253,4 @@ class MangaDexApiClient(Provider):
         for element in chapter_data[file_list_key]:
             download_urls.append(f"{base_url}/{url_quality}/{url_hash}/{element}")
 
-        return {
-            "urls": download_urls,
-            "hash": url_hash,
-        }
+        return ProcessedDownloadResource(urls=download_urls, hash=url_hash)

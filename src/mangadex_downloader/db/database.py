@@ -7,6 +7,7 @@ def _get_db_path() -> Path:
     """Get the path to the SQLite database file."""
     config_dir = Path(os.path.expanduser("~/.mangadex-downloader"))
     config_dir.mkdir(parents=True, exist_ok=True)
+
     return config_dir / "mangadex.db"
 
 

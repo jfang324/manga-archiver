@@ -7,8 +7,7 @@ LOG_DIR = Path(os.path.expanduser("~/.mangadex-downloader/logs"))
 
 
 def setup_logging() -> None:
-    """
-    Configure application logging with time-based rotation.
+    """Configure application logging with time-based rotation.
 
     Creates two log files with daily rotation:
     - debug.log: All DEBUG and above messages

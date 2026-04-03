@@ -12,7 +12,7 @@ class FavoritesPanel(Widget):
     A panel widget for displaying and interacting with favorited manga.
 
     Reactive Attributes:
-        favorites: List of favorited manga with manga_id and manga_title
+        favorites (list[dict[str, str]]): List of favorited manga with manga_id and manga_title
     """
 
     DEFAULT_CSS = """
@@ -46,14 +46,22 @@ class FavoritesPanel(Widget):
     ]
 
     class DeleteAt(Message):
-        """Message sent when delete action is triggered."""
+        """Message sent when delete action is triggered.
+
+        Attributes:
+            index (int): The index of the favorite to delete
+        """
 
         def __init__(self, index: int, **kwargs) -> None:
             super().__init__(**kwargs)
             self.index = index
 
     class SelectAt(Message):
-        """Message sent when select action is triggered."""
+        """Message sent when select action is triggered.
+
+        Attributes:
+            index (int): The index of the favorite to select
+        """
 
         def __init__(self, index: int, **kwargs) -> None:
             super().__init__(**kwargs)
@@ -87,6 +95,7 @@ class FavoritesPanel(Widget):
     def action_delete(self) -> None:
         list_view: ListView = self.query_one("#favorites-panel-list", ListView)
         index = list_view.index
+
         if index is not None and index >= 0:
             self.post_message(self.DeleteAt(index))
 
@@ -94,5 +103,6 @@ class FavoritesPanel(Widget):
     def _on_selected(self, event: ListView.Selected) -> None:
         list_view: ListView = event.list_view
         index = list_view.index
+
         if index is not None and index >= 0:
             self.post_message(self.SelectAt(index))

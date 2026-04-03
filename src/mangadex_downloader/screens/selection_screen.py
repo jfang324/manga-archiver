@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import NamedTuple, TypedDict
 
 from textual import on, work
 from textual.app import ComposeResult
@@ -17,7 +17,13 @@ from ..integrations.content_providers.mangadex.client import (
 from ..types import ProcessedChapter, ProcessedManga
 from ..widgets import SelectionPanel
 
-ChapterResult = tuple[str | None, str, str]
+
+class ChapterResult(NamedTuple):
+    """A tuple containing the title, ID, and chapter number of a chapter."""
+
+    title: str
+    id: str
+    chapter: str
 
 
 class PartialJob(TypedDict):
@@ -78,7 +84,7 @@ class SelectionScreen(Screen):
             return
 
         new_results: list[ChapterResult] = [
-            (chapter["title"], chapter["id"], chapter["chapter"])
+            ChapterResult(chapter["title"], chapter["id"], chapter["chapter"])
             for chapter in chapters
         ]
 
@@ -93,11 +99,11 @@ class SelectionScreen(Screen):
 
     def _queue_downloads(self, selected_chapters: list[tuple[str, str]]) -> None:
         partial_jobs: list[PartialJob] = [
-            {
-                "manga_title": self._manga_title,
-                "chapter_id": chapter_id,
-                "chapter_title": chapter_title,
-            }
+            PartialJob(
+                manga_title=self._manga_title,
+                chapter_id=chapter_id,
+                chapter_title=chapter_title,
+            )
             for chapter_title, chapter_id in selected_chapters
         ]
 

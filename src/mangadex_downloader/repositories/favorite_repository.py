@@ -17,7 +17,9 @@ class FavoriteRepository:
                 cursor.execute("SELECT manga_id, manga_title FROM favorite_manga")
                 rows = cursor.fetchall()
 
-                return [{"manga_id": row[0], "manga_title": row[1]} for row in rows]
+                return [
+                    FavoriteManga(manga_id=row[0], manga_title=row[1]) for row in rows
+                ]
         except Exception as e:
             logger.error("Failed to get favorites: %s", e)
             return []

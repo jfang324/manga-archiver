@@ -8,7 +8,7 @@ class ProcessedManga(TypedDict):
 
 class ProcessedChapter(TypedDict):
     id: str
-    title: str | None
+    title: str
     chapter: str
 
 

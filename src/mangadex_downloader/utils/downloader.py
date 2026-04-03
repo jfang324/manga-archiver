@@ -11,13 +11,10 @@ class DownloadError(Exception):
 
 
 class DownloadClient:
-    """
-    Client for downloading images from URLs.
-    """
+    """Client for downloading images from URLs."""
 
     def __init__(self, session: ClientSession) -> None:
-        """
-        Initialize the downloader with an HTTP session.
+        """Initialize the downloader with an HTTP session.
 
         Args:
             session: The aiohttp ClientSession to use for requests
@@ -25,8 +22,7 @@ class DownloadClient:
         self._session = session
 
     async def download_image(self, url: str) -> bytes:
-        """
-        Download a single image from the given URL.
+        """Download a single image from the given URL.
 
         Args:
             url: The URL of the image to download
@@ -52,14 +48,13 @@ class DownloadClient:
                 )
 
     async def download_images(self, urls: list[str]) -> list[bytes]:
-        """
-        Download multiple images concurrently from the given URLs.
+        """Download multiple images concurrently from the given URLs.
 
         Args:
             urls: The URLs of the images to download
 
         Returns:
-            List of binary data for each image
+            list[bytes]: List of binary data for each image
 
         Raises:
             DownloadError: If the download fails

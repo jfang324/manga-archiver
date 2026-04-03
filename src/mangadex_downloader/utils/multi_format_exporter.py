@@ -9,16 +9,13 @@ from ..enums import OutputFormat
 
 
 class MultiFormatExporter:
-    """
-    Exporter for merging images into a merged format.
-    """
+    """Exporter for merging images into a merged format."""
 
     def _sanitize(self, path: str) -> str:
-        """
-        Sanitize a path to be used as a filename.
+        """Sanitize a path to be used as a filename.
 
         Args:
-            path (str): The path to sanitize
+            path: The path to sanitize
 
         Returns:
             str: The sanitized path
@@ -50,17 +47,17 @@ class MultiFormatExporter:
         quality: int = 75,
         optimize: bool = False,
     ) -> str:
-        """
-        Merge the image data list into a merged format.
+        """Merge the image data list into a merged format.
+
         Loads images directly from bytes in memory without writing to disk.
 
         Args:
-            image_data_list (list[bytes]): The list of image data to merge
-            output_directory (Path): The directory to save the file
-            output_name (str): The name of the output file
-            output_format (OutputFormat): The format of the output file
-            quality (int): The quality of the PDF (1-100, default: 75)
-            optimize (bool): Whether to optimize PDF file size (default: False)
+            image_data_list: The list of image data to merge
+            output_directory: The directory to save the file
+            output_name: The name of the output file
+            output_format: The format of the output file
+            quality: The quality of the PDF (1-100, default: 75)
+            optimize: Whether to optimize PDF file size (default: False)
 
         Returns:
             str: The path to the generated file

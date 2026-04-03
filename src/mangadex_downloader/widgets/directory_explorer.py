@@ -18,8 +18,7 @@ class FilteredDirectoryTree(DirectoryTree):
 
 
 class DirectoryExplorer(Widget):
-    """
-    A DirectoryExplorer widget that allows the user to navigate through directories and select files.
+    """A DirectoryExplorer widget that allows the user to navigate through directories and select files.
 
     Reactive Attributes:
         current_directory (str): The directory path that will act as the root of the directory explorer
@@ -39,8 +38,7 @@ class DirectoryExplorer(Widget):
     current_directory: reactive[str] = reactive(".")
 
     class DirectoryChanged(Message):
-        """
-        Message to indicate that the current directory has changed
+        """Message to indicate that the current directory has changed
 
         Attributes:
             new_directory (str): The path of the new root directory
@@ -57,8 +55,8 @@ class DirectoryExplorer(Widget):
             Initializes the DirectoryChanged message
 
             Args:
-                new_directory (str): The path of the new root directory
-                control (Widget): A reference to the DirectoryExplorer widget
+                new_directory: The path of the new root directory
+                control: A reference to the DirectoryExplorer widget
             """
             super().__init__(**kwargs)
 

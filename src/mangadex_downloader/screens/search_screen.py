@@ -18,9 +18,16 @@ from .selection_screen import SelectionScreen
 if TYPE_CHECKING:
     from ..types import ProcessedManga
 
+from typing import NamedTuple
+
 from ..repositories import FavoriteManga
 
-SearchResult = tuple[str, str]
+
+class SearchResult(NamedTuple):
+    """A tuple containing the title and ID of a search result."""
+
+    title: str
+    id: str
 
 
 class SearchScreen(Screen):
@@ -78,14 +85,15 @@ class SearchScreen(Screen):
             self.notify("Error searching for manga", severity="error")
             return
 
-        new_results = [(item["title"], item["id"]) for item in search_results]
+        new_results = [
+            SearchResult(item["title"], item["id"]) for item in search_results
+        ]
         self.results = new_results
 
     @on(SearchPanel.Selected)
     def _navigate_to_chapter_screen(self, event: SearchPanel.Selected) -> None:
-        manga_title: str = event.title
-        manga_id: str = event.value
-        manga: ProcessedManga = {"title": manga_title, "id": manga_id}
+        title, id = event.title, event.value
+        manga: ProcessedManga = {"title": title, "id": id}
 
         self.app.push_screen(SelectionScreen(manga, self._mangadex_client))
 
@@ -95,7 +103,7 @@ class SearchScreen(Screen):
         if index < 0 or index >= len(self.results):
             return
 
-        title, manga_id = self.results[index]
-        favorited_manga: FavoriteManga = {"manga_id": manga_id, "manga_title": title}
+        title, id = self.results[index]
+        favorited_manga: FavoriteManga = {"manga_id": id, "manga_title": title}
 
         self.post_message(self.FavoriteAdded(favorited_manga))

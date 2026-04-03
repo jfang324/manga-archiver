@@ -9,11 +9,10 @@ from textual.widgets.selection_list import Selection
 
 
 class SelectionPanel(Widget):
-    """
-    A selection panel widget for selecting a value from a list.
+    """A selection panel widget for selecting a value from a list.
 
     Reactive Attributes:
-        options (list[tuple[str | None, str, str]]): A list of options to display in the SelectionList. This format is (title, value, chapter) matching the ProcessedChapter type
+        options (list[tuple[str, str, str]]): A list of options to display in the SelectionList. This format is (title, value, chapter) matching the ProcessedChapter type
     """
 
     DEFAULT_CSS = """
@@ -40,32 +39,29 @@ class SelectionPanel(Widget):
     ]
 
     class Selected(Message):
-        """
-        Message to indicate that a selection has been made.
+        """Message to indicate that a selection has been made.
 
         Attributes:
             selected_pairs (list[tuple[str, str]]): A list of selected (name, value) pairs
         """
 
         def __init__(self, selected_pairs: list[tuple[str, str]], **kwargs) -> None:
-            """
-            Initialize the Selected message.
+            """Initialize the Selected message.
 
             Args:
-                selected_pairs (list[tuple[str, str]]): A list of selected (name, value) pairs
+                selected_pairs: A list of selected (name, value) pairs
             """
             super().__init__(**kwargs)
 
             self.selected_pairs = selected_pairs
 
-    options: reactive[list[tuple[str | None, str, str]]] = reactive([])
+    options: reactive[list[tuple[str, str, str]]] = reactive([])
 
     def __init__(self, title: str, **kwargs) -> None:
-        """
-        Initialize the SelectionPanel widget.
+        """Initialize the SelectionPanel widget.
 
         Args:
-            title (str): The title of the widget
+            title: The title of the widget
         """
         super().__init__(**kwargs)
 
@@ -87,7 +83,7 @@ class SelectionPanel(Widget):
         selection_items: list[Selection] = []
 
         for title, value, chapter in options:
-            name = f"{chapter}. {title or ''}"
+            name = f"{chapter}. {title}"
 
             self._name_map[value] = name
             selection_items.append(Selection(name, value))
