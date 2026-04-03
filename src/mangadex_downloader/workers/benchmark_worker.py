@@ -15,7 +15,7 @@ class BenchmarkWorker(Worker):
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
-        config: WorkerConfig | None = None,
+        config: WorkerConfig,
         expected_count: int | None = None,
         benchmark_callback: Callable[[float, float], None] | None = None,
     ):
@@ -38,8 +38,7 @@ class BenchmarkWorker(Worker):
         self._job_timings: list[tuple[float, float]] = []
 
     async def _do_work(self, job: Job) -> None:
-        """
-        Track job timing and report when all jobs complete.
+        """Track job timing and report when all jobs complete.
 
         Args:
             job: The completed job to track
@@ -67,6 +66,7 @@ class BenchmarkWorker(Worker):
             self._report_benchmark()
 
     def _report_benchmark(self) -> None:
+        """Report the time elapsed between the first and last jobs."""
         if not self._job_timings:
             return
 

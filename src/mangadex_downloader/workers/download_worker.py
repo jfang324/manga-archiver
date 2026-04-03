@@ -7,9 +7,7 @@ from .jobs import DownloadingJob, Job, MergingJob, NotificationJob
 
 
 class DownloadWorker(Worker):
-    """
-    Worker class for downloading resources for a chapter
-    """
+    """Worker class for downloading resources for a chapter"""
 
     def __init__(
         self,
@@ -17,7 +15,7 @@ class DownloadWorker(Worker):
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
-        config: WorkerConfig | None,
+        config: WorkerConfig,
         download_client: DownloadClient,
         semaphore: Semaphore,
     ):
@@ -25,13 +23,13 @@ class DownloadWorker(Worker):
         Initialize the worker
 
         Args:
-            id (str): The ID of the worker
-            input_queue (Queue[Job]): The input queue for the worker
-            output_queue (Queue[Job] | None): The output queue for the worker
-            notification_queue (Queue[NotificationJob]): The queue for notification jobs
-            config (WorkerConfig): The configuration for the worker
-            download_client (DownloadClient): The client for downloading images
-            semaphore (Semaphore): The semaphore to use for global rate limiting
+            id: The ID of the worker
+            input_queue: The input queue for the worker
+            output_queue: The output queue for the worker
+            notification_queue: The queue for notification jobs
+            config: The configuration for the worker
+            download_client: The client for downloading images
+            semaphore: The semaphore to use for global rate limiting
         """
         super().__init__(id, input_queue, output_queue, config, notification_queue)
 
@@ -39,11 +37,10 @@ class DownloadWorker(Worker):
         self._semaphore = semaphore
 
     async def _do_work(self, job: DownloadingJob) -> MergingJob:
-        """
-        Download the resources from a list of URLs and enqueue them for merging
+        """Download the resources from a list of URLs and enqueue them for merging
 
         Args:
-            job (DownloadingJob): The job to process
+            job: The job to process
 
         Returns:
             MergingJob: The next job in the pipeline

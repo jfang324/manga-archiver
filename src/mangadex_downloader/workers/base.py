@@ -35,40 +35,35 @@ class WorkerConfig:
 
 
 class Worker(ABC):
-    """
-    The base worker class that all workers will implement
-    """
+    """The base worker class that all workers will implement."""
 
     def __init__(
         self,
         id: str,
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
-        config: WorkerConfig | None,
+        config: WorkerConfig,
         notification_queue: Queue[NotificationJob],
     ) -> None:
-        """
-        Initialize the worker
+        """Initialize the worker
 
         Args:
-            id (str): The ID of the worker
-            input_queue (Queue[Job]): The input queue for the worker
-            output_queue (Queue[Job] | None): The output queue for the worker
-            config (WorkerConfig): The configuration for the worker
-            notification_queue (Queue[NotificationJob]): The queue for notification jobs
+            id: The ID of the worker
+            input_queue: The input queue for the worker
+            output_queue: The output queue for the worker
+            config: The configuration for the worker
+            notification_queue: The queue for notification jobs
         """
         self._id = id
         self._input_queue = input_queue
         self._output_queue = output_queue
         self._notification_queue = notification_queue
 
-        self._config = config or WorkerConfig()
+        self._config = config
         self._running = False
 
     async def run(self) -> None:
-        """
-        Main loop - continuously pull jobs from the input queue and process them.
-        """
+        """Main loop - continuously pull jobs from the input queue and process them."""
         self._running = True
 
         while self._running:
@@ -97,12 +92,11 @@ class Worker(ABC):
                 break
 
     async def _process_job(self, job: Job, attempt: int = 0) -> None:
-        """
-        Process a job and update the status accordingly.
+        """Process a job and update the status accordingly.
 
         Args:
-            job (Job): The job to process
-            attempt (int): The current attempt number for retries
+            job: The job to process
+            attempt: The current attempt number for retries
         """
         try:
             next_job: Job | None = await self._do_work(job)
@@ -110,6 +104,7 @@ class Worker(ABC):
             if not self._output_queue or not next_job:
                 end_time = next_job.end_time if next_job else job.end_time
                 job.end_time = end_time
+
                 await self._send_notification(job, JobStatus.COMPLETED)
                 return
 
@@ -213,11 +208,10 @@ class Worker(ABC):
         )
 
     def _calculate_backoff(self, attempt: int) -> float:
-        """
-        Calculate exponential backoff with jitter.
+        """Calculate exponential backoff with jitter.
 
         Args:
-            attempt (int): The current attempt number
+            attempt: The current attempt number
 
         Returns:
             float: The calculated backoff in seconds
@@ -229,11 +223,10 @@ class Worker(ABC):
 
     @abstractmethod
     async def _do_work(self, job: Job) -> Job | None:
-        """
-        Do the actual work for a job.
+        """Do the actual work for a job.
 
         Args:
-            job (Job): The job to process
+            job: The job to process
 
         Returns:
             Job | None: The next job in the pipeline or None if this is the last step

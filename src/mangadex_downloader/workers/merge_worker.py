@@ -22,7 +22,7 @@ class MergeWorker(Worker):
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
-        config: WorkerConfig | None,
+        config: WorkerConfig,
         multi_format_exporter: MultiFormatExporter,
     ):
         """Initialize the worker.

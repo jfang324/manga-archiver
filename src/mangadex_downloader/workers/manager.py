@@ -41,12 +41,12 @@ class PipelineConfig:
     """A data container for the configuration of a pipeline.
 
     Attributes:
-        num_resolve_workers: The number of resolve workers to use
-        num_download_workers: The number of download workers to use
-        num_merge_workers: The number of merge workers to use
-        num_upload_workers: The number of upload workers to use
-        resolve_rate_limit: The global rate limit for resolve workers (requests per second)
-        download_rate_limit: The global rate limit for download workers (requests per second)
+        num_resolve_workers (int): The number of resolve workers to use
+        num_download_workers (int): The number of download workers to use
+        num_merge_workers (int): The number of merge workers to use
+        num_upload_workers (int): The number of upload workers to use
+        resolve_rate_limit (int): The global rate limit for resolve workers (requests per second)
+        download_rate_limit (int): The global rate limit for download workers (requests per second)
     """
 
     num_resolve_workers: int = DEFAULT_RESOLVE_WORKERS
@@ -59,14 +59,7 @@ class PipelineConfig:
 
 
 class PipelineManager:
-    """A class that controls the processing pipeline, managing and configuring workers and queues.
-
-    Attributes:
-        mangadex_api_client: The API client for MangaDex
-        download_client: The client for downloading images
-        config: The configuration for the pipeline
-        google_drive_client: The Google Drive client for uploads (optional)
-    """
+    """A class that controls the processing pipeline, managing and configuring workers and queues."""
 
     def __init__(
         self,
@@ -74,7 +67,6 @@ class PipelineManager:
         download_client: DownloadClient,
         config: PipelineConfig,
         google_drive_client: GoogleDriveClient | None = None,
-        benchmark_callback: Callable[[float, float], None] | None = None,
     ):
         """Initialize the pipeline manager.
 
@@ -133,10 +125,8 @@ class PipelineManager:
             for index in range(config.num_merge_workers)
         ]
 
-        self._track_memory = False
-        self._benchmark_callback = benchmark_callback
-
         self._upload_pool: list[UploadWorker] = []
+
         if google_drive_client:
             self._upload_pool = [
                 UploadWorker(
@@ -156,13 +146,12 @@ class PipelineManager:
             on_status_update=self._on_status_update,
         )
 
+        self._track_memory = False
+
     def _on_status_update(
         self, job_id: str, status: JobStatus, metadata: JobMetadata
     ) -> None:
-        """
-        Callback to update job status in the internal dict with automatic expiry.
-        Modification of state MUST be done here to avoid race conditions.
-        """
+        """Callback to update job status in the internal dict with automatic expiry. Modification of state MUST be done here to avoid race conditions."""
         self._job_statuses[job_id] = (status, metadata)
 
         # Only add to expiry queue if terminal state
@@ -236,7 +225,6 @@ class PipelineManager:
         """Start all workers in the pipeline.
 
         Launches all worker pools (resolve, download, merge, upload, notification)
-        and blocks until all workers complete.
         """
         if self._track_memory:
             tracemalloc.start()

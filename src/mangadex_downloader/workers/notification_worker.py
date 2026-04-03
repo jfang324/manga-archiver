@@ -10,11 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 class NotificationWorker:
-    """
-    Worker that tracks job statuses and updates the PipelineManager's job status dict.
+    """Worker that tracks job statuses and updates the PipelineManager's job status dict.
 
     Attributes:
-        on_status_update: Callback to update job status in PipelineManager
+        on_status_update (Callable[[str, JobStatus, JobMetadata], None]): Callback to update job status in PipelineManager
     """
 
     def __init__(

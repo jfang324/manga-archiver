@@ -18,9 +18,7 @@ import time
 
 
 class ResolveWorker(Worker):
-    """
-    Worker class for fetching and processing resources for a chapter
-    """
+    """Worker class for fetching and processing resources for a chapter"""
 
     def __init__(
         self,
@@ -28,7 +26,7 @@ class ResolveWorker(Worker):
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
-        config: WorkerConfig | None,
+        config: WorkerConfig,
         api_client: MangaDexApiClient,
         semaphore: Semaphore,
     ):
@@ -36,13 +34,13 @@ class ResolveWorker(Worker):
         Initialize the worker
 
         Args:
-            id (str): The ID of the worker
-            input_queue (Queue[Job]): The input queue for the worker
-            output_queue (Queue[Job] | None): The output queue for the worker
-            notification_queue (Queue[NotificationJob]): The queue for notification jobs
-            config (WorkerConfig): The configuration for the worker
-            api_client (MangaDexApiClient): The API client for MangaDex
-            semaphore (Semaphore): The semaphore to use for global rate limiting
+            id: The ID of the worker
+            input_queue: The input queue for the worker
+            output_queue: The output queue for the worker
+            notification_queue: The queue for notification jobs
+            config: The configuration for the worker
+            api_client: The API client for MangaDex
+            semaphore: The semaphore to use for global rate limiting
         """
         super().__init__(id, input_queue, output_queue, config, notification_queue)
 
@@ -50,11 +48,10 @@ class ResolveWorker(Worker):
         self._semaphore = semaphore
 
     async def _do_work(self, job: FetchingResourcesJob) -> DownloadingJob:
-        """
-        Fetch the resources process them and enqueue them for downloading
+        """Fetch the resources process them and enqueue them for downloading
 
         Args:
-            job (FetchingResourcesJob): The job to process
+            job: The job to process
 
         Returns:
             DownloadingJob: The next job in the pipeline
