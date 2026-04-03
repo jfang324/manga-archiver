@@ -233,6 +233,11 @@ class PipelineManager:
         return wrapped_callback
 
     async def start(self):
+        """Start all workers in the pipeline.
+
+        Launches all worker pools (resolve, download, merge, upload, notification)
+        and blocks until all workers complete.
+        """
         if self._track_memory:
             tracemalloc.start()
 
@@ -247,6 +252,10 @@ class PipelineManager:
         await asyncio.gather(*[w.run() for w in all_workers])
 
     def stop(self) -> None:
+        """Stop all workers in the pipeline.
+
+        Signals all workers to stop processing.
+        """
         for worker in (
             [self._notification_worker]
             + self._resolve_pool

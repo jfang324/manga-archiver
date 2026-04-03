@@ -40,10 +40,13 @@ class MergeWorker(Worker):
         self._multi_format_exporter = multi_format_exporter
 
     async def _do_work(self, job: MergingJob) -> Job | None:
-        """Merge the downloaded images into a single PDF.
+        """Merge the downloaded images into a single PDF or CBZ.
 
         Args:
-            job: The job to process
+            job: The merging job containing image data to process
+
+        Returns:
+            UploadJob for archive mode, or None if no output queue configured
         """
         (
             job_id,

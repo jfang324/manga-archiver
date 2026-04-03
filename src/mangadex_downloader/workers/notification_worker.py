@@ -37,6 +37,10 @@ class NotificationWorker:
         self._running = False
 
     async def run(self) -> None:
+        """Main loop for the notification worker.
+
+        Continuously pulls notification jobs from the queue and processes them.
+        """
         self._running = True
 
         while self._running:
@@ -49,6 +53,11 @@ class NotificationWorker:
                 break
 
     async def _do_work(self, job: NotificationJob) -> None:
+        """Process a notification job and update the job status.
+
+        Args:
+            job: The notification job containing status update information
+        """
         metadata = JobMetadata(
             chapter_id=job.id,
             manga_title=job.manga_title,
@@ -59,4 +68,5 @@ class NotificationWorker:
         self._on_status_update(job.id, job.status, metadata)
 
     def stop(self) -> None:
+        """Stop the notification worker."""
         self._running = False

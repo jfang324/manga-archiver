@@ -40,7 +40,7 @@ class UploadWorker(Worker):
         """Upload the merged file to Google Drive.
 
         Args:
-            job: The job to process
+            job: The upload job containing file data to upload
         """
         (
             job_id,

@@ -18,6 +18,12 @@ DEFAULT_MAX_RETRIES = 5
 
 
 class GoogleDriveClient:
+    """Client for interacting with Google Drive API for cloud storage.
+
+    Provides methods for folder management and file uploads to Google Drive.
+    Must call initialize() after construction before using other methods.
+    """
+
     def __init__(
         self,
         refresh_token: str,
@@ -26,6 +32,15 @@ class GoogleDriveClient:
         token_uri: str,
         max_retries: int = DEFAULT_MAX_RETRIES,
     ):
+        """Initialize the Google Drive client.
+
+        Args:
+            refresh_token: OAuth refresh token for authentication
+            client_id: OAuth client ID
+            client_secret: OAuth client secret
+            token_uri: OAuth token endpoint URL
+            max_retries: Maximum number of retries for failed uploads (default: 5)
+        """
         self._credentials = Credentials(
             token=None,
             refresh_token=refresh_token,
@@ -39,7 +54,17 @@ class GoogleDriveClient:
         self._max_retries = max_retries
 
     def initialize(self) -> str:
-        """Initialize and cache folders. Call after construction."""
+        """Initialize and cache folders from Google Drive.
+
+        Searches for the root MangaDex-Downloader folder, creates it if not
+        found, then caches all existing manga subfolders.
+
+        Returns:
+            The ID of the root folder
+
+        Raises:
+            Exception: If initialization fails
+        """
         print("Initializing Google Drive...")
 
         root_folders = self._get_root_folders(page_size=DEFAULT_ROOT_PAGE_SIZE)
@@ -68,7 +93,14 @@ class GoogleDriveClient:
         return self._root_folder_id
 
     def _get_root_folders(self, page_size: int | None = None) -> list[dict[str, str]]:
-        """List all folders in My Drive (the "drive" space)."""
+        """List all folders in My Drive (the "drive" space).
+
+        Args:
+            page_size: Maximum number of results to return (default: None)
+
+        Returns:
+            List of folder dictionaries with 'id' and 'name' keys
+        """
         query = "mimeType='application/vnd.google-apps.folder' and trashed=false"
 
         results = (
@@ -86,7 +118,15 @@ class GoogleDriveClient:
     def _get_sub_folders(
         self, parent_id: str, page_size: int | None = None
     ) -> list[dict[str, str]]:
-        """List all subfolders under a specific folder by parent ID."""
+        """List all subfolders under a specific folder by parent ID.
+
+        Args:
+            parent_id: The ID of the parent folder
+            page_size: Maximum number of results to return (default: None)
+
+        Returns:
+            List of folder dictionaries with 'id' and 'name' keys
+        """
         query = f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
 
         results = (
@@ -101,15 +141,14 @@ class GoogleDriveClient:
         return results.get("files", [])
 
     def _create_folder_sync(self, name: str, parent_id: str | None = None) -> str:
-        """
-        Create a new folder.
+        """Create a new folder in Google Drive.
 
         Args:
             name: The name of the folder to create
-            parent_id: The ID of the parent folder. If None, creates in My Drive root.
+            parent_id: The ID of the parent folder. If None, creates in My Drive root
 
         Returns:
-            The ID of the created folder.
+            The ID of the created folder
         """
         metadata: dict = {
             "name": name,
@@ -122,6 +161,19 @@ class GoogleDriveClient:
         return folder["id"]
 
     async def get_or_create_manga_folder(self, manga_title: str) -> str:
+        """Get or create a folder for a manga title.
+
+        Checks the cache first, then creates the folder in Google Drive if needed.
+
+        Args:
+            manga_title: The title of the manga
+
+        Returns:
+            The ID of the folder
+
+        Raises:
+            RuntimeError: If the client has not been initialized
+        """
         if manga_title in self._folder_cache:
             return self._folder_cache[manga_title]
 
@@ -143,6 +195,21 @@ class GoogleDriveClient:
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         attempts: int = 1,
     ) -> str | None:
+        """Upload a file to Google Drive (synchronous).
+
+        Handles file conflicts by retrying with modified filenames.
+
+        Args:
+            file_data: The file data to upload
+            file_name: The name of the file
+            folder_id: The ID of the destination folder
+            mimetype: The MIME type of the file
+            chunk_size: The chunk size for resumable upload (default: 5MB)
+            attempts: Current attempt number for recursive retries (default: 1)
+
+        Returns:
+            The ID of the uploaded file, or None if upload failed
+        """
         name = Path(file_name).stem
         extension = Path(file_name).suffix
 
@@ -188,6 +255,18 @@ class GoogleDriveClient:
         mimetype: str,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
     ) -> str | None:
+        """Upload a file to Google Drive (asynchronous).
+
+        Args:
+            file_data: The file data to upload
+            file_name: The name of the file
+            folder_id: The ID of the destination folder
+            mimetype: The MIME type of the file
+            chunk_size: The chunk size for resumable upload (default: 5MB)
+
+        Returns:
+            The ID of the uploaded file, or None if upload failed
+        """
         return await asyncio.to_thread(
             self._upload_file_sync,
             file_data,

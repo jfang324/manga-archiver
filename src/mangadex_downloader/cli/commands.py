@@ -10,6 +10,17 @@ from ..constants.defaults import (
 
 
 def positive_int(value: str) -> int:
+    """Validate that a string is a positive integer.
+
+    Args:
+        value: String value from command line
+
+    Returns:
+        The parsed integer value
+
+    Raises:
+        ArgumentTypeError: If value is not a valid positive integer
+    """
     try:
         n = int(value)
     except ValueError as e:
@@ -22,6 +33,13 @@ def positive_int(value: str) -> int:
 
 
 def create_parser() -> ArgumentParser:
+    """Create the command-line argument parser.
+
+    Defines all CLI arguments and subcommands for the MangaDex Downloader.
+
+    Returns:
+        Configured ArgumentParser instance
+    """
     parser = ArgumentParser(
         description="MangaDex Downloader - Download manga from MangaDex"
     )
@@ -82,6 +100,11 @@ def create_parser() -> ArgumentParser:
 
 
 def parse_args() -> Namespace:
+    """Parse command-line arguments.
+
+    Returns:
+        Parsed arguments namespace
+    """
     parser = create_parser()
 
     return parser.parse_args()

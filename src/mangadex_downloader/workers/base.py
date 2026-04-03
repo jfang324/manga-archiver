@@ -193,7 +193,12 @@ class Worker(ABC):
             return
 
     async def _send_notification(self, job: Job, status: JobStatus) -> None:
-        """Send a notification job to the notification queue."""
+        """Send a notification job to the notification queue.
+
+        Args:
+            job: The job to send notification for
+            status: The status to report
+        """
         await self._notification_queue.put(
             NotificationJob(
                 id=job.id,

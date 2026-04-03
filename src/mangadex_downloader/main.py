@@ -3,16 +3,21 @@ import sys
 
 from .app import MangaDexDownloaderApp
 from .cli import parse_args
-from .cli.auth import handle_auth_login, handle_auth_logout
 from .integrations.google_drive import GoogleDriveClient
 from .repositories import FavoriteRepository
-from .utils import load_settings, load_token, setup_logging
+from .utils import load_settings, setup_logging
+from .utils.auth.google_drive import handle_auth_login, handle_auth_logout, load_token
 from .workers.manager import PipelineConfig
 
 logger = logging.getLogger(__name__)
 
 
 def main():
+    """Main entry point for the MangaDex Downloader CLI.
+
+    Parses command-line arguments, initializes the Google Drive client
+    if in archive mode, and launches the Textual UI application.
+    """
     setup_logging()
 
     try:
