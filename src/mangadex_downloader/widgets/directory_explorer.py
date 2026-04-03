@@ -64,6 +64,11 @@ class DirectoryExplorer(Widget):
             self._control = control
 
     def __init__(self, title: str, **kwargs) -> None:
+        """Initialize the DirectoryExplorer.
+
+        Args:
+            title: The title to display on the directory explorer's border
+        """
         super().__init__(**kwargs)
 
         self.border_title = title
