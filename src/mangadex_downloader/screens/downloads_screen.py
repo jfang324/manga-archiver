@@ -8,9 +8,15 @@ from textual.widgets import DataTable, Footer
 from ..enums import JobStatus
 from ..workers.jobs import JobMetadata
 
+JobStatusRecord = tuple[JobStatus, JobMetadata]
+
 
 class DownloadsScreen(Screen):
-    """Downloads screen showing real-time job status updates."""
+    """Downloads screen showing real-time job status updates.
+
+    Reactive Attributes:
+        jobs (dict[str, JobStatusRecord]): Dictionary of job IDs to tuples of (status, metadata)
+    """
 
     DEFAULT_CSS = """
     DownloadsScreen {
@@ -23,15 +29,14 @@ class DownloadsScreen(Screen):
     }
     """
 
-    jobs: reactive[dict[str, tuple[JobStatus, JobMetadata]]] = reactive({})
+    jobs: reactive[dict[str, JobStatusRecord]] = reactive({})
 
     def __init__(
         self,
-        get_jobs: Callable[[], dict[str, tuple[JobStatus, JobMetadata]]],
+        get_jobs: Callable[[], dict[str, JobStatusRecord]],
         **kwargs,
     ) -> None:
-        """
-        Initialize the DownloadsScreen.
+        """Initialize the DownloadsScreen.
 
         Args:
             get_jobs: Callable that returns the current job statuses
@@ -45,8 +50,10 @@ class DownloadsScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
+        """Setup polling for job status updates on mount."""
         table = self.query_one(DataTable)
         table.add_columns("Job ID", "Manga", "Chapter", "Download Time", "Status")
+
         self.set_interval(1, self._poll_jobs)
 
     def _poll_jobs(self) -> None:

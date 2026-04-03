@@ -27,6 +27,8 @@ if TYPE_CHECKING:
     from .screens.selection_screen import PartialJob
     from .types import ProcessedManga
 
+from .repositories import FavoriteManga
+
 
 class MangaDexDownloaderApp(App):
     """
@@ -34,7 +36,7 @@ class MangaDexDownloaderApp(App):
 
     Attributes:
         pipeline_manager (PipelineManager | None): The pipeline manager instance
-        favorites: List of favorited manga with manga_id and manga_title
+        favorites (list[FavoriteManga]): List of favorited manga with manga_id and manga_title
     """
 
     DEFAULT_CSS = """
@@ -47,7 +49,7 @@ class MangaDexDownloaderApp(App):
     BINDINGS = [("escape", "safe_pop_screen", "Go back")]
 
     _app_config: reactive[AppConfig] = reactive(AppConfig)
-    favorites: reactive[list[dict[str, str]]] = reactive([])
+    favorites: reactive[list[FavoriteManga]] = reactive([])
 
     def __init__(
         self,
@@ -181,33 +183,43 @@ class MangaDexDownloaderApp(App):
 
     @on(FavoritesScreen.Deleted)
     def _on_favorite_deleted(self, event: FavoritesScreen.Deleted) -> None:
+        manga_id, manga_title = (
+            event.deleted_manga["manga_id"],
+            event.deleted_manga["manga_title"],
+        )
+
         try:
-            self._favorite_repository.delete_by_id(event.manga_id)
+            self._favorite_repository.delete_by_id(manga_id)
         except Exception:
             self.notify("Failed to remove favorite", severity="error")
             return
 
-        self.favorites = [f for f in self.favorites if f["manga_id"] != event.manga_id]
+        self.favorites = [f for f in self.favorites if f["manga_id"] != manga_id]
         self.mutate_reactive(MangaDexDownloaderApp.favorites)
-        self.notify(
-            f"Removed '{event.manga_title}' from favorites", severity="information"
-        )
+        self.notify(f"Removed '{manga_title}' from favorites", severity="information")
 
     @on(FavoritesScreen.Selected)
     def _on_favorite_selected(self, event: FavoritesScreen.Selected) -> None:
-        manga: ProcessedManga = {"id": event.manga_id, "title": event.manga_title}
+        manga: ProcessedManga = {
+            "id": event.selected_manga["manga_id"],
+            "title": event.selected_manga["manga_title"],
+        }
+
         self.push_screen(SelectionScreen(manga, self._mangadex_client))
 
     @on(SearchScreen.FavoriteAdded)
     def _on_favorite_added(self, event: SearchScreen.FavoriteAdded) -> None:
+        favorite_manga: FavoriteManga = event.favorited_manga
+
         try:
-            self._favorite_repository.create_one(event.manga_id, event.manga_title)
+            self._favorite_repository.create_one(favorite_manga)
         except Exception:
             self.notify("Failed to add favorite", severity="error")
             return
 
-        self.favorites.append(
-            {"manga_id": event.manga_id, "manga_title": event.manga_title}
-        )
+        self.favorites.append(favorite_manga)
         self.mutate_reactive(MangaDexDownloaderApp.favorites)
-        self.notify(f"Added '{event.manga_title}' to favorites", severity="information")
+        self.notify(
+            f"Added '{favorite_manga['manga_title']}' to favorites",
+            severity="information",
+        )

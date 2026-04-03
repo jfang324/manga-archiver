@@ -5,6 +5,7 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Footer
 
+from ..repositories import FavoriteManga
 from ..widgets import FavoritesPanel
 
 
@@ -13,26 +14,32 @@ class FavoritesScreen(Screen):
     Favorites screen for displaying favorited manga.
 
     Reactive Attributes:
-        favorites: List of favorited manga with manga_id and manga_title
+        favorites (list[FavoriteManga]): List of favorited manga with manga_id and manga_title
     """
 
-    favorites: reactive[list[dict[str, str]]] = reactive([])
+    favorites: reactive[list[FavoriteManga]] = reactive([])
 
     class Deleted(Message):
-        """Message sent when a favorite manga is deleted."""
+        """Message sent when a favorite manga is deleted.
 
-        def __init__(self, manga_id: str, manga_title: str, **kwargs) -> None:
+        Attributes:
+            deleted_manga (FavoriteManga): The deleted manga
+        """
+
+        def __init__(self, deleted_manga: FavoriteManga, **kwargs) -> None:
             super().__init__(**kwargs)
-            self.manga_id = manga_id
-            self.manga_title = manga_title
+            self.deleted_manga = deleted_manga
 
     class Selected(Message):
-        """Message sent when a favorite manga is selected."""
+        """Message sent when a favorite manga is selected.
 
-        def __init__(self, manga_id: str, manga_title: str, **kwargs) -> None:
+        Attributes:
+            selected_manga (FavoriteManga): The selected manga
+        """
+
+        def __init__(self, selected_manga: FavoriteManga, **kwargs) -> None:
             super().__init__(**kwargs)
-            self.manga_id = manga_id
-            self.manga_title = manga_title
+            self.selected_manga = selected_manga
 
     def compose(self) -> ComposeResult:
         yield FavoritesPanel().data_bind(favorites=FavoritesScreen.favorites)
@@ -42,16 +49,14 @@ class FavoritesScreen(Screen):
     def _on_delete_at(self, event: FavoritesPanel.DeleteAt) -> None:
         if event.index < 0 or event.index >= len(self.favorites):
             return
-        fav = self.favorites[event.index]
-        self.post_message(
-            self.Deleted(manga_id=fav["manga_id"], manga_title=fav["manga_title"])
-        )
+
+        deleted_manga = self.favorites[event.index]
+        self.post_message(self.Deleted(deleted_manga))
 
     @on(FavoritesPanel.SelectAt)
     def _on_select_at(self, event: FavoritesPanel.SelectAt) -> None:
         if event.index < 0 or event.index >= len(self.favorites):
             return
-        fav = self.favorites[event.index]
-        self.post_message(
-            self.Selected(manga_id=fav["manga_id"], manga_title=fav["manga_title"])
-        )
+
+        selected_manga = self.favorites[event.index]
+        self.post_message(self.Selected(selected_manga))

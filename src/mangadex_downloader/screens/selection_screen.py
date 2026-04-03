@@ -17,6 +17,8 @@ from ..integrations.content_providers.mangadex.client import (
 from ..types import ProcessedChapter, ProcessedManga
 from ..widgets import SelectionPanel
 
+ChapterResult = tuple[str | None, str, str]
+
 
 class PartialJob(TypedDict):
     manga_title: str
@@ -25,46 +27,30 @@ class PartialJob(TypedDict):
 
 
 class SelectionScreen(Screen):
-    """
-    The selection screen of the application.
-
-    Attributes:
-        _mangadex_client: API client for fetching chapter information
-        _manga_id: The ID of the manga to display chapters for
-        _manga_title: The title of the manga for display purposes
+    """The selection screen of the application.
 
     Reactive Attributes:
-        results (list[tuple[str | None, str, str]]): A list of chapters for the selected manga. Each result is a tuple of (title, chapter_id, chapter_number)
+        results (list[ChapterResult]): A list of chapters for the selected manga.
     """
 
     class EnqueueJobs(Message):
-        """
-        Message to enqueue jobs to the pipeline.
+        """Message to enqueue jobs to the pipeline.
 
         Attributes:
             partial_jobs (list[PartialJob]): partial information for jobs to enqueue
         """
 
         def __init__(self, partial_jobs: list[PartialJob], **kwargs) -> None:
-            """
-            Initialize the EnqueueJobs message.
-
-            Args:
-                partial_jobs (list[PartialJob]): The jobs to enqueue.
-            """
             super().__init__(**kwargs)
 
             self.partial_jobs = partial_jobs
 
-    results: reactive[list[tuple[str | None, str, str]]] = reactive(
-        []
-    )  # chapter title, chapter id, chapter number
+    results: reactive[list[ChapterResult]] = reactive([])
 
     def __init__(
         self, manga: ProcessedManga, mangadex_client: MangaDexApiClient, **kwargs
     ) -> None:
-        """
-        Initialize the SelectionScreen.
+        """Initialize the SelectionScreen.
 
         Args:
             manga (ProcessedManga): The manga to display chapters for
@@ -91,7 +77,7 @@ class SelectionScreen(Screen):
             self.notify("Error fetching chapters", severity="error")
             return
 
-        new_results: list[tuple[str | None, str, str]] = [
+        new_results: list[ChapterResult] = [
             (chapter["title"], chapter["id"], chapter["chapter"])
             for chapter in chapters
         ]

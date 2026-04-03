@@ -18,31 +18,34 @@ from .selection_screen import SelectionScreen
 if TYPE_CHECKING:
     from ..types import ProcessedManga
 
+from ..repositories import FavoriteManga
+
+SearchResult = tuple[str, str]
+
 
 class SearchScreen(Screen):
     """
     The search screen of the application.
 
-    Attributes:
-        _mangadex_client: API client for MangaDex searches
-
     Reactive Attributes:
-        results (list[tuple[str, str]]): A list of results for the current query. Each result is a tuple of (title, manga_id)
+        results (list[SearchResult]): A list of results for the current query. Each result is a tuple of (title, manga_id)
     """
 
-    results: reactive[list[tuple[str, str]]] = reactive([])
+    results: reactive[list[SearchResult]] = reactive([])
 
     class FavoriteAdded(Message):
-        """Message sent when a manga should be added to favorites."""
+        """Message sent when a manga should be added to favorites.
 
-        def __init__(self, manga_id: str, manga_title: str, **kwargs) -> None:
+        Attributes:
+            favorited_manga (FavoriteManga): The favorited manga
+        """
+
+        def __init__(self, favorited_manga: FavoriteManga, **kwargs) -> None:
             super().__init__(**kwargs)
-            self.manga_id = manga_id
-            self.manga_title = manga_title
+            self.favorited_manga = favorited_manga
 
     def __init__(self, mangadex_client: MangaDexApiClient, **kwargs) -> None:
-        """
-        Initialize the SearchScreen.
+        """Initialize the SearchScreen.
 
         Args:
             mangadex_client: The API client for MangaDex searches
@@ -93,4 +96,6 @@ class SearchScreen(Screen):
             return
 
         title, manga_id = self.results[index]
-        self.post_message(self.FavoriteAdded(manga_id=manga_id, manga_title=title))
+        favorited_manga: FavoriteManga = {"manga_id": manga_id, "manga_title": title}
+
+        self.post_message(self.FavoriteAdded(favorited_manga))
