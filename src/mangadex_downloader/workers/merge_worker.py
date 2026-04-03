@@ -54,8 +54,6 @@ class MergeWorker(Worker):
             output_directory,
             output_format,
             image_data,
-            start_time,
-            _,
         ) = (
             job.id,
             job.manga_title,
@@ -63,8 +61,6 @@ class MergeWorker(Worker):
             job.output_directory,
             job.output_format,
             job.image_data,
-            job.start_time,
-            job.end_time,
         )
 
         try:
@@ -79,6 +75,20 @@ class MergeWorker(Worker):
 
         output_name: str = f"{manga_title} [{chapter_number}] - {stripped_title}"
 
+        merge_start = time.perf_counter_ns()
+        await self._notification_queue.put(
+            NotificationJob(
+                id=job_id,
+                manga_title=manga_title,
+                chapter_title=chapter_title,
+                output_directory=output_directory,
+                output_format=output_format,
+                start_time=merge_start,
+                end_time=-1,
+                status=JobStatus.MERGING,
+            )
+        )
+
         full_name, file_data = self._multi_format_exporter.generate(
             image_data_list=image_data,
             output_directory=output_directory,
@@ -87,8 +97,7 @@ class MergeWorker(Worker):
             return_bytes=self._output_queue is not None,
         )
 
-        end_time = time.perf_counter_ns()
-
+        merge_end = time.perf_counter_ns()
         await self._notification_queue.put(
             NotificationJob(
                 id=job_id,
@@ -96,8 +105,8 @@ class MergeWorker(Worker):
                 chapter_title=chapter_title,
                 output_directory=output_directory,
                 output_format=output_format,
-                start_time=start_time,
-                end_time=end_time,
+                start_time=merge_start,
+                end_time=merge_end,
                 status=JobStatus.MERGING,
             )
         )
@@ -108,8 +117,6 @@ class MergeWorker(Worker):
             chapter_title=stripped_title,
             output_directory=output_directory,
             output_format=output_format,
-            start_time=start_time,
-            end_time=end_time,
             complete_file_data=file_data,
             full_name=full_name,
         )

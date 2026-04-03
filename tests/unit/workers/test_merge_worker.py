@@ -25,7 +25,6 @@ class TestMergeWorkerDoWork:
             output_format=OutputFormat.PDF,
             image_data=[b"image1", b"image2"],
             start_time=1000,
-            end_time=-1,
         )
 
         mock_config = MagicMock()
@@ -63,7 +62,6 @@ class TestMergeWorkerDoWork:
             output_format=OutputFormat.PDF,
             image_data=[b"image1", b"image2"],
             start_time=1000,
-            end_time=-1,
         )
 
         worker = MergeWorker(
@@ -102,7 +100,6 @@ class TestMergeWorkerDoWork:
             output_format=OutputFormat.PDF,
             image_data=[b"image1"],
             start_time=1000,
-            end_time=-1,
         )
 
         worker = MergeWorker(
@@ -135,7 +132,6 @@ class TestMergeWorkerDoWork:
             output_format=OutputFormat.PDF,
             image_data=[b"image1"],
             start_time=1000,
-            end_time=-1,
         )
 
         worker = MergeWorker(
@@ -165,7 +161,6 @@ class TestMergeWorkerDoWork:
             output_format=OutputFormat.PDF,
             image_data=[b"image1"],
             start_time=1000,
-            end_time=-1,
         )
 
         worker = MergeWorker(
@@ -197,7 +192,6 @@ class TestMergeWorkerDoWork:
             output_format=OutputFormat.PDF,
             image_data=[b"image1"],
             start_time=1000,
-            end_time=-1,
         )
 
         worker = MergeWorker(

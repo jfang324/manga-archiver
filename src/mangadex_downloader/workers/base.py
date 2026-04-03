@@ -102,9 +102,6 @@ class Worker(ABC):
             next_job: Job | None = await self._do_work(job)
 
             if not self._output_queue or not next_job:
-                end_time = next_job.end_time if next_job else job.end_time
-                job.end_time = end_time
-
                 await self._send_notification(job, JobStatus.COMPLETED)
                 return
 
@@ -188,7 +185,7 @@ class Worker(ABC):
             return
 
     async def _send_notification(self, job: Job, status: JobStatus) -> None:
-        """Send a notification job to the notification queue.
+        """Send a notification for the job.
 
         Args:
             job: The job to send notification for
@@ -201,8 +198,6 @@ class Worker(ABC):
                 chapter_title=job.chapter_title,
                 output_directory=job.output_directory,
                 output_format=job.output_format,
-                start_time=job.start_time,
-                end_time=job.end_time,
                 status=status,
             )
         )

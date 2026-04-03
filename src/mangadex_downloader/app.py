@@ -27,7 +27,11 @@ if TYPE_CHECKING:
     from .screens.selection_screen import PartialJob
     from .types import ProcessedManga
 
+import logging
+
 from .repositories import FavoriteManga
+
+logger = logging.getLogger(__name__)
 
 
 class MangaDexDownloaderApp(App):
@@ -125,8 +129,6 @@ class MangaDexDownloaderApp(App):
                 chapter_title=partial_job["chapter_title"],
                 output_directory=self._app_config.output_path,
                 output_format=self._app_config.output_format,
-                start_time=-1,
-                end_time=-1,
             )
             for partial_job in partial_jobs
         ]
@@ -170,8 +172,17 @@ class MangaDexDownloaderApp(App):
 
         if self._pipeline_manager:
             self._pipeline_manager.stop()
+
         if self._session:
             await self._session.close()
+
+        if self._pipeline_manager and self._pipeline_config.benchmark_enabled:
+            benchmark_results = self._pipeline_manager.get_benchmark_results()
+
+            if benchmark_results:
+                logger.info("Aggregate Benchmark Results:")
+                for aggregate in benchmark_results:
+                    logger.info(f"[{aggregate}]: {benchmark_results[aggregate]}")
 
         self.exit()
 

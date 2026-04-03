@@ -12,7 +12,7 @@ from src.mangadex_downloader.workers.resolve_worker import ResolveWorker
 class TestResolveWorkerDoWork:
     @pytest.mark.asyncio
     async def test_do_work_returns_downloading_job(self):
-        mock_api_client = MagicMock()
+        mock_api_client = AsyncMock()
         mock_api_client.get_download_resource = AsyncMock(
             return_value={
                 "urls": ["http://example.com/1.jpg", "http://example.com/2.jpg"]
@@ -32,8 +32,6 @@ class TestResolveWorkerDoWork:
             chapter_id="chapter_456",
             output_directory=MagicMock(),
             output_format=MagicMock(),
-            start_time=-1,
-            end_time=-1,
         )
 
         worker = ResolveWorker(
@@ -56,7 +54,7 @@ class TestResolveWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_calls_api_client_with_chapter_id(self):
-        mock_api_client = MagicMock()
+        mock_api_client = AsyncMock()
         mock_api_client.get_download_resource = AsyncMock(
             return_value={"urls": ["http://example.com/1.jpg"]}
         )
@@ -72,8 +70,6 @@ class TestResolveWorkerDoWork:
             chapter_id="chapter_456",
             output_directory=MagicMock(),
             output_format=MagicMock(),
-            start_time=-1,
-            end_time=-1,
         )
 
         worker = ResolveWorker(
@@ -92,7 +88,7 @@ class TestResolveWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_calls_status_change(self):
-        mock_api_client = MagicMock()
+        mock_api_client = AsyncMock()
         mock_api_client.get_download_resource = AsyncMock(
             return_value={"urls": ["http://example.com/1.jpg"]}
         )
@@ -110,8 +106,6 @@ class TestResolveWorkerDoWork:
             chapter_id="chapter_456",
             output_directory=MagicMock(),
             output_format=MagicMock(),
-            start_time=-1,
-            end_time=-1,
         )
 
         worker = ResolveWorker(
@@ -130,7 +124,7 @@ class TestResolveWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_raises_error_for_missing_chapter_id(self):
-        mock_api_client = MagicMock()
+        mock_api_client = AsyncMock()
 
         mock_semaphore = MagicMock()
 
@@ -138,11 +132,9 @@ class TestResolveWorkerDoWork:
             id="job_123",
             manga_title="Test Manga",
             chapter_title="Chapter 1",
-            chapter_id="",  # Empty chapter_id
+            chapter_id="chapter_456",
             output_directory=MagicMock(),
             output_format=MagicMock(),
-            start_time=-1,
-            end_time=-1,
         )
 
         worker = ResolveWorker(
@@ -162,7 +154,7 @@ class TestResolveWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_uses_semaphore(self):
-        mock_api_client = MagicMock()
+        mock_api_client = AsyncMock()
         mock_api_client.get_download_resource = AsyncMock(
             return_value={"urls": ["http://example.com/1.jpg"]}
         )
@@ -178,8 +170,6 @@ class TestResolveWorkerDoWork:
             chapter_id="chapter_456",
             output_directory=MagicMock(),
             output_format=MagicMock(),
-            start_time=-1,
-            end_time=-1,
         )
 
         worker = ResolveWorker(

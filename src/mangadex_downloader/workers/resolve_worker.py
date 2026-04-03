@@ -66,8 +66,6 @@ class ResolveWorker(Worker):
             chapter_title,
             output_directory,
             output_format,
-            start_time,
-            end_time,
         ) = (
             job.id,
             job.chapter_id,
@@ -75,13 +73,12 @@ class ResolveWorker(Worker):
             job.chapter_title,
             job.output_directory,
             job.output_format,
-            job.start_time,
-            job.end_time,
         )
 
         if not chapter_id:
             raise ValueError(f"Invalid FetchingResourcesJob missing chapter_id: {job}")
 
+        resolve_start = time.perf_counter_ns()
         await self._notification_queue.put(
             NotificationJob(
                 id=job_id,
@@ -89,18 +86,30 @@ class ResolveWorker(Worker):
                 chapter_title=chapter_title,
                 output_directory=output_directory,
                 output_format=output_format,
-                start_time=start_time,
-                end_time=end_time,
+                start_time=resolve_start,
+                end_time=-1,
                 status=JobStatus.FETCHING_RESOURCES,
             )
         )
-
-        start_time = time.perf_counter_ns()
 
         async with self._semaphore:
             resources: ProcessedDownloadResource = (
                 await self._api_client.get_download_resource(job.chapter_id)
             )
+
+        resolve_end = time.perf_counter_ns()
+        await self._notification_queue.put(
+            NotificationJob(
+                id=job_id,
+                manga_title=manga_title,
+                chapter_title=chapter_title,
+                output_directory=output_directory,
+                output_format=output_format,
+                start_time=resolve_start,
+                end_time=resolve_end,
+                status=JobStatus.FETCHING_RESOURCES,
+            )
+        )
 
         return DownloadingJob(
             id=job_id,
@@ -109,6 +118,4 @@ class ResolveWorker(Worker):
             output_directory=output_directory,
             output_format=output_format,
             urls=resources["urls"],
-            start_time=start_time,
-            end_time=end_time,
         )

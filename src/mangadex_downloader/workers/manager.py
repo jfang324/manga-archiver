@@ -5,7 +5,6 @@ import tracemalloc
 from asyncio import Queue, Semaphore
 from collections import deque
 from dataclasses import dataclass
-from typing import Callable
 
 from ..constants.defaults import (
     DEFAULT_DOWNLOAD_RATE_LIMIT,
@@ -21,6 +20,7 @@ from ..integrations.content_providers import MangaDexApiClient
 from ..integrations.storage_providers.google_drive import GoogleDriveClient
 from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
+from .benchmark import BenchmarkManager, BenchmarkPhase
 from .download_worker import DownloadWorker
 from .jobs import (
     FetchingResourcesJob,
@@ -47,6 +47,7 @@ class PipelineConfig:
         num_upload_workers (int): The number of upload workers to use
         resolve_rate_limit (int): The global rate limit for resolve workers (requests per second)
         download_rate_limit (int): The global rate limit for download workers (requests per second)
+        benchmark_enabled (bool): Whether to enable benchmark metrics collection
     """
 
     num_resolve_workers: int = DEFAULT_RESOLVE_WORKERS
@@ -56,6 +57,8 @@ class PipelineConfig:
 
     resolve_rate_limit: int = DEFAULT_RESOLVE_RATE_LIMIT
     download_rate_limit: int = DEFAULT_DOWNLOAD_RATE_LIMIT
+
+    benchmark_enabled: bool = True
 
 
 class PipelineManager:
@@ -144,24 +147,28 @@ class PipelineManager:
             id="notification_worker",
             input_queue=self._notification_queue,
             on_status_update=self._on_status_update,
+            benchmark=BenchmarkManager() if config.benchmark_enabled else None,
         )
 
-        self._track_memory = False
+        self._benchmark_enabled = config.benchmark_enabled
 
     def _on_status_update(
         self, job_id: str, status: JobStatus, metadata: JobMetadata
     ) -> None:
-        """Callback to update job status in the internal dict with automatic expiry. Modification of state MUST be done here to avoid race conditions."""
+        """Callback to update job status in the internal dict with automatic expiry.
+
+        Uses a queue to track completed jobs for efficient expiry checking.
+        Modification of state MUST be done here to avoid race conditions.
+        """
         self._job_statuses[job_id] = (status, metadata)
 
-        # Only add to expiry queue if terminal state
+        # Add to expiry queue when job completes
         if status in (JobStatus.COMPLETED, JobStatus.FAILED):
             self._job_expiry_queue.append((time.time(), job_id))
 
-        # Check oldest entries - O(1) amortized
+        # Check and remove expired jobs (O(1) amortized)
         while self._job_expiry_queue:
             oldest_timestamp, oldest_job_id = self._job_expiry_queue[0]
-
             if time.time() - oldest_timestamp > self._job_expiry_seconds:
                 self._job_expiry_queue.popleft()
                 self._job_statuses.pop(oldest_job_id, None)
@@ -201,32 +208,12 @@ class PipelineManager:
                 ]
             )
 
-    def _wrap_benchmark_callback(
-        self, original_callback: Callable[[float, float], None] | None
-    ) -> Callable[[float, float], None]:
-        """Wrap benchmark callback to include memory logging."""
-
-        def wrapped_callback(earliest_start: float, latest_end: float) -> None:
-            if self._track_memory:
-                _, peak = tracemalloc.get_traced_memory()
-                peak_mb = peak / 1024 / 1024
-                logger.debug(
-                    "Benchmark: time=%.2fms, peak_memory=%.2fMB",
-                    (latest_end - earliest_start) / 1_000_000,
-                    peak_mb,
-                )
-
-            if original_callback:
-                original_callback(earliest_start, latest_end)
-
-        return wrapped_callback
-
     async def start(self):
         """Start all workers in the pipeline.
 
         Launches all worker pools (resolve, download, merge, upload, notification)
         """
-        if self._track_memory:
+        if self._benchmark_enabled:
             tracemalloc.start()
 
         all_workers = (
@@ -252,3 +239,59 @@ class PipelineManager:
             + self._upload_pool
         ):
             worker.stop()
+
+    def get_benchmark_results(self) -> dict | None:
+        """Get benchmark results if benchmarking is enabled.
+
+        Returns:
+            Dictionary with benchmark metrics, or None if benchmarking is not enabled
+        """
+        if not self._benchmark_enabled:
+            return None
+
+        benchmark = self._notification_worker._benchmark
+        if benchmark is None:
+            return None
+
+        aggregates = benchmark.get_aggregates()
+        return {
+            "total_job_count": aggregates.total_job_count,
+            "fetching_total_ms": aggregates.total_time_per_phase.get(
+                BenchmarkPhase.FETCHING, 0
+            )
+            / 1_000_000,
+            "fetching_avg_ms": aggregates.avg_time_per_phase.get(
+                BenchmarkPhase.FETCHING, 0
+            )
+            / 1_000_000,
+            "downloading_total_ms": aggregates.total_time_per_phase.get(
+                BenchmarkPhase.DOWNLOADING, 0
+            )
+            / 1_000_000,
+            "downloading_avg_ms": aggregates.avg_time_per_phase.get(
+                BenchmarkPhase.DOWNLOADING, 0
+            )
+            / 1_000_000,
+            "merging_total_ms": aggregates.total_time_per_phase.get(
+                BenchmarkPhase.MERGING, 0
+            )
+            / 1_000_000,
+            "merging_avg_ms": aggregates.avg_time_per_phase.get(
+                BenchmarkPhase.MERGING, 0
+            )
+            / 1_000_000,
+            "uploading_total_ms": aggregates.total_time_per_phase.get(
+                BenchmarkPhase.UPLOADING, 0
+            )
+            / 1_000_000,
+            "uploading_avg_ms": aggregates.avg_time_per_phase.get(
+                BenchmarkPhase.UPLOADING, 0
+            )
+            / 1_000_000,
+            "avg_total_time_ms": aggregates.avg_total_time / 1_000_000,
+            "peak_memory_mb": aggregates.peak_memory_mb,
+            "highest_perceived_download_time_ms": aggregates.highest_perceived_download_time
+            / 1_000_000,
+            "highest_perceived_end_to_end_ms": aggregates.highest_perceived_end_to_end
+            / 1_000_000,
+        }

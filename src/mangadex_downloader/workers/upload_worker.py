@@ -50,8 +50,6 @@ class UploadWorker(Worker):
             output_format,
             complete_file_data,
             full_name,
-            start_time,
-            _,
         ) = (
             job.id,
             job.manga_title,
@@ -60,26 +58,25 @@ class UploadWorker(Worker):
             job.output_format,
             job.complete_file_data,
             job.full_name,
-            job.start_time,
-            job.end_time,
+        )
+
+        upload_start = time.perf_counter_ns()
+        await self._notification_queue.put(
+            NotificationJob(
+                id=job_id,
+                manga_title=manga_title,
+                chapter_title=chapter_title,
+                output_directory=output_directory,
+                output_format=output_format,
+                start_time=upload_start,
+                end_time=-1,
+                status=JobStatus.UPLOADING,
+            )
         )
 
         try:
             folder_id = await self._google_drive_client.get_or_create_manga_folder(
                 manga_title
-            )
-
-            await self._notification_queue.put(
-                NotificationJob(
-                    id=job_id,
-                    manga_title=manga_title,
-                    chapter_title=chapter_title,
-                    output_directory=output_directory,
-                    output_format=output_format,
-                    start_time=start_time,
-                    end_time=-1,
-                    status=JobStatus.UPLOADING,
-                )
             )
 
             uploaded_id = await self._google_drive_client.upload_file(
@@ -89,7 +86,7 @@ class UploadWorker(Worker):
                 mimetype=output_format.mime_type,
             )
 
-            end_time = time.perf_counter_ns()
+            upload_end = time.perf_counter_ns()
 
             if uploaded_id:
                 await self._notification_queue.put(
@@ -99,8 +96,20 @@ class UploadWorker(Worker):
                         chapter_title=chapter_title,
                         output_directory=output_directory,
                         output_format=output_format,
-                        start_time=start_time,
-                        end_time=end_time,
+                        start_time=upload_start,
+                        end_time=upload_end,
+                        status=JobStatus.UPLOADING,
+                    )
+                )
+                await self._notification_queue.put(
+                    NotificationJob(
+                        id=job_id,
+                        manga_title=manga_title,
+                        chapter_title=chapter_title,
+                        output_directory=output_directory,
+                        output_format=output_format,
+                        start_time=upload_start,
+                        end_time=upload_end,
                         status=JobStatus.COMPLETED,
                     )
                 )

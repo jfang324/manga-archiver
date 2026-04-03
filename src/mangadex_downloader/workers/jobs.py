@@ -14,8 +14,6 @@ class Job:
         chapter_title (str): The title of the chapter
         output_directory (Path): The directory to save output files
         output_format (OutputFormat): The output format (PDF, CBZ, etc.)
-        start_time (float): The start time in nanoseconds (-1 if not started)
-        end_time (float): The end time in nanoseconds (-1 if not completed)
     """
 
     id: str
@@ -23,8 +21,6 @@ class Job:
     chapter_title: str
     output_directory: Path
     output_format: OutputFormat
-    start_time: float
-    end_time: float
 
 
 @dataclass
@@ -35,15 +31,13 @@ class JobMetadata:
         manga_title (str): The title of the manga
         chapter_id (str): The ID of the chapter
         chapter_title (str): The title of the chapter
-        start_time (float): The start time in nanoseconds (-1 if not started)
-        end_time (float): The end time in nanoseconds (-1 if not completed)
+        completed_at (float): Unix timestamp when job completed (set only on terminal status)
     """
 
     manga_title: str
     chapter_id: str
     chapter_title: str
-    start_time: float  # initialized to -1 on enqueue, workers set to time.perf_counter_ns() on start
-    end_time: float  # initialized to -1 on enqueue, workers set to time.perf_counter_ns() on end
+    completed_at: float = -1
 
 
 @dataclass
@@ -52,9 +46,13 @@ class NotificationJob(Job):
 
     Attributes:
         status (JobStatus): The status of the job
+        start_time (float): Start time of phase in nanoseconds (-1 if not started)
+        end_time (float): End time of phase in nanoseconds (-1 if not completed)
     """
 
     status: JobStatus
+    start_time: float = -1
+    end_time: float = -1
 
 
 @dataclass
@@ -101,8 +99,3 @@ class UploadJob(Job):
 
     complete_file_data: bytes
     full_name: str
-
-
-@dataclass
-class BenchmarkJob(Job):
-    """Job for tracking job timing across the pipeline."""

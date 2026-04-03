@@ -28,8 +28,6 @@ class TestDownloadWorkerDoWork:
             output_directory=MagicMock(),
             output_format=MagicMock(),
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
-            start_time=1000,
-            end_time=-1,
         )
 
         worker = DownloadWorker(
@@ -66,8 +64,6 @@ class TestDownloadWorkerDoWork:
             output_directory=MagicMock(),
             output_format=MagicMock(),
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
-            start_time=1000,
-            end_time=-1,
         )
 
         worker = DownloadWorker(
@@ -105,7 +101,6 @@ class TestDownloadWorkerDoWork:
             output_format=MagicMock(),
             urls=["http://example.com/1.jpg"],
             start_time=1000,
-            end_time=-1,
         )
 
         worker = DownloadWorker(
@@ -136,9 +131,7 @@ class TestDownloadWorkerDoWork:
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=MagicMock(),
-            urls=[],  # Empty URLs
-            start_time=1000,
-            end_time=-1,
+            urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
         )
 
         worker = DownloadWorker(
@@ -171,7 +164,6 @@ class TestDownloadWorkerDoWork:
             output_format=MagicMock(),
             urls=["http://example.com/1.jpg"],
             start_time=1000,
-            end_time=-1,
         )
 
         worker = DownloadWorker(
