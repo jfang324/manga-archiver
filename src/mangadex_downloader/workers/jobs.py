@@ -95,11 +95,11 @@ class UploadJob(Job):
     """Job for uploading merged files to a cloud storage provider.
 
     Attributes:
-        complete_file_data (list[bytes]): List of file bytes to upload
+        complete_file_data (bytes): The file bytes to upload
         full_name (str): The full name of the file to upload
     """
 
-    complete_file_data: list[bytes]
+    complete_file_data: bytes
     full_name: str
 
 

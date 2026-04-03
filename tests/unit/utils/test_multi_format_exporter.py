@@ -116,7 +116,9 @@ class TestMultiFormatExporterGenerate:
         exporter = MultiFormatExporter()
         result = exporter.generate([b"test_data"], temp_dir, "test", OutputFormat.PDF)
 
-        assert result.startswith(str(temp_dir))
+        full_name, file_data = result
+        assert full_name.startswith("test")
+        assert file_data == []
 
     # TODO: add tests for other formats
     @patch("PIL.Image.open")

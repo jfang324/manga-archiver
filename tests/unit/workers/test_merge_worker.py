@@ -13,7 +13,7 @@ class TestMergeWorkerDoWork:
         mock_multi_format_exporter = MagicMock()
         test_file = tmp_path / "test.pdf"
         test_file.write_bytes(b"fake pdf content")
-        mock_multi_format_exporter.generate.return_value = str(test_file)
+        mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
 
         mock_notification_queue = AsyncMock()
 
@@ -46,14 +46,14 @@ class TestMergeWorkerDoWork:
         assert result.manga_title == "Test Manga"
         assert result.output_directory == tmp_path
         assert result.output_format == OutputFormat.PDF
-        assert result.full_name == "Test Manga [1] - Introduction.pdf"
+        assert result.full_name == "test.pdf"
 
     @pytest.mark.asyncio
     async def test_do_work_calls_multi_format_exporter(self, tmp_path):
         mock_multi_format_exporter = MagicMock()
         test_file = tmp_path / "test.pdf"
         test_file.write_bytes(b"fake pdf content")
-        mock_multi_format_exporter.generate.return_value = str(test_file)
+        mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
 
         job = MergingJob(
             id="job_123",
@@ -82,6 +82,7 @@ class TestMergeWorkerDoWork:
             output_directory=tmp_path,
             output_name="Test Manga [1] - Introduction",
             output_format=OutputFormat.PDF,
+            return_bytes=True,
         )
 
     @pytest.mark.asyncio
@@ -89,7 +90,7 @@ class TestMergeWorkerDoWork:
         mock_multi_format_exporter = MagicMock()
         test_file = tmp_path / "test.pdf"
         test_file.write_bytes(b"fake pdf content")
-        mock_multi_format_exporter.generate.return_value = str(test_file)
+        mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
 
         mock_notification_queue = AsyncMock()
 
@@ -124,7 +125,7 @@ class TestMergeWorkerDoWork:
         mock_multi_format_exporter = MagicMock()
         test_file = tmp_path / "test.pdf"
         test_file.write_bytes(b"fake pdf content")
-        mock_multi_format_exporter.generate.return_value = str(test_file)
+        mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
 
         job = MergingJob(
             id="job_123",
@@ -154,7 +155,7 @@ class TestMergeWorkerDoWork:
         mock_multi_format_exporter = MagicMock()
         test_file = tmp_path / "test.pdf"
         test_file.write_bytes(b"fake pdf content")
-        mock_multi_format_exporter.generate.return_value = str(test_file)
+        mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
 
         job = MergingJob(
             id="job_123",
@@ -184,7 +185,7 @@ class TestMergeWorkerDoWork:
         mock_multi_format_exporter = MagicMock()
         test_file = tmp_path / "test.pdf"
         test_file.write_bytes(b"fake pdf content")
-        mock_multi_format_exporter.generate.return_value = str(test_file)
+        mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
 
         mock_notification_queue = AsyncMock()
 

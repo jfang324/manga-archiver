@@ -46,7 +46,8 @@ class MultiFormatExporter:
         output_format: OutputFormat,
         quality: int = 75,
         optimize: bool = False,
-    ) -> str:
+        return_bytes: bool = False,
+    ) -> tuple[str, bytes | list[bytes]]:
         """Merge the image data list into a merged format.
 
         Loads images directly from bytes in memory without writing to disk.
@@ -58,9 +59,12 @@ class MultiFormatExporter:
             output_format: The format of the output file
             quality: The quality of the PDF (1-100, default: 75)
             optimize: Whether to optimize PDF file size (default: False)
+            return_bytes: If True, return file bytes instead of writing to disk (default: False)
 
         Returns:
-            str: The path to the generated file
+            tuple[str, bytes | list[bytes]]: (full_name, file_bytes)
+                - full_name: The full filename with extension
+                - file_bytes: If return_bytes=True, the file bytes; otherwise empty list
 
         Raises:
             ValueError: If any of the arguments are invalid
@@ -82,6 +86,7 @@ class MultiFormatExporter:
         full_output_path: Path = (
             output_directory / f"{self._sanitize(output_name)}.{str(output_format)}"
         )
+        full_name: str = f"{self._sanitize(output_name)}.{str(output_format)}"
 
         images: list[Image.Image] = []
 
@@ -101,24 +106,47 @@ class MultiFormatExporter:
                 raise ValueError("No valid images to generate output")
 
             if output_format == OutputFormat.CBZ:
-                with zipfile.ZipFile(
-                    full_output_path, "w", compression=zipfile.ZIP_DEFLATED
-                ) as cbz:
-                    for i, img in enumerate(images, start=1):
-                        img_buf = BytesIO()
-                        img.save(img_buf, format="PNG")  # or "JPEG" for smaller files
-                        img_buf.seek(0)
-                        cbz.writestr(f"page_{i:03}.png", img_buf.read())
+                if return_bytes:
+                    cbz_buffer = BytesIO()
+                    with zipfile.ZipFile(
+                        cbz_buffer, "w", compression=zipfile.ZIP_DEFLATED
+                    ) as cbz:
+                        for i, img in enumerate(images, start=1):
+                            img_buf = BytesIO()
+                            img.save(img_buf, format="PNG")
+                            img_buf.seek(0)
+                            cbz.writestr(f"page_{i:03}.png", img_buf.read())
+                    return full_name, cbz_buffer.getvalue()
+                else:
+                    with zipfile.ZipFile(
+                        full_output_path, "w", compression=zipfile.ZIP_DEFLATED
+                    ) as cbz:
+                        for i, img in enumerate(images, start=1):
+                            img_buf = BytesIO()
+                            img.save(img_buf, format="PNG")
+                            img_buf.seek(0)
+                            cbz.writestr(f"page_{i:03}.png", img_buf.read())
             else:
-                images[0].save(
-                    full_output_path,
-                    save_all=True,
-                    append_images=images[1:],
-                    quality=quality,
-                    optimize=optimize,
-                )
+                if return_bytes:
+                    pdf_buffer = BytesIO()
+                    images[0].save(
+                        pdf_buffer,
+                        save_all=True,
+                        append_images=images[1:],
+                        quality=quality,
+                        optimize=optimize,
+                    )
+                    return full_name, pdf_buffer.getvalue()
+                else:
+                    images[0].save(
+                        full_output_path,
+                        save_all=True,
+                        append_images=images[1:],
+                        quality=quality,
+                        optimize=optimize,
+                    )
 
-            return str(full_output_path)
+            return full_name, []
         finally:
             for img in images:
                 img.close()

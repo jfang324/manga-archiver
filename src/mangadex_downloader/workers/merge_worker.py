@@ -80,14 +80,19 @@ class MergeWorker(Worker):
 
         output_name: str = f"{manga_title} [{chapter_number}] - {stripped_title}"
 
-        file_path = self._multi_format_exporter.generate(
+        full_name, file_data = self._multi_format_exporter.generate(
             image_data_list=image_data,
             output_directory=output_directory,
             output_name=output_name,
             output_format=output_format,
+            return_bytes=self._output_queue is not None,
         )
 
-        file_bytes = Path(file_path).read_bytes()
+        if isinstance(file_data, list) and not file_data:
+            file_data = Path(output_directory / full_name).read_bytes()
+        elif isinstance(file_data, list):
+            file_data = file_data[0]
+
         end_time = time.perf_counter_ns()
 
         await self._notification_queue.put(
@@ -103,8 +108,6 @@ class MergeWorker(Worker):
             )
         )
 
-        full_name = f"{output_name}.{output_format.value}"
-
         return UploadJob(
             id=job_id,
             manga_title=manga_title,
@@ -113,6 +116,6 @@ class MergeWorker(Worker):
             output_format=output_format,
             start_time=start_time,
             end_time=end_time,
-            complete_file_data=[file_bytes],
+            complete_file_data=file_data,
             full_name=full_name,
         )

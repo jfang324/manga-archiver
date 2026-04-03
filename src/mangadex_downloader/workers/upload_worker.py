@@ -82,7 +82,7 @@ class UploadWorker(Worker):
                 )
             )
 
-            file_data = complete_file_data[0]
+            file_data = complete_file_data
 
             mimetype = (
                 "application/vnd.comicbook+zip"
