@@ -76,18 +76,7 @@ class MergeWorker(Worker):
         output_name: str = f"{manga_title} [{chapter_number}] - {stripped_title}"
 
         merge_start = time.perf_counter_ns()
-        await self._notification_queue.put(
-            NotificationJob(
-                id=job_id,
-                manga_title=manga_title,
-                chapter_title=chapter_title,
-                output_directory=output_directory,
-                output_format=output_format,
-                start_time=merge_start,
-                end_time=-1,
-                status=JobStatus.MERGING,
-            )
-        )
+        await self._send_notification(job, JobStatus.MERGING, merge_start)
 
         full_name, file_data = self._multi_format_exporter.generate(
             image_data_list=image_data,
@@ -98,18 +87,7 @@ class MergeWorker(Worker):
         )
 
         merge_end = time.perf_counter_ns()
-        await self._notification_queue.put(
-            NotificationJob(
-                id=job_id,
-                manga_title=manga_title,
-                chapter_title=chapter_title,
-                output_directory=output_directory,
-                output_format=output_format,
-                start_time=merge_start,
-                end_time=merge_end,
-                status=JobStatus.MERGING,
-            )
-        )
+        await self._send_notification(job, JobStatus.MERGING, merge_start, merge_end)
 
         return UploadJob(
             id=job_id,

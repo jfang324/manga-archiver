@@ -228,7 +228,7 @@ class MangaDexDownloaderApp(App):
             self.notify("Failed to remove favorite", severity="error")
             return
 
-        self.favorites = [f for f in self.favorites if f["manga_id"] != manga_id]
+        self._favorites = [f for f in self._favorites if f["manga_id"] != manga_id]
         self.mutate_reactive(MangaDexDownloaderApp._favorites)
         self.notify(f"Removed '{manga_title}' from favorites", severity="information")
 
@@ -253,7 +253,7 @@ class MangaDexDownloaderApp(App):
             self.notify("Failed to add favorite", severity="error")
             return
 
-        self.favorites.append(favorite_manga)
+        self._favorites.append(favorite_manga)
         self.mutate_reactive(MangaDexDownloaderApp._favorites)
         self.notify(
             f"Added '{favorite_manga['manga_title']}' to favorites",

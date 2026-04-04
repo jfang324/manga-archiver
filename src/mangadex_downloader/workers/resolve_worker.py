@@ -79,18 +79,7 @@ class ResolveWorker(Worker):
             raise ValueError(f"Invalid FetchingResourcesJob missing chapter_id: {job}")
 
         resolve_start = time.perf_counter_ns()
-        await self._notification_queue.put(
-            NotificationJob(
-                id=job_id,
-                manga_title=manga_title,
-                chapter_title=chapter_title,
-                output_directory=output_directory,
-                output_format=output_format,
-                start_time=resolve_start,
-                end_time=-1,
-                status=JobStatus.FETCHING_RESOURCES,
-            )
-        )
+        await self._send_notification(job, JobStatus.FETCHING_RESOURCES, resolve_start)
 
         async with self._semaphore:
             resources: ProcessedDownloadResource = (
@@ -98,17 +87,8 @@ class ResolveWorker(Worker):
             )
 
         resolve_end = time.perf_counter_ns()
-        await self._notification_queue.put(
-            NotificationJob(
-                id=job_id,
-                manga_title=manga_title,
-                chapter_title=chapter_title,
-                output_directory=output_directory,
-                output_format=output_format,
-                start_time=resolve_start,
-                end_time=resolve_end,
-                status=JobStatus.FETCHING_RESOURCES,
-            )
+        await self._send_notification(
+            job, JobStatus.FETCHING_RESOURCES, resolve_start, resolve_end
         )
 
         return DownloadingJob(

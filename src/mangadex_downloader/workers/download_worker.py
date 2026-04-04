@@ -69,34 +69,14 @@ class DownloadWorker(Worker):
             raise ValueError(f"Invalid DownloadingJob missing urls: {job}")
 
         download_start = time.perf_counter_ns()
-        await self._notification_queue.put(
-            NotificationJob(
-                id=job_id,
-                manga_title=manga_title,
-                chapter_title=chapter_title,
-                output_directory=output_directory,
-                output_format=output_format,
-                start_time=download_start,
-                end_time=-1,
-                status=JobStatus.DOWNLOADING,
-            )
-        )
+        await self._send_notification(job, JobStatus.DOWNLOADING, download_start)
 
         async with self._semaphore:
             image_data: list[bytes] = await self._download_client.download_images(urls)
 
         download_end = time.perf_counter_ns()
-        await self._notification_queue.put(
-            NotificationJob(
-                id=job_id,
-                manga_title=manga_title,
-                chapter_title=chapter_title,
-                output_directory=output_directory,
-                output_format=output_format,
-                start_time=download_start,
-                end_time=download_end,
-                status=JobStatus.DOWNLOADING,
-            )
+        await self._send_notification(
+            job, JobStatus.DOWNLOADING, download_start, download_end
         )
 
         return MergingJob(

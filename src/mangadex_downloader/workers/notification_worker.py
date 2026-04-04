@@ -56,7 +56,9 @@ class NotificationWorker:
         while self._running:
             try:
                 job: NotificationJob = await self._input_queue.get()
+
                 await self._do_work(job)
+
                 self._input_queue.task_done()
             except asyncio.CancelledError:
                 self._running = False

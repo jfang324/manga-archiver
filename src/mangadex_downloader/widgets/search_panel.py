@@ -32,7 +32,7 @@ class SearchItem(ListItem):
         """Initialize the SearchItem widget.
 
         Args:
-            title (str): The title of the search result
+            title: The title of the search result
         """
         super().__init__(**kwargs)
 
@@ -113,7 +113,7 @@ class SearchPanel(Widget):
             """Initialize the Search message.
 
             Args:
-                query (str): The search query
+                query: The search query
             """
             super().__init__(**kwargs)
 
@@ -159,7 +159,7 @@ class SearchPanel(Widget):
         """Initialize the SearchPanel widget.
 
         Args:
-            debounce_duration (int): The duration in milliseconds to debounce the search query. Defaults to 500
+            debounce_duration: The duration in milliseconds to debounce the search query. Defaults to 500
         """
         super().__init__(**kwargs)
 

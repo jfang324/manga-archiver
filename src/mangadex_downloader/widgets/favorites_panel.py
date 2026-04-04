@@ -8,8 +8,7 @@ from textual.widgets import Label, ListItem, ListView
 
 
 class FavoritesPanel(Widget):
-    """
-    A panel widget for displaying and interacting with favorited manga.
+    """A panel widget for displaying and interacting with favorited manga.
 
     Reactive Attributes:
         favorites (list[dict[str, str]]): List of favorited manga with manga_id and manga_title
@@ -53,6 +52,11 @@ class FavoritesPanel(Widget):
         """
 
         def __init__(self, index: int, **kwargs) -> None:
+            """Initialize the DeleteAt message.
+
+            Args:
+                index: The index of the favorite to delete
+            """
             super().__init__(**kwargs)
             self.index = index
 
@@ -64,6 +68,11 @@ class FavoritesPanel(Widget):
         """
 
         def __init__(self, index: int, **kwargs) -> None:
+            """Initialize the SelectAt message.
+
+            Args:
+                index: The index of the favorite to select
+            """
             super().__init__(**kwargs)
             self.index = index
 

@@ -45,8 +45,8 @@ class UploadWorker(Worker):
         (
             job_id,
             manga_title,
-            chapter_title,
-            output_directory,
+            _,
+            _,
             output_format,
             complete_file_data,
             full_name,
@@ -61,18 +61,7 @@ class UploadWorker(Worker):
         )
 
         upload_start = time.perf_counter_ns()
-        await self._notification_queue.put(
-            NotificationJob(
-                id=job_id,
-                manga_title=manga_title,
-                chapter_title=chapter_title,
-                output_directory=output_directory,
-                output_format=output_format,
-                start_time=upload_start,
-                end_time=-1,
-                status=JobStatus.UPLOADING,
-            )
-        )
+        await self._send_notification(job, JobStatus.UPLOADING, upload_start)
 
         try:
             folder_id = await self._google_drive_client.get_or_create_manga_folder(
@@ -89,30 +78,11 @@ class UploadWorker(Worker):
             upload_end = time.perf_counter_ns()
 
             if uploaded_id:
-                await self._notification_queue.put(
-                    NotificationJob(
-                        id=job_id,
-                        manga_title=manga_title,
-                        chapter_title=chapter_title,
-                        output_directory=output_directory,
-                        output_format=output_format,
-                        start_time=upload_start,
-                        end_time=upload_end,
-                        status=JobStatus.UPLOADING,
-                    )
+                await self._send_notification(
+                    job, JobStatus.UPLOADING, upload_start, upload_end
                 )
-                await self._notification_queue.put(
-                    NotificationJob(
-                        id=job_id,
-                        manga_title=manga_title,
-                        chapter_title=chapter_title,
-                        output_directory=output_directory,
-                        output_format=output_format,
-                        start_time=upload_start,
-                        end_time=upload_end,
-                        status=JobStatus.COMPLETED,
-                    )
-                )
+
+                return None
             else:
                 logger.error("Failed to upload %s to Google Drive", full_name)
                 await self._send_notification(job, JobStatus.FAILED)

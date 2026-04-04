@@ -59,6 +59,10 @@ class PipelineConfig:
     resolve_rate_limit: int = DEFAULT_RESOLVE_RATE_LIMIT
     download_rate_limit: int = DEFAULT_DOWNLOAD_RATE_LIMIT
 
+    download_queue_size: int = DEFAULT_QUEUE_SIZE
+    merge_queue_size: int = DEFAULT_QUEUE_SIZE
+    upload_queue_size: int = DEFAULT_QUEUE_SIZE
+
     benchmark_enabled: bool = True
 
 
@@ -81,9 +85,9 @@ class PipelineManager:
             benchmark_callback: Optional callback for benchmark results
         """
         self._resolve_queue: Queue[Job] = Queue()
-        self._download_queue: Queue[Job] = Queue(maxsize=DEFAULT_QUEUE_SIZE)
-        self._merge_queue: Queue[Job] = Queue(maxsize=DEFAULT_QUEUE_SIZE)
-        self._upload_queue: Queue[Job] = Queue(maxsize=DEFAULT_QUEUE_SIZE)
+        self._download_queue: Queue[Job] = Queue(maxsize=config.download_queue_size)
+        self._merge_queue: Queue[Job] = Queue(maxsize=config.merge_queue_size)
+        self._upload_queue: Queue[Job] = Queue(maxsize=config.upload_queue_size)
         self._notification_queue: Queue[NotificationJob] = Queue()
 
         self._job_statuses: dict[str, tuple[JobStatus, JobMetadata]] = {}
@@ -183,9 +187,11 @@ class PipelineManager:
     def incomplete_job_count(self) -> int:
         """Return the number of jobs not in a terminal state."""
         return sum(
-            1
-            for status, _ in self._job_statuses.values()
-            if status not in (JobStatus.COMPLETED, JobStatus.FAILED)
+            [
+                1
+                for status, _ in self._job_statuses.values()
+                if status not in (JobStatus.COMPLETED, JobStatus.FAILED)
+            ]
         )
 
     async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]):
@@ -197,8 +203,6 @@ class PipelineManager:
                 chapter_title=job.chapter_title,
                 output_directory=job.output_directory,
                 output_format=job.output_format,
-                start_time=-1,
-                end_time=-1,
                 status=JobStatus.QUEUED,
             )
 

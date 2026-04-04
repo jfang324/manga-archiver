@@ -184,7 +184,9 @@ class Worker(ABC):
             await self._send_notification(job, JobStatus.FAILED)
             return
 
-    async def _send_notification(self, job: Job, status: JobStatus) -> None:
+    async def _send_notification(
+        self, job: Job, status: JobStatus, start_time: int = -1, end_time: int = -1
+    ) -> None:
         """Send a notification for the job.
 
         Args:
@@ -199,6 +201,8 @@ class Worker(ABC):
                 output_directory=job.output_directory,
                 output_format=job.output_format,
                 status=status,
+                start_time=start_time,
+                end_time=end_time,
             )
         )
 
