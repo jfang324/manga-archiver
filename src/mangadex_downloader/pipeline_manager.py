@@ -6,7 +6,7 @@ from asyncio import Queue, Semaphore
 from collections import deque
 from dataclasses import dataclass
 
-from ..constants.defaults import (
+from .constants.defaults import (
     DEFAULT_DOWNLOAD_RATE_LIMIT,
     DEFAULT_DOWNLOAD_WORKERS,
     DEFAULT_JOB_EXPIRY_SECONDS,
@@ -16,23 +16,23 @@ from ..constants.defaults import (
     DEFAULT_RESOLVE_WORKERS,
     DEFAULT_UPLOAD_WORKERS,
 )
-from ..enums import JobStatus
-from ..integrations.content_providers import MangaDexApiClient
-from ..integrations.storage_providers.google_drive import GoogleDriveClient
-from ..utils import DownloadClient, MultiFormatExporter
-from .base import WorkerConfig
-from .benchmark import BenchmarkManager
-from .download_worker import DownloadWorker
-from .jobs import (
+from .enums import JobStatus
+from .integrations.content_providers import MangaDexApiClient
+from .integrations.storage_providers.google_drive import GoogleDriveClient
+from .utils import DownloadClient, MultiFormatExporter
+from .workers import (
+    BenchmarkManager,
+    DownloadWorker,
     FetchingResourcesJob,
     Job,
     JobMetadata,
+    MergeWorker,
     NotificationJob,
+    NotificationWorker,
+    ResolveWorker,
+    UploadWorker,
+    WorkerConfig,
 )
-from .merge_worker import MergeWorker
-from .notification_worker import NotificationWorker
-from .resolve_worker import ResolveWorker
-from .upload_worker import UploadWorker
 
 logger = logging.getLogger(__name__)
 

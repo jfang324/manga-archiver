@@ -9,6 +9,7 @@ from .db import init_db
 from .integrations.content_providers import MangaDexApiClient
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .models import AppConfig
+from .pipeline_manager import PipelineConfig, PipelineManager
 from .repositories import FavoriteRepository
 from .screens import (
     DownloadsScreen,
@@ -20,7 +21,6 @@ from .screens import (
     SettingsScreen,
 )
 from .utils import DownloadClient, save_settings
-from .workers import PipelineConfig, PipelineManager
 from .workers.jobs import FetchingResourcesJob
 
 if TYPE_CHECKING:

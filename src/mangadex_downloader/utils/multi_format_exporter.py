@@ -74,7 +74,7 @@ class MultiFormatExporter:
         write_location: Path | BytesIO,
         quality: int = 75,
         optimize: bool = False,
-    ) -> bytes:
+    ) -> None:
         """Generate a PDF file from a list of images.
 
         Args:
@@ -82,7 +82,7 @@ class MultiFormatExporter:
             write_location: The location to write the PDF file
 
         Returns:
-            bytes: The PDF file data
+            None: The PDF file data is written to the write_location regardless of if it was a BytesIO or Path
         """
         try:
             images[0].save(
@@ -93,8 +93,6 @@ class MultiFormatExporter:
                 quality=quality,
                 optimize=optimize,
             )
-
-            return cast("BytesIO", write_location).getvalue()
         except Exception as e:
             logger.error("Error generating PDF file: %s", e)
             raise
@@ -174,9 +172,10 @@ class MultiFormatExporter:
                 file_data = self._generate_cbz(images, write_location)
             else:
                 write_location = BytesIO() if return_bytes else full_output_path
-                file_data = self._generate_pdf(
-                    images, write_location, quality, optimize
-                )
+                self._generate_pdf(images, write_location, quality, optimize)
+
+                if isinstance(write_location, BytesIO):
+                    file_data = cast("BytesIO", write_location).getvalue()
 
             if return_bytes:
                 output_data = file_data

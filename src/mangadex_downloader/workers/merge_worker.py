@@ -38,7 +38,7 @@ class MergeWorker(Worker):
 
         self._multi_format_exporter = multi_format_exporter
 
-    async def _do_work(self, job: MergingJob) -> Job | None:
+    async def _do_work(self, job: MergingJob) -> Job:
         """Merge the downloaded images into a single PDF or CBZ.
 
         Args:
