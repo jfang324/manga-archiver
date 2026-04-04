@@ -3,8 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.mangadex_downloader.integrations.exceptions import DownloadError
-from src.mangadex_downloader.utils.downloader import DownloadClient
+from src.mangadex_downloader.utils.downloader import DownloadClient, DownloadError
 from tests.conftest import AsyncContextManagerMock
 
 

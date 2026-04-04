@@ -130,28 +130,26 @@ mock_processed_chapter_data: list[dict] = [
         "chapter": "2",
     },
     {
-        "title": None,
+        "title": "",
         "id": "3",
         "chapter": "3",
     },
 ]
 
-# Download resource response
-mock_download_resource_data: dict = {
+# # Download resource response
+mock_malformed_download_resource_data: dict = {
     "baseUrl": "https://mangaCDN.com",
     "chapter": {
         "hash": "hash",
         "data": [
-            "chapter1.jpg",
-            "chapter2.jpg",
-            "chapter3.jpg",
-            "chapter4.jpg",
+            "chapter1.png",
+            "chapter2.png",
         ],
     },
 }
 
 # Download resource with data-saver
-mock_download_resource_data_with_saver: dict = {
+mock_download_resource_data: dict = {
     "baseUrl": "https://mangaCDN.com",
     "chapter": {
         "hash": "hash",
@@ -166,29 +164,20 @@ mock_download_resource_data_with_saver: dict = {
     },
 }
 
+# processed resource with no data-saver
 mock_processed_download_resource_data: dict = {
     "urls": [
-        "https://mangaCDN.com/data/hash/chapter1.jpg",
-        "https://mangaCDN.com/data/hash/chapter2.jpg",
-        "https://mangaCDN.com/data/hash/chapter3.jpg",
-        "https://mangaCDN.com/data/hash/chapter4.jpg",
+        "https://mangaCDN.com/data/hash/chapter1.png",
+        "https://mangaCDN.com/data/hash/chapter2.png",
     ],
     "hash": "hash",
 }
 
+# processed resource with data-saver
 mock_processed_download_resource_data_saver: dict = {
     "urls": [
         "https://mangaCDN.com/data-saver/hash/chapter1-saver.jpg",
         "https://mangaCDN.com/data-saver/hash/chapter2-saver.jpg",
-    ],
-    "hash": "hash",
-}
-
-# Expected processed data for mock_download_resource_data_with_saver using standard quality
-mock_processed_download_resource_data_from_saver: dict = {
-    "urls": [
-        "https://mangaCDN.com/data/hash/chapter1.png",
-        "https://mangaCDN.com/data/hash/chapter2.png",
     ],
     "hash": "hash",
 }
