@@ -30,11 +30,11 @@ def mock_session():
 
 
 @pytest.fixture
-def mock_response():
+def mock_api_response(request):
+    status_code, return_value = request.param
     response = MagicMock()
+    response.status = status_code
 
-    response.status = 200
-    response.json = AsyncMock(return_value={})
-    response.read = AsyncMock(return_value=b"mock_image_data")
+    response.json = AsyncMock(return_value=return_value)
 
     return response
