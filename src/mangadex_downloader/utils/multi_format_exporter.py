@@ -1,3 +1,4 @@
+import logging
 import re
 import zipfile
 from io import BytesIO
@@ -7,6 +8,8 @@ from typing import cast
 from PIL import Image
 
 from ..enums import OutputFormat
+
+logger = logging.getLogger(__name__)
 
 
 class MultiFormatExporter:
@@ -38,7 +41,65 @@ class MultiFormatExporter:
 
         return sanitized
 
-    # ruff: disable[C901] - This function is complex but we will refactor it after we add epub support
+    def _generate_cbz(
+        self, images: list[Image.Image], write_location: Path | BytesIO
+    ) -> bytes:
+        """Generate a CBZ file from a list of images.
+
+        Args:
+            images: The list of images to generate
+            write_location: The location to write the CBZ file
+
+        Returns:
+            bytes: The CBZ file data
+        """
+        try:
+            with zipfile.ZipFile(
+                write_location, "w", compression=zipfile.ZIP_DEFLATED
+            ) as cbz:
+                for i, img in enumerate(images, start=1):
+                    img_buf = BytesIO()
+                    img.save(img_buf, format="PNG")
+                    img_buf.seek(0)
+                    cbz.writestr(f"page_{i:03}.png", img_buf.read())
+
+            return cast("BytesIO", write_location).getvalue()
+        except Exception as e:
+            logger.error("Error generating CBZ file: %s", e)
+            raise
+
+    def _generate_pdf(
+        self,
+        images: list[Image.Image],
+        write_location: Path | BytesIO,
+        quality: int = 75,
+        optimize: bool = False,
+    ) -> bytes:
+        """Generate a PDF file from a list of images.
+
+        Args:
+            images: The list of images to generate
+            write_location: The location to write the PDF file
+
+        Returns:
+            bytes: The PDF file data
+        """
+        try:
+            images[0].save(
+                write_location,
+                format=str(OutputFormat.PDF),
+                save_all=True,
+                append_images=images[1:],
+                quality=quality,
+                optimize=optimize,
+            )
+
+            return cast("BytesIO", write_location).getvalue()
+        except Exception as e:
+            logger.error("Error generating PDF file: %s", e)
+            raise
+
+    # ruff: disable[C901] - The complexity of this function largely comes from input validation which must be done
     def generate(
         self,
         image_data_list: list[bytes],
@@ -110,30 +171,15 @@ class MultiFormatExporter:
 
             if output_format == OutputFormat.CBZ:
                 write_location = BytesIO() if return_bytes else full_output_path
-                with zipfile.ZipFile(
-                    write_location, "w", compression=zipfile.ZIP_DEFLATED
-                ) as cbz:
-                    for i, img in enumerate(images, start=1):
-                        img_buf = BytesIO()
-                        img.save(img_buf, format="PNG")
-                        img_buf.seek(0)
-                        cbz.writestr(f"page_{i:03}.png", img_buf.read())
-
-                if return_bytes:
-                    output_data = cast("BytesIO", write_location).getvalue()
+                file_data = self._generate_cbz(images, write_location)
             else:
                 write_location = BytesIO() if return_bytes else full_output_path
-                images[0].save(
-                    write_location,
-                    format=str(output_format),
-                    save_all=True,
-                    append_images=images[1:],
-                    quality=quality,
-                    optimize=optimize,
+                file_data = self._generate_pdf(
+                    images, write_location, quality, optimize
                 )
 
-                if return_bytes:
-                    output_data = cast("BytesIO", write_location).getvalue()
+            if return_bytes:
+                output_data = file_data
 
             return full_name, output_data
         finally:

@@ -32,6 +32,7 @@ class SettingsData(TypedDict):
 def _get_settings_path() -> Path:
     """Get the absolute path to the settings file."""
     config_dir = Path(os.path.expanduser("~/.mangadex-downloader"))
+
     return config_dir / SETTINGS_FILENAME
 
 
@@ -94,7 +95,7 @@ def load_settings() -> AppConfig:
 
     try:
         settings_data: SettingsData = json.loads(settings_path.read_text())
-        logger.debug("Loaded settings from %s: %s", settings_path, settings_data)
+        logger.info("Loaded settings from %s: %s", settings_path, settings_data)
     except (json.JSONDecodeError, OSError) as e:
         logger.error("Failed to read settings.json from %s: %s", settings_path, e)
         settings_data: SettingsData = _get_default_settings()
@@ -135,7 +136,7 @@ def save_settings(app_config: AppConfig) -> None:
 
     try:
         settings_path.write_text(json.dumps(settings_data, indent=2))
-        logger.debug("Saved settings to %s: %s", settings_path, settings_data)
+        logger.info("Saved settings to %s: %s", settings_path, settings_data)
     except OSError as e:
         logger.error("Failed to save settings.json to %s: %s", settings_path, e)
         raise ValueError(f"Failed to save settings.json: {e}") from e

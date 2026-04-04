@@ -18,7 +18,6 @@ def setup_logging() -> None:
     """
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Configure root logger explicitly
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
     root_logger.handlers.clear()
