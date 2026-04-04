@@ -5,17 +5,10 @@ from asyncio import Queue
 from typing import Callable
 
 from ..enums import JobStatus
-from .benchmark import BenchmarkManager, BenchmarkPhase
+from .benchmark import BenchmarkManager
 from .jobs import JobMetadata, NotificationJob
 
 logger = logging.getLogger(__name__)
-
-STATUS_TO_BENCHMARK = {
-    JobStatus.FETCHING_RESOURCES: "fetching_resources",
-    JobStatus.DOWNLOADING: "downloading",
-    JobStatus.MERGING: "merging",
-    JobStatus.UPLOADING: "uploading",
-}
 
 
 class NotificationWorker:
@@ -82,11 +75,9 @@ class NotificationWorker:
 
         self._on_status_update(job.id, job.status, metadata)
 
-        # Record benchmark timing for both start (end_time=-1) and end notifications
-        if self._benchmark and job.start_time != -1:
-            phase_name = STATUS_TO_BENCHMARK.get(job.status)
-            if phase_name:
-                self._benchmark.record(job.id, phase_name, job.start_time, job.end_time)
+        # Record benchmark timing
+        if self._benchmark:
+            self._benchmark.record(job.id, job.status, job.start_time, job.end_time)
 
         if self._benchmark and job.status == JobStatus.COMPLETED:
             aggregates = self._benchmark.get_aggregates()
@@ -95,14 +86,11 @@ class NotificationWorker:
                 "merge_avg_ms=%.2f, upload_avg_ms=%.2f, peak_memory_mb=%.2f",
                 job.id,
                 aggregates.total_job_count,
-                aggregates.avg_time_per_phase.get(BenchmarkPhase.FETCHING, 0)
+                aggregates.avg_time_per_phase.get(JobStatus.FETCHING_RESOURCES, 0)
                 / 1_000_000,
-                aggregates.avg_time_per_phase.get(BenchmarkPhase.DOWNLOADING, 0)
-                / 1_000_000,
-                aggregates.avg_time_per_phase.get(BenchmarkPhase.MERGING, 0)
-                / 1_000_000,
-                aggregates.avg_time_per_phase.get(BenchmarkPhase.UPLOADING, 0)
-                / 1_000_000,
+                aggregates.avg_time_per_phase.get(JobStatus.DOWNLOADING, 0) / 1_000_000,
+                aggregates.avg_time_per_phase.get(JobStatus.MERGING, 0) / 1_000_000,
+                aggregates.avg_time_per_phase.get(JobStatus.UPLOADING, 0) / 1_000_000,
                 aggregates.peak_memory_mb,
             )
 

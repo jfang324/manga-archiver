@@ -21,7 +21,7 @@ from ..integrations.content_providers import MangaDexApiClient
 from ..integrations.storage_providers.google_drive import GoogleDriveClient
 from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
-from .benchmark import BenchmarkManager, BenchmarkPhase
+from .benchmark import BenchmarkManager
 from .download_worker import DownloadWorker
 from .jobs import (
     FetchingResourcesJob,
@@ -262,35 +262,33 @@ class PipelineManager:
         return {
             "total_job_count": aggregates.total_job_count,
             "fetching_total_ms": aggregates.total_time_per_phase.get(
-                BenchmarkPhase.FETCHING, 0
+                JobStatus.FETCHING_RESOURCES, 0
             )
             / 1_000_000,
             "fetching_avg_ms": aggregates.avg_time_per_phase.get(
-                BenchmarkPhase.FETCHING, 0
+                JobStatus.FETCHING_RESOURCES, 0
             )
             / 1_000_000,
             "downloading_total_ms": aggregates.total_time_per_phase.get(
-                BenchmarkPhase.DOWNLOADING, 0
+                JobStatus.DOWNLOADING, 0
             )
             / 1_000_000,
             "downloading_avg_ms": aggregates.avg_time_per_phase.get(
-                BenchmarkPhase.DOWNLOADING, 0
+                JobStatus.DOWNLOADING, 0
             )
             / 1_000_000,
             "merging_total_ms": aggregates.total_time_per_phase.get(
-                BenchmarkPhase.MERGING, 0
+                JobStatus.MERGING, 0
             )
             / 1_000_000,
-            "merging_avg_ms": aggregates.avg_time_per_phase.get(
-                BenchmarkPhase.MERGING, 0
-            )
+            "merging_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.MERGING, 0)
             / 1_000_000,
             "uploading_total_ms": aggregates.total_time_per_phase.get(
-                BenchmarkPhase.UPLOADING, 0
+                JobStatus.UPLOADING, 0
             )
             / 1_000_000,
             "uploading_avg_ms": aggregates.avg_time_per_phase.get(
-                BenchmarkPhase.UPLOADING, 0
+                JobStatus.UPLOADING, 0
             )
             / 1_000_000,
             "avg_total_time_ms": aggregates.avg_total_time / 1_000_000,

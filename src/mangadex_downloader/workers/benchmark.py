@@ -1,83 +1,25 @@
 import tracemalloc
 from dataclasses import dataclass
-from enum import Enum
-from typing import NamedTuple
+from typing import TypedDict
+
+from ..enums import JobStatus
 
 
-class BenchmarkPhase(Enum):
-    """Phases of the pipeline for benchmarking."""
+class PhaseTimings(TypedDict):
+    """Stores start and end timestamps for a single phase."""
 
-    FETCHING = "fetching"
-    DOWNLOADING = "downloading"
-    MERGING = "merging"
-    UPLOADING = "uploading"
+    start_ns: float | None
+    end_ns: float | None
 
 
-class Timestamps(NamedTuple):
-    """Stores attribute names for start/end timestamps of a phase."""
-
-    start: str
-    end: str
-
-
-class BenchmarkMetric:
+class BenchmarkMetric(TypedDict):
     """Stores timing timestamps for a single job.
 
     Attributes:
-        job_id: Unique identifier for the job
-        resolve_start_ns: Start time of resolve phase (nanoseconds) or None
-        resolve_end_ns: End time of resolve phase (nanoseconds) or None
-        download_start_ns: Start time of download phase (nanoseconds) or None
-        download_end_ns: End time of download phase (nanoseconds) or None
-        merge_start_ns: Start time of merge phase (nanoseconds) or None
-        merge_end_ns: End time of merge phase (nanoseconds) or None
-        upload_start_ns: Start time of upload phase (nanoseconds) or None
-        upload_end_ns: End time of upload phase (nanoseconds) or None
+        timings: Dictionary mapping JobStatus to (start, end) timestamps
     """
 
-    __slots__ = (
-        "job_id",
-        "resolve_start_ns",
-        "resolve_end_ns",
-        "download_start_ns",
-        "download_end_ns",
-        "merge_start_ns",
-        "merge_end_ns",
-        "upload_start_ns",
-        "upload_end_ns",
-    )
-
-    job_id: str
-    resolve_start_ns: float | None
-    resolve_end_ns: float | None
-    download_start_ns: float | None
-    download_end_ns: float | None
-    merge_start_ns: float | None
-    merge_end_ns: float | None
-    upload_start_ns: float | None
-    upload_end_ns: float | None
-
-    def __init__(
-        self,
-        job_id: str,
-        resolve_start_ns: float | None = None,
-        resolve_end_ns: float | None = None,
-        download_start_ns: float | None = None,
-        download_end_ns: float | None = None,
-        merge_start_ns: float | None = None,
-        merge_end_ns: float | None = None,
-        upload_start_ns: float | None = None,
-        upload_end_ns: float | None = None,
-    ) -> None:
-        self.job_id = job_id
-        self.resolve_start_ns = resolve_start_ns
-        self.resolve_end_ns = resolve_end_ns
-        self.download_start_ns = download_start_ns
-        self.download_end_ns = download_end_ns
-        self.merge_start_ns = merge_start_ns
-        self.merge_end_ns = merge_end_ns
-        self.upload_start_ns = upload_start_ns
-        self.upload_end_ns = upload_end_ns
+    timings: dict[JobStatus, PhaseTimings]
 
 
 @dataclass
@@ -94,8 +36,8 @@ class BenchmarkAggregates:
         highest_perceived_end_to_end: Max time from earliest resolve start to latest upload end
     """
 
-    total_time_per_phase: dict[BenchmarkPhase, int]
-    avg_time_per_phase: dict[BenchmarkPhase, int]
+    total_time_per_phase: dict[JobStatus, int]
+    avg_time_per_phase: dict[JobStatus, int]
     avg_total_time: int
     peak_memory_mb: float
     total_job_count: int
@@ -110,130 +52,155 @@ class BenchmarkManager:
     when requested.
     """
 
-    _phase_fields: dict[BenchmarkPhase, Timestamps] = {
-        BenchmarkPhase.FETCHING: Timestamps("resolve_start_ns", "resolve_end_ns"),
-        BenchmarkPhase.DOWNLOADING: Timestamps("download_start_ns", "download_end_ns"),
-        BenchmarkPhase.MERGING: Timestamps("merge_start_ns", "merge_end_ns"),
-        BenchmarkPhase.UPLOADING: Timestamps("upload_start_ns", "upload_end_ns"),
-    }
+    _TRACKED_PHASES: tuple[JobStatus, ...] = (
+        JobStatus.FETCHING_RESOURCES,
+        JobStatus.DOWNLOADING,
+        JobStatus.MERGING,
+        JobStatus.UPLOADING,
+    )
 
     def __init__(self) -> None:
         self._metrics: dict[str, BenchmarkMetric] = {}
-        self._peak_memory_bytes: int = 0
 
-    def _parse_phase(self, status: str) -> BenchmarkPhase | None:
-        """Convert status string to BenchmarkPhase.
-
-        Args:
-            status: Status string (e.g., 'fetching_resources', 'downloading')
-
-        Returns:
-            BenchmarkPhase or None if invalid
-        """
-        key = status.replace("_resources", "")
-        try:
-            return BenchmarkPhase(key)
-        except ValueError:
-            return None
-
-    def record(self, job_id: str, status: str, start_ns: float, end_ns: float) -> None:
+    def record(
+        self, job_id: str, status: JobStatus, start_ns: float, end_ns: float
+    ) -> None:
         """Record timing for a job phase.
 
         Args:
             job_id: Unique identifier for the job
-            status: The status/phase name (e.g., 'fetching_resources', 'downloading')
+            status: The JobStatus phase (e.g., JobStatus.DOWNLOADING)
             start_ns: Start time in nanoseconds
-            end_ns: End time in nanoseconds (or None if phase just started)
+            end_ns: End time in nanoseconds (-1 if phase just started)
         """
-        phase = self._parse_phase(status)
-        if phase is None:
+        if status not in self._TRACKED_PHASES:
             return
 
-        metric = self._metrics.get(job_id)
-        if metric is None:
-            metric = BenchmarkMetric(job_id=job_id)
-            self._metrics[job_id] = metric
+        metric = self._metrics.setdefault(job_id, {"timings": {}})
+        metric["timings"][status] = {
+            "start_ns": start_ns if start_ns != -1 else None,
+            "end_ns": end_ns if end_ns != -1 else None,
+        }
 
-        timestamps = self._phase_fields[phase]
-        setattr(metric, timestamps.start, start_ns)
-        setattr(metric, timestamps.end, end_ns if end_ns != -1 else None)
+    def _get_memory(self) -> float:
+        """Get peak memory in MB using tracemalloc."""
+        _, current = tracemalloc.get_traced_memory()
+        return current / (1024 * 1024)
 
-    def record_memory(self, memory_bytes: int) -> None:
-        """Record peak memory usage.
-
-        Args:
-            memory_bytes: Current memory usage in bytes
-        """
-        self._peak_memory_bytes = max(self._peak_memory_bytes, memory_bytes)
-
-    def _get_duration(self, metric: BenchmarkMetric, phase: BenchmarkPhase) -> int:
-        """Get duration in nanoseconds for a phase, or 0 if not complete."""
-        timestamps = self._phase_fields[phase]
-        start = getattr(metric, timestamps.start)
-        end = getattr(metric, timestamps.end)
-        if start is not None and end is not None:
-            return int(end - start)
-        return 0
-
-    def _update_markers(
+    def _calculate_phase_times(
         self,
-        metric: BenchmarkMetric,
-        earliest_resolve: float | None,
-        latest_merge: float,
-        latest_upload: float,
-    ) -> tuple[float | None, float, float]:
-        """Update global timing markers from a single metric."""
-        if metric.resolve_start_ns is not None and (
-            earliest_resolve is None or metric.resolve_start_ns < earliest_resolve
-        ):
-            earliest_resolve = metric.resolve_start_ns
-        if metric.merge_end_ns is not None and metric.merge_end_ns > latest_merge:
-            latest_merge = metric.merge_end_ns
-        if metric.upload_end_ns is not None and metric.upload_end_ns > latest_upload:
-            latest_upload = metric.upload_end_ns
-        return earliest_resolve, latest_merge, latest_upload
+    ) -> tuple[dict[JobStatus, int], dict[JobStatus, int], list[int]]:
+        """Calculate timing aggregates per phase.
 
-    def get_aggregates(self) -> BenchmarkAggregates:
-        """Calculate aggregate metrics from all recorded jobs."""
-        if self._peak_memory_bytes == 0:
-            _, self._peak_memory_bytes = tracemalloc.get_traced_memory()
-
-        peak_memory_mb = self._peak_memory_bytes / (1024 * 1024)
-
-        total_time_per_phase = dict.fromkeys(self._phase_fields, 0)
-        count_per_phase = dict.fromkeys(self._phase_fields, 0)
-
+        Returns:
+            Tuple of (total_time_per_phase, count_per_phase, total_times_per_job)
+        """
+        total_time_per_phase = dict.fromkeys(self._TRACKED_PHASES, 0)
+        count_per_phase = dict.fromkeys(self._TRACKED_PHASES, 0)
         total_times: list[int] = []
+
+        for metric in self._metrics.values():
+            job_total = 0
+            timings = metric["timings"]
+
+            for phase in self._TRACKED_PHASES:
+                phase_timings = timings.get(phase)
+                if (
+                    phase_timings
+                    and phase_timings["start_ns"]
+                    and phase_timings["end_ns"]
+                ):
+                    duration = int(phase_timings["end_ns"] - phase_timings["start_ns"])
+                    total_time_per_phase[phase] += duration
+                    count_per_phase[phase] += 1
+                    job_total += duration
+
+            if job_total > 0:
+                total_times.append(job_total)
+
+        return total_time_per_phase, count_per_phase, total_times
+
+    def _calculate_global_markers(self) -> tuple[float | None, float, float]:
+        """Calculate global timing markers across all jobs.
+
+        Returns:
+            Tuple of (earliest_resolve, latest_merge, latest_upload)
+        """
         earliest_resolve: float | None = None
         latest_merge: float = 0
         latest_upload: float = 0
 
         for metric in self._metrics.values():
-            job_total = 0
+            timings = metric["timings"]
 
-            for phase in self._phase_fields:
-                duration = self._get_duration(metric, phase)
-                if duration > 0:
-                    total_time_per_phase[phase] += duration
-                    count_per_phase[phase] += 1
-                    job_total += duration
+            # Track earliest resolve (FETCHING_RESOURCES start)
+            fetching = timings.get(JobStatus.FETCHING_RESOURCES)
+            if (
+                fetching
+                and fetching["start_ns"]
+                and (
+                    earliest_resolve is None or fetching["start_ns"] < earliest_resolve
+                )
+            ):
+                earliest_resolve = fetching["start_ns"]
 
-            earliest_resolve, latest_merge, latest_upload = self._update_markers(
-                metric, earliest_resolve, latest_merge, latest_upload
-            )
+            # Track latest merge end
+            merging = timings.get(JobStatus.MERGING)
+            if merging and merging["end_ns"] and merging["end_ns"] > latest_merge:
+                latest_merge = merging["end_ns"]
 
-            if job_total > 0:
-                total_times.append(job_total)
+            # Track latest upload end
+            uploading = timings.get(JobStatus.UPLOADING)
+            if (
+                uploading
+                and uploading["end_ns"]
+                and uploading["end_ns"] > latest_upload
+            ):
+                latest_upload = uploading["end_ns"]
 
-        avg_time_per_phase = {
-            phase: (total_time_per_phase[phase] // count_per_phase[phase])
-            if count_per_phase[phase] > 0
-            else 0
-            for phase in self._phase_fields
+        return earliest_resolve, latest_merge, latest_upload
+
+    def _compute_averages(
+        self, total_time: dict[JobStatus, int], count: dict[JobStatus, int]
+    ) -> dict[JobStatus, int]:
+        """Compute average times per phase.
+
+        Args:
+            total_time: Total time per phase
+            count: Count of jobs per phase
+
+        Returns:
+            Dictionary of average times per phase
+        """
+        return {
+            phase: total_time[phase] // count[phase] if count[phase] > 0 else 0
+            for phase in self._TRACKED_PHASES
         }
 
-        avg_total = sum(total_times) // len(total_times) if total_times else 0
+    def _compute_avg_total(self, total_times: list[int]) -> int:
+        """Compute average total time across all jobs.
 
+        Args:
+            total_times: List of total times per job
+
+        Returns:
+            Average total time in nanoseconds
+        """
+        return sum(total_times) // len(total_times) if total_times else 0
+
+    def _compute_highest_times(
+        self, earliest_resolve: float | None, latest_merge: float, latest_upload: float
+    ) -> tuple[int, int]:
+        """Compute highest perceived times.
+
+        Args:
+            earliest_resolve: Earliest resolve start time
+            latest_merge: Latest merge end time
+            latest_upload: Latest upload end time
+
+        Returns:
+            Tuple of (highest_perceived_download_time, highest_perceived_end_to_end)
+        """
         highest_download = 0
         if earliest_resolve is not None and latest_merge > 0:
             highest_download = int(latest_merge - earliest_resolve)
@@ -241,6 +208,24 @@ class BenchmarkManager:
         highest_e2e = 0
         if earliest_resolve is not None and latest_upload > 0:
             highest_e2e = int(latest_upload - earliest_resolve)
+
+        return highest_download, highest_e2e
+
+    def get_aggregates(self) -> BenchmarkAggregates:
+        """Calculate aggregate metrics from all recorded jobs."""
+        peak_memory_mb = self._get_memory()
+        total_time_per_phase, count_per_phase, total_times = (
+            self._calculate_phase_times()
+        )
+        earliest_resolve, latest_merge, latest_upload = self._calculate_global_markers()
+
+        avg_time_per_phase = self._compute_averages(
+            total_time_per_phase, count_per_phase
+        )
+        avg_total = self._compute_avg_total(total_times)
+        highest_download, highest_e2e = self._compute_highest_times(
+            earliest_resolve, latest_merge, latest_upload
+        )
 
         return BenchmarkAggregates(
             total_time_per_phase=total_time_per_phase,
