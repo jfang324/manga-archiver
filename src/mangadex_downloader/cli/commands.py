@@ -25,8 +25,6 @@ def _positive_int(value: str) -> int:
 def create_parser() -> ArgumentParser:
     """Create the command-line argument parser.
 
-    Defines all CLI arguments and subcommands for the MangaDex Downloader.
-
     Returns:
         ArgumentParser: Configured ArgumentParser instance
     """

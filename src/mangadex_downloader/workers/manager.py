@@ -11,6 +11,7 @@ from ..constants.defaults import (
     DEFAULT_DOWNLOAD_WORKERS,
     DEFAULT_JOB_EXPIRY_SECONDS,
     DEFAULT_MERGE_WORKERS,
+    DEFAULT_QUEUE_SIZE,
     DEFAULT_RESOLVE_RATE_LIMIT,
     DEFAULT_RESOLVE_WORKERS,
     DEFAULT_UPLOAD_WORKERS,
@@ -80,9 +81,9 @@ class PipelineManager:
             benchmark_callback: Optional callback for benchmark results
         """
         self._resolve_queue: Queue[Job] = Queue()
-        self._download_queue: Queue[Job] = Queue()
-        self._merge_queue: Queue[Job] = Queue()
-        self._upload_queue: Queue[Job] = Queue()
+        self._download_queue: Queue[Job] = Queue(maxsize=DEFAULT_QUEUE_SIZE)
+        self._merge_queue: Queue[Job] = Queue(maxsize=DEFAULT_QUEUE_SIZE)
+        self._upload_queue: Queue[Job] = Queue(maxsize=DEFAULT_QUEUE_SIZE)
         self._notification_queue: Queue[NotificationJob] = Queue()
 
         self._job_statuses: dict[str, tuple[JobStatus, JobMetadata]] = {}

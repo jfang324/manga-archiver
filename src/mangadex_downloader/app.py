@@ -202,10 +202,8 @@ class MangaDexDownloaderApp(App):
 
         self.pop_screen()
 
-    @on(SettingsScreen.ScheduleSettingsSave)
-    def _on_schedule_settings_save(
-        self, event: SettingsScreen.ScheduleSettingsSave
-    ) -> None:
+    @on(SettingsScreen.Save)
+    def _on_schedule_settings_save(self, event: SettingsScreen.Save) -> None:
         """Save settings to settings.json."""
         try:
             new_settings: AppConfig = event.app_config

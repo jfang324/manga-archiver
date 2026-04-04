@@ -27,6 +27,8 @@ class ChapterResult(NamedTuple):
 
 
 class PartialJob(TypedDict):
+    """A dictionary containing partial information for a job."""
+
     manga_title: str
     chapter_id: str
     chapter_title: str

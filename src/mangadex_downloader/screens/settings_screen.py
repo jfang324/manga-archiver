@@ -25,7 +25,7 @@ class SettingsScreen(Screen):
         app_config (AppConfig): The application configuration
     """
 
-    class ScheduleSettingsSave(Message):
+    class Save(Message):
         """Message to schedule settings saving.
 
         Attributes:
@@ -95,4 +95,4 @@ class SettingsScreen(Screen):
             self.app.notify("Invalid settings values", severity="error")
             return
 
-        self.post_message(SettingsScreen.ScheduleSettingsSave(config))
+        self.post_message(SettingsScreen.Save(config))
