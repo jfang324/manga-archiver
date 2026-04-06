@@ -113,7 +113,6 @@ class TestMangaDexApiClientSearchManga:
         client = MangaDexApiClient(mock_session)
         result = await client.search_manga("test")
 
-        assert len(result) == len(expected_result)
         assert result == expected_result
 
     @pytest.mark.parametrize(
@@ -154,8 +153,7 @@ class TestMangaDexApiClientGetChapters:
         client = MangaDexApiClient(mock_session)
         result = await client.get_chapters("1")
 
-        assert len(result) == len(expected_result)
-        assert all(result[i] == expected_result[i] for i in range(len(result)))
+        assert result == expected_result
 
     @pytest.mark.parametrize(
         "mock_api_response, expected_error",

@@ -1,11 +1,5 @@
 """Mock data for unit tests."""
 
-# Base test data
-mock_url: str = "https://test.com"
-mock_query: str = "test"
-mock_manga_id: str = "1"
-mock_chapter_id: str = "1000"
-
 # Manga search response data
 mock_manga_data: dict = {
     "data": [
@@ -182,34 +176,6 @@ mock_processed_download_resource_data_saver: dict = {
     "hash": "hash",
 }
 
-# Image data
-mock_image_data: bytes = b"A long string of bytes representing an image"
-mock_url_list: list[str] = [
-    "https://test.com/1.jpg",
-    "https://test.com/2.jpg",
-    "https://test.com/3.jpg",
-    "https://test.com/4.jpg",
-]
-
-mock_image_data_list: list[bytes] = [
-    b"A long string of bytes representing an image",
-    b"Another long string of bytes representing an image",
-    b"Yet another long string of bytes representing an image",
-]
-
-mock_image_paths: list[str] = [
-    "1.jpg",
-    "2.jpg",
-    "3.jpg",
-]
-
-mock_directory: str = "c:/usr/test"
-
-# API error responses
-mock_not_found_response: dict = {"result": "error", "errors": [{"status": 404}]}
-mock_rate_limit_response: dict = {"result": "error", "errors": [{"status": 429}]}
-mock_api_error_response: dict = {"result": "error", "errors": [{"status": 500}]}
-
 # Nested test data for _get_nested helper
 mock_nested_data: dict = {
     "title": {"en": "Test Title"},
@@ -218,9 +184,6 @@ mock_nested_data: dict = {
     "empty": {},
     "null_value": None,
 }
-
-# Expected manga processing results
-expected_processed_manga_single: dict = {"title": "Test Title", "id": "1"}
 
 # Empty response data
 mock_empty_manga_data: dict = {"data": []}
