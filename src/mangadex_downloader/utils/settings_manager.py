@@ -48,6 +48,21 @@ def _get_default_settings() -> SettingsData:
     )
 
 
+def _parse_settings_file(settings_path: Path) -> SettingsData | None:
+    """Read and parse settings JSON file.
+
+    Args:
+        settings_path: Path to settings.json
+
+    Returns:
+        SettingsData if successful, None if file cannot be read or parsed
+    """
+    try:
+        return json.loads(settings_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
 def _create_app_config(settings_data: SettingsData) -> AppConfig:
     """Create an AppConfig object from a dictionary of settings data."""
     try:
@@ -93,12 +108,13 @@ def load_settings() -> AppConfig:
             "Settings file not found at %s, created with defaults", settings_path
         )
 
-    try:
-        settings_data: SettingsData = json.loads(settings_path.read_text())
+    settings_data: SettingsData | None = _parse_settings_file(settings_path)
+
+    if settings_data is None:
+        logger.error("Failed to read settings.json from %s", settings_path)
+        settings_data = _get_default_settings()
+    else:
         logger.info("Loaded settings from %s: %s", settings_path, settings_data)
-    except (json.JSONDecodeError, OSError) as e:
-        logger.error("Failed to read settings.json from %s: %s", settings_path, e)
-        settings_data: SettingsData = _get_default_settings()
 
     return _create_app_config(settings_data)
 
