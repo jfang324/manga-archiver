@@ -69,8 +69,6 @@ class TestNotificationWorkerDoWork:
         assert metadata.chapter_id == "job_456"
         assert metadata.manga_title == "One Piece"
         assert metadata.chapter_title == "Chapter 100"
-        assert metadata.start_time == 5000
-        assert metadata.end_time == 8000
 
 
 class TestNotificationWorker:

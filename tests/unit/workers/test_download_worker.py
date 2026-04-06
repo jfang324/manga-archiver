@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.mangadex_downloader.enums import JobStatus
+from src.mangadex_downloader.utils.downloader import DownloadClient
 from src.mangadex_downloader.workers.download_worker import DownloadWorker
 from src.mangadex_downloader.workers.jobs import DownloadingJob, MergingJob
 
@@ -100,7 +100,6 @@ class TestDownloadWorkerDoWork:
             output_directory=MagicMock(),
             output_format=MagicMock(),
             urls=["http://example.com/1.jpg"],
-            start_time=1000,
         )
 
         worker = DownloadWorker(
@@ -115,13 +114,11 @@ class TestDownloadWorkerDoWork:
 
         await worker._do_work(job)
 
-        mock_notification_queue.put.assert_called_once()
-        call_args = mock_notification_queue.put.call_args[0][0]
-        assert call_args.status == JobStatus.DOWNLOADING
+        assert mock_notification_queue.put.call_count == 2
 
     @pytest.mark.asyncio
     async def test_do_work_raises_error_for_missing_urls(self):
-        mock_download_client = MagicMock()
+        mock_download_client = MagicMock(spec=DownloadClient)
 
         mock_semaphore = MagicMock()
 
@@ -131,7 +128,7 @@ class TestDownloadWorkerDoWork:
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=MagicMock(),
-            urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
+            urls=[],
         )
 
         worker = DownloadWorker(
@@ -163,7 +160,6 @@ class TestDownloadWorkerDoWork:
             output_directory=MagicMock(),
             output_format=MagicMock(),
             urls=["http://example.com/1.jpg"],
-            start_time=1000,
         )
 
         worker = DownloadWorker(

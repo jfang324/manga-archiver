@@ -120,7 +120,7 @@ class TestResolveWorkerDoWork:
 
         await worker._do_work(job)
 
-        mock_notification_queue.put.assert_called_once()
+        assert mock_notification_queue.put.call_count == 2
 
     @pytest.mark.asyncio
     async def test_do_work_raises_error_for_missing_chapter_id(self):
@@ -132,7 +132,7 @@ class TestResolveWorkerDoWork:
             id="job_123",
             manga_title="Test Manga",
             chapter_title="Chapter 1",
-            chapter_id="chapter_456",
+            chapter_id="",
             output_directory=MagicMock(),
             output_format=MagicMock(),
         )

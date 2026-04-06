@@ -63,7 +63,9 @@ class MultiFormatExporter:
                     img_buf.seek(0)
                     cbz.writestr(f"page_{i:03}.png", img_buf.read())
 
-            return cast("BytesIO", write_location).getvalue()
+            if isinstance(write_location, BytesIO):
+                return write_location.getvalue()
+            return b""
         except Exception as e:
             logger.error("Error generating CBZ file: %s", e)
             raise
@@ -97,7 +99,68 @@ class MultiFormatExporter:
             logger.error("Error generating PDF file: %s", e)
             raise
 
-    # ruff: disable[C901] - The complexity of this function largely comes from input validation which must be done
+    def _validate_inputs(
+        self,
+        image_data_list: list[bytes],
+        output_directory: Path,
+        output_name: str,
+        quality: int,
+    ) -> None:
+        """Validate inputs for the generate method.
+
+        Args:
+            image_data_list: The list of image data to merge
+            output_directory: The directory to save the file
+            output_name: The name of the output file
+            quality: The quality of the PDF (1-100)
+
+        Raises:
+            ValueError: If any of the arguments are invalid
+        """
+        if not image_data_list:
+            raise ValueError("Image data list cannot be empty")
+
+        if not output_directory.exists() or not output_directory.is_dir():
+            raise ValueError(
+                f"Output directory must be a valid directory: {output_directory}"
+            )
+
+        if not output_name:
+            raise ValueError("Output name cannot be empty")
+
+        if quality < 1 or quality > 100:
+            raise ValueError("Quality must be between 1 and 100")
+
+    def _load_images(self, image_data_list: list[bytes]) -> list[Image.Image]:
+        """Load images from bytes and convert to RGB.
+
+        Args:
+            image_data_list: The list of image data to load
+
+        Returns:
+            list[Image.Image]: List of loaded images in RGB mode
+
+        Raises:
+            ValueError: If any image data is invalid
+        """
+        images: list[Image.Image] = []
+
+        for image_data in image_data_list:
+            try:
+                img = Image.open(BytesIO(image_data))
+            except Exception as e:
+                raise ValueError(f"Invalid image data: {e}") from e
+
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+
+            images.append(img)
+
+        if not images:
+            raise ValueError("No valid images to generate output")
+
+        return images
+
     def generate(
         self,
         image_data_list: list[bytes],
@@ -123,50 +186,22 @@ class MultiFormatExporter:
 
         Returns:
             tuple[str, bytes]: (full_name, file_bytes)
-                - full_name: The full filename with extension
+                - file_name: The full filename with extension
                 - file_bytes: If return_bytes=True, the file bytes; otherwise empty bytes
 
         Raises:
             ValueError: If any of the arguments are invalid
         """
-        if not image_data_list:
-            raise ValueError("Image data list cannot be empty")
+        self._validate_inputs(image_data_list, output_directory, output_name, quality)
 
-        if not output_directory.exists() and not output_directory.is_dir():
-            raise ValueError(
-                f"Output directory must be a valid directory: {output_directory}"
-            )
-
-        if not output_name:
-            raise ValueError("Output name cannot be empty")
-
-        if quality < 1 or quality > 100:
-            raise ValueError("Quality must be between 1 and 100")
-
-        full_output_path: Path = (
-            output_directory / f"{self._sanitize(output_name)}.{str(output_format)}"
-        )
-        full_name: str = f"{self._sanitize(output_name)}.{str(output_format)}"
-
-        images: list[Image.Image] = []
+        file_name: str = f"{self._sanitize(output_name)}.{str(output_format)}"
+        full_output_path: Path = output_directory / file_name
 
         output_data: bytes = b""
 
+        images = self._load_images(image_data_list)
+
         try:
-            for image_data in image_data_list:
-                try:
-                    img = Image.open(BytesIO(image_data))
-                except Exception as e:
-                    raise ValueError(f"Invalid image data: {e}") from e
-
-                if img.mode in ("RGBA", "P"):
-                    img = img.convert("RGB")
-
-                images.append(img)
-
-            if not images:
-                raise ValueError("No valid images to generate output")
-
             if output_format == OutputFormat.CBZ:
                 write_location = BytesIO() if return_bytes else full_output_path
                 file_data = self._generate_cbz(images, write_location)
@@ -180,9 +215,7 @@ class MultiFormatExporter:
             if return_bytes:
                 output_data = file_data
 
-            return full_name, output_data
+            return file_name, output_data
         finally:
             for img in images:
                 img.close()
-
-    # ruff: enable[C901]

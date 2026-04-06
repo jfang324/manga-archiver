@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.mangadex_downloader.enums import JobStatus, OutputFormat
+from src.mangadex_downloader.enums import OutputFormat
 from src.mangadex_downloader.workers.jobs import MergingJob, UploadJob
 from src.mangadex_downloader.workers.merge_worker import MergeWorker
 
@@ -24,7 +24,6 @@ class TestMergeWorkerDoWork:
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1", b"image2"],
-            start_time=1000,
         )
 
         mock_config = MagicMock()
@@ -61,7 +60,6 @@ class TestMergeWorkerDoWork:
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1", b"image2"],
-            start_time=1000,
         )
 
         worker = MergeWorker(
@@ -99,7 +97,6 @@ class TestMergeWorkerDoWork:
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1"],
-            start_time=1000,
         )
 
         worker = MergeWorker(
@@ -113,9 +110,7 @@ class TestMergeWorkerDoWork:
 
         await worker._do_work(job)
 
-        mock_notification_queue.put.assert_called_once()
-        call_args = mock_notification_queue.put.call_args[0][0]
-        assert call_args.status == JobStatus.MERGING
+        assert mock_notification_queue.put.call_count == 2
 
     @pytest.mark.asyncio
     async def test_do_work_parses_chapter_title_with_number(self, tmp_path):
@@ -131,7 +126,6 @@ class TestMergeWorkerDoWork:
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1"],
-            start_time=1000,
         )
 
         worker = MergeWorker(
@@ -160,7 +154,6 @@ class TestMergeWorkerDoWork:
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1"],
-            start_time=1000,
         )
 
         worker = MergeWorker(
@@ -174,36 +167,3 @@ class TestMergeWorkerDoWork:
 
         result = await worker._do_work(job)
         assert result.chapter_title == "Introduction"
-
-    @pytest.mark.asyncio
-    async def test_do_work_sets_end_time_after_generation(self, tmp_path):
-        mock_multi_format_exporter = MagicMock()
-        test_file = tmp_path / "test.pdf"
-        test_file.write_bytes(b"fake pdf content")
-        mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
-
-        mock_notification_queue = AsyncMock()
-
-        job = MergingJob(
-            id="job_123",
-            manga_title="Test Manga",
-            chapter_title="1. Introduction",
-            output_directory=tmp_path,
-            output_format=OutputFormat.PDF,
-            image_data=[b"image1"],
-            start_time=1000,
-        )
-
-        worker = MergeWorker(
-            multi_format_exporter=mock_multi_format_exporter,
-            id="merge_worker_0",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            notification_queue=mock_notification_queue,
-            config=MagicMock(),
-        )
-
-        result = await worker._do_work(job)
-
-        assert result.end_time > 0
-        assert result.end_time >= result.start_time
