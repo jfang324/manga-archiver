@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 
 import logging
 
+from textual import events
+
 from .repositories import FavoriteManga
 
 logger = logging.getLogger(__name__)
@@ -69,7 +71,6 @@ class MangaDexDownloaderApp(App):
         app_config: AppConfig,
         favorite_repository: FavoriteRepository,
         google_drive_client: GoogleDriveClient | None,
-        headless: bool = False,
         backlog: list[FetchingResourcesJob] | None = None,
         **kwargs,
     ) -> None:
@@ -80,14 +81,12 @@ class MangaDexDownloaderApp(App):
             app_config: The application configuration
             favorite_repository: The favorite repository
             google_drive_client: The Google Drive client
-            headless: Run in headless sync mode
             backlog: Pre-fetched jobs to enqueue after pipeline starts
         """
         super().__init__(**kwargs)
 
         self._pipeline_config = pipeline_config
         self._app_config = app_config
-        self._headless = headless
         self._backlog = backlog
 
         self._pipeline_manager: PipelineManager | None = None
@@ -105,6 +104,22 @@ class MangaDexDownloaderApp(App):
         self.mutate_reactive(MangaDexDownloaderApp._app_config)
         self.mutate_reactive(MangaDexDownloaderApp._favorites)
 
+    @on(events.Key)
+    async def _process_backlog(self, event: events.Key) -> None:
+        if event.key != "a":
+            return
+
+        """enqueue jobs from backlog."""
+        if not self._backlog:
+            return
+
+        if not self._pipeline_manager:
+            self.notify("Pipeline manager not initialized", severity="error")
+            return
+
+        self.notify(f"Enqueueing backlog: {len(self._backlog)} jobs", severity="information")
+        await self._pipeline_manager.enqueue_jobs(self._backlog)
+
     @work
     async def _setup_pipeline_manager(self) -> None:
         """Set up the pipeline manager and start it."""
@@ -116,11 +131,6 @@ class MangaDexDownloaderApp(App):
         )
 
         await self._pipeline_manager.start()
-
-        if self._backlog:
-            pass
-            # commented out for now, will be used later
-            # await self._pipeline_manager.enqueue_jobs(self._backlog)
 
     @work
     @on(SelectionScreen.EnqueueJobs)

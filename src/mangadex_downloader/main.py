@@ -79,6 +79,7 @@ def main() -> None:
         if not google_drive_client:
             print("headless mode requires a Google Drive client, try running with --archive")
             sys.exit(1)
+
         headless_sync = HeadlessSync(
             favorite_repository=favorite_repository,
             google_drive_client=google_drive_client,
@@ -92,7 +93,6 @@ def main() -> None:
         app_config=app_config,
         favorite_repository=favorite_repository,
         google_drive_client=google_drive_client,
-        headless=args.headless,
         backlog=backlog,
     )
     app.run()

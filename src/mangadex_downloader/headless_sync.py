@@ -5,6 +5,7 @@ from pathlib import Path
 
 import aiohttp
 
+from .enums import OutputFormat
 from .integrations.content_providers import MangaDexApiClient
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .repositories import FavoriteRepository
@@ -15,13 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class MangaChapters:
-    """Tracks chapters for a manga."""
+class Manga:
+    """Represents a manga with its chapters from API and Google Drive."""
 
-    manga_id: str
     manga_title: str
     api_chapters: list[ProcessedChapter]
-    google_drive_chapters: list[int]
+    google_drive_chapters: list[float]
 
 
 class HeadlessSync:
@@ -46,7 +46,7 @@ class HeadlessSync:
         self._google_drive_client = google_drive_client
         self._output_directory = output_directory
         self._output_format = output_format
-        self._manga_chapters: list[MangaChapters] = []
+        self._mangas: list[Manga] = []
 
     async def run(self) -> list[FetchingResourcesJob]:
         """Run the headless sync process.
@@ -90,18 +90,74 @@ class HeadlessSync:
                     f"{len(google_drive_chapters)} in Google Drive"
                 )
 
-                self._manga_chapters.append(
-                    MangaChapters(
-                        manga_id=manga_id,
+                self._mangas.append(
+                    Manga(
                         manga_title=manga_title,
                         api_chapters=api_chapters,
                         google_drive_chapters=google_drive_chapters,
                     )
                 )
 
-            print(f"\nScanned {len(self._manga_chapters)} manga")
+            print(f"\nScanned {len(self._mangas)} manga")
 
-        return []
+        return self._create_jobs()
+
+    def _calculate_diff(self) -> list[tuple[str, ProcessedChapter]]:
+        """Calculate missing chapters by comparing API chapters vs Google Drive.
+
+        Returns:
+            list[tuple[str, ProcessedChapter]]: List of tuples containing (manga_title, chapter)
+                for chapters missing in Google Drive
+        """
+        missing_chapters: list[tuple[str, ProcessedChapter]] = []
+
+        for manga in self._mangas:
+            google_drive_set = set(manga.google_drive_chapters)
+
+            for chapter in manga.api_chapters:
+                chapter_str = chapter.get("chapter")
+                if not chapter_str:
+                    logger.error("Skipping chapter %s - no chapter number", chapter.get("id"))
+                    continue
+
+                try:
+                    chapter_num = float(chapter_str)
+                except (ValueError, TypeError) as e:
+                    logger.error(
+                        "Failed to parse chapter number '%s' for %s: %s",
+                        chapter_str,
+                        chapter.get("id"),
+                        e,
+                    )
+                    continue
+
+                if chapter_num not in google_drive_set:
+                    missing_chapters.append((manga.manga_title, chapter))
+
+        return missing_chapters
+
+    def _create_jobs(self) -> list[FetchingResourcesJob]:
+        """Create FetchingResourcesJob for missing chapters.
+
+        Returns:
+            list[FetchingResourcesJob]: List of jobs to enqueue
+        """
+        missing_chapters = self._calculate_diff()
+
+        jobs: list[FetchingResourcesJob] = []
+        for manga_title, chapter in missing_chapters:
+            jobs.append(
+                FetchingResourcesJob(
+                    id=chapter["id"],
+                    manga_title=manga_title,
+                    chapter_id=chapter["id"],
+                    chapter_title=chapter["title"],
+                    output_directory=self._output_directory,
+                    output_format=OutputFormat(self._output_format),
+                )
+            )
+
+        return jobs
 
     async def _fetch_api_chapters(
         self,
@@ -117,7 +173,7 @@ class HeadlessSync:
             manga_title: The manga title (for logging)
 
         Returns:
-            List of chapters, or None if fetch failed
+            list[ProcessedChapter] | None: List of chapters, or None if fetch failed
         """
         try:
             return await client.get_chapters(manga_id)
@@ -126,14 +182,14 @@ class HeadlessSync:
             print(f"  ERROR: Failed to get chapters for '{manga_title}'")
             return None
 
-    def _fetch_google_drive_chapters(self, manga_title: str) -> list[int]:
+    def _fetch_google_drive_chapters(self, manga_title: str) -> list[float]:
         """Fetch chapter numbers from Google Drive folder.
 
         Args:
             manga_title: The manga title to look up in folder cache
 
         Returns:
-            List of chapter numbers found in Google Drive
+            list[float]: List of chapter numbers found in Google Drive
         """
         folder_id = self._google_drive_client._folder_cache.get(manga_title)
         if folder_id:
@@ -141,21 +197,21 @@ class HeadlessSync:
             return self._parse_chapter_numbers(files)
         return []
 
-    def _parse_chapter_numbers(self, files: list[dict]) -> list[int]:
+    def _parse_chapter_numbers(self, files: list[dict]) -> list[float]:
         """Parse chapter numbers from file names.
 
         Args:
             files: List of file dictionaries with 'name' key
 
         Returns:
-            list[int]: List of parsed chapter numbers
+            list[float]: List of parsed chapter numbers
         """
-        chapter_numbers: list[int] = []
+        chapter_numbers: list[float] = []
 
         for file in files:
             name = file.get("name", "")
-            match = re.search(r"\[(\d+)\]", name)
+            match = re.search(r"\[(\d+\.?\d*)\]", name)
             if match:
-                chapter_numbers.append(int(match.group(1)))
+                chapter_numbers.append(float(match.group(1)))
 
         return chapter_numbers
