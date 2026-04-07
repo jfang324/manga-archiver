@@ -8,7 +8,11 @@ from .jobs import DownloadingJob, Job, MergingJob, NotificationJob
 
 
 class DownloadWorker(Worker):
-    """Worker class for downloading resources for a chapter"""
+    """Downloads image resources from MangaDex API and prepares them for merging.
+
+    Uses an async download client and semaphore-based rate limiting to fetch images
+    for a chapter from the MangaDex CDN URLs.
+    """
 
     def __init__(
         self,

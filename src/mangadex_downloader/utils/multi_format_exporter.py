@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class MultiFormatExporter:
-    """Exporter for merging images into a merged format."""
+    """Merges images into CBZ or PDF format, either in memory or to disk."""
 
     def _sanitize(self, path: str) -> str:
         """Sanitize a path to be used as a filename.
@@ -171,9 +171,10 @@ class MultiFormatExporter:
         optimize: bool = False,
         return_bytes: bool = False,
     ) -> tuple[str, bytes]:
-        """Merge the image data list into a merged format.
+        """Merge images into a merged format.
 
-        Loads images directly from bytes in memory without writing to disk.
+        Processes image bytes and generates either a PDF or CBZ file.
+        Can write output to disk or return file data based on the return_bytes flag.
 
         Args:
             image_data_list: The list of image data to merge
@@ -186,8 +187,8 @@ class MultiFormatExporter:
 
         Returns:
             tuple[str, bytes]: (full_name, file_bytes)
-                - file_name: The full filename with extension
-                - file_bytes: If return_bytes=True, the file bytes; otherwise empty bytes
+            - file_name: The full filename with extension
+            - file_bytes: If return_bytes=True, the file bytes; otherwise empty bytes
 
         Raises:
             ValueError: If any of the arguments are invalid

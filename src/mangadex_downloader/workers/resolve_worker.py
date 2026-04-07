@@ -14,7 +14,11 @@ from .jobs import (
 
 
 class ResolveWorker(Worker):
-    """Worker class for fetching and processing resources for a chapter"""
+    """Fetches chapter resource data from MangaDex API and creates download jobs.
+
+    Processes FetchingResourcesJob inputs by querying the MangaDex API for chapter
+    download URLs and metadata, then outputs DownloadingJob objects.
+    """
 
     def __init__(
         self,

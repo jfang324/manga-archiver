@@ -35,7 +35,12 @@ class WorkerConfig:
 
 
 class Worker(ABC):
-    """The base worker class that all workers will implement."""
+    """Base class for async pipeline workers that process jobs with retry logic.
+
+    Workers operate in a continuous loop pulling jobs from an input queue, processing them,
+    and optionally passing them to an output queue. Implements configurable retry with
+    exponential backoff for different error types.
+    """
 
     def __init__(
         self,

@@ -67,7 +67,11 @@ class PipelineConfig:
 
 
 class PipelineManager:
-    """A class that controls the processing pipeline, managing and configuring workers and queues."""
+    """Controls the multi-stage processing pipeline, managing workers, queues, and job lifecycle.
+
+    Orchestrates the flow of jobs through fetch → download → merge → upload stages,
+    with built-in rate limiting, error handling, and status tracking.
+    """
 
     def __init__(
         self,
@@ -75,14 +79,14 @@ class PipelineManager:
         download_client: DownloadClient,
         config: PipelineConfig,
         google_drive_client: GoogleDriveClient | None = None,
-    ):
+    ) -> None:
         """Initialize the pipeline manager.
 
         Args:
             mangadex_api_client: The API client for MangaDex
             download_client: The client for downloading images
             config: The configuration for the pipeline
-            benchmark_callback: Optional callback for benchmark results
+            google_drive_client: The Google Drive client for uploading
         """
         self._resolve_queue: Queue[Job] = Queue()
         self._download_queue: Queue[Job] = Queue(maxsize=config.download_queue_size)
