@@ -7,7 +7,7 @@ from .types import GoogleApiStoredToken
 
 logger = logging.getLogger(__name__)
 
-TOKEN_FILENAME = "google_drive_token.json"  # noqa: S105
+TOKEN_FILENAME = "google_drive_token.json"
 
 
 def get_token_path() -> Path:

@@ -221,7 +221,7 @@ class Worker(ABC):
             float: The calculated backoff in seconds
         """
         max_delay = self._config.base_delay * (2**attempt)
-        jitter = random.uniform(0, max_delay) * 0.1 if self._config.jitter else 0  # noqa: S311
+        jitter = random.uniform(0, max_delay) * 0.1 if self._config.jitter else 0
 
         return max_delay + jitter
 
