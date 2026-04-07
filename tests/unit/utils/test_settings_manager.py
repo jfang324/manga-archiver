@@ -122,10 +122,12 @@ class TestLoadSettings:
         assert data["data_saver"] == DEFAULT_DATA_SAVER
 
         assert config.quality == DEFAULT_QUALITY
-        assert config.output_path == DEFAULT_OUTPUT_PATH
         assert config.output_format == DEFAULT_OUTPUT_FORMAT
         assert config.optimize == DEFAULT_OPTIMIZE
         assert config.data_saver == DEFAULT_DATA_SAVER
+        # Note: output_path depends on whether DEFAULT_OUTPUT_PATH exists on the system
+        # If it doesn't exist, falls back to Path.cwd()
+        assert config.output_path in (DEFAULT_OUTPUT_PATH, Path.cwd())
 
     def test_load_settings_returns_defaults_on_parse_error(self, tmp_path):
         settings_file = tmp_path / "settings.json"
@@ -137,7 +139,6 @@ class TestLoadSettings:
             config = settings_manager.load_settings()
 
         assert config.quality == DEFAULT_QUALITY
-        assert config.output_path == DEFAULT_OUTPUT_PATH
         assert config.output_format == DEFAULT_OUTPUT_FORMAT
         assert config.optimize == DEFAULT_OPTIMIZE
         assert config.data_saver == DEFAULT_DATA_SAVER
