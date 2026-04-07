@@ -17,7 +17,7 @@ class MergeWorker(Worker):
 
     def __init__(
         self,
-        id: str,  # noqa: A002
+        worker_id: str,
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
@@ -27,14 +27,14 @@ class MergeWorker(Worker):
         """Initialize the worker.
 
         Args:
-            id: The ID of the worker
+            worker_id: The ID of the worker
             input_queue: The input queue for the worker
             output_queue: The output queue for the worker
             notification_queue: The queue for notification jobs
             config: The configuration for the worker
             multi_format_exporter: The exporter to use for merging
         """
-        super().__init__(id, input_queue, output_queue, config, notification_queue)
+        super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
 
         self._multi_format_exporter = multi_format_exporter
 

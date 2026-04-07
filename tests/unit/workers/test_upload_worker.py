@@ -31,7 +31,7 @@ class TestUploadWorkerDoWork:
 
         worker = UploadWorker(
             google_drive_client=mock_drive_client,
-            id="upload_worker_0",
+            worker_id="upload_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=mock_notification_queue,
@@ -66,7 +66,7 @@ class TestUploadWorkerDoWork:
 
         worker = UploadWorker(
             google_drive_client=mock_drive_client,
-            id="upload_worker_0",
+            worker_id="upload_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=mock_notification_queue,
@@ -97,7 +97,7 @@ class TestUploadWorkerDoWork:
 
         worker = UploadWorker(
             google_drive_client=mock_drive_client,
-            id="upload_worker_0",
+            worker_id="upload_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=mock_notification_queue,
@@ -129,7 +129,7 @@ class TestUploadWorkerDoWork:
 
         worker = UploadWorker(
             google_drive_client=mock_drive_client,
-            id="upload_worker_0",
+            worker_id="upload_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=AsyncMock(),
@@ -145,7 +145,7 @@ class TestUploadWorker:
         mock_drive_client = MagicMock()
         worker = UploadWorker(
             google_drive_client=mock_drive_client,
-            id="upload_worker_0",
+            worker_id="upload_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=MagicMock(),

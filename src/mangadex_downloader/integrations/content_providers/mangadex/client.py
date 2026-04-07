@@ -134,9 +134,9 @@ class MangaDexApiClient(Provider):
                     or self._get_nested(attributes, "title")
                     or "Unknown"
                 )
-                id = element["id"]  # noqa: A001
+                element_id = element["id"]
 
-                manga = ProcessedManga(title=title, id=id)
+                manga = ProcessedManga(title=title, id=element_id)
                 processed_manga_data.append(manga)
 
         return processed_manga_data

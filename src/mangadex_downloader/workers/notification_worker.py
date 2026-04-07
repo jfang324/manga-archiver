@@ -20,7 +20,7 @@ class NotificationWorker:
 
     def __init__(
         self,
-        id: str,  # noqa: A002
+        worker_id: str,
         input_queue: Queue,
         on_status_update: Callable[[str, JobStatus, JobMetadata], None],
         benchmark: BenchmarkManager | None = None,
@@ -28,12 +28,12 @@ class NotificationWorker:
         """Initialize the notification worker.
 
         Args:
-            id: The ID of the worker
+            worker_id: The ID of the worker
             input_queue: The queue to receive notification jobs from
             on_status_update: Callback to update job status in PipelineManager
             benchmark: Optional benchmark manager for collecting metrics
         """
-        self._id = id
+        self._id = worker_id
         self._input_queue = input_queue
         self._on_status_update = on_status_update
         self._benchmark = benchmark

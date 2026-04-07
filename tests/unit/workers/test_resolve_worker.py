@@ -37,7 +37,7 @@ class TestResolveWorkerDoWork:
         worker = ResolveWorker(
             api_client=mock_api_client,
             semaphore=mock_semaphore,
-            id="resolve_worker_0",
+            worker_id="resolve_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=mock_notification_queue,
@@ -68,7 +68,7 @@ class TestResolveWorkerDoWork:
         worker = ResolveWorker(
             api_client=mock_api_client,
             semaphore=mock_semaphore,
-            id="resolve_worker_0",
+            worker_id="resolve_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=AsyncMock(),
@@ -97,7 +97,7 @@ class TestResolveWorkerDoWork:
         worker = ResolveWorker(
             api_client=mock_api_client,
             semaphore=mock_semaphore,
-            id="resolve_worker_0",
+            worker_id="resolve_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=mock_notification_queue,
@@ -124,7 +124,7 @@ class TestResolveWorkerDoWork:
         worker = ResolveWorker(
             api_client=mock_api_client,
             semaphore=mock_semaphore,
-            id="resolve_worker_0",
+            worker_id="resolve_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=AsyncMock(),
@@ -150,7 +150,7 @@ class TestResolveWorkerDoWork:
         worker = ResolveWorker(
             api_client=mock_api_client,
             semaphore=mock_semaphore,
-            id="resolve_worker_0",
+            worker_id="resolve_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=AsyncMock(),

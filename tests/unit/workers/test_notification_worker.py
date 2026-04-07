@@ -13,7 +13,7 @@ class TestNotificationWorkerDoWork:
     async def test_do_work_passes_callback_args(self):
         mock_callback = MagicMock()
         worker = NotificationWorker(
-            id="test_notification_worker",
+            worker_id="test_notification_worker",
             input_queue=MagicMock(),
             on_status_update=mock_callback,
         )
@@ -54,7 +54,7 @@ class TestNotificationWorkerDoWork:
     async def test_do_work_completed_at_based_on_status(self, status, expected_completed_at):
         mock_callback = MagicMock()
         worker = NotificationWorker(
-            id="test_notification_worker",
+            worker_id="test_notification_worker",
             input_queue=MagicMock(),
             on_status_update=mock_callback,
         )
@@ -92,7 +92,7 @@ class TestNotificationWorkerDoWork:
         mock_benchmark = MagicMock()
 
         worker = NotificationWorker(
-            id="test_notification_worker",
+            worker_id="test_notification_worker",
             input_queue=MagicMock(),
             on_status_update=mock_callback,
             benchmark=mock_benchmark,
@@ -117,7 +117,7 @@ class TestNotificationWorkerDoWork:
 class TestNotificationWorker:
     def test_stop_sets_running_false(self):
         worker = NotificationWorker(
-            id="test_notification_worker",
+            worker_id="test_notification_worker",
             input_queue=MagicMock(),
             on_status_update=MagicMock(),
         )

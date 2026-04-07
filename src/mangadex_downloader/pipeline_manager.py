@@ -103,7 +103,7 @@ class PipelineManager:
 
         self._resolve_pool: list[ResolveWorker] = [
             ResolveWorker(
-                id=f"resolve_worker_{index}",
+                worker_id=f"resolve_worker_{index}",
                 input_queue=self._resolve_queue,
                 output_queue=self._download_queue,
                 notification_queue=self._notification_queue,
@@ -115,7 +115,7 @@ class PipelineManager:
         ]
         self._download_pool: list[DownloadWorker] = [
             DownloadWorker(
-                id=f"download_worker_{index}",
+                worker_id=f"download_worker_{index}",
                 input_queue=self._download_queue,
                 output_queue=self._merge_queue,
                 notification_queue=self._notification_queue,
@@ -127,7 +127,7 @@ class PipelineManager:
         ]
         self._merge_pool: list[MergeWorker] = [
             MergeWorker(
-                id=f"merge_worker_{index}",
+                worker_id=f"merge_worker_{index}",
                 input_queue=self._merge_queue,
                 output_queue=self._upload_queue if google_drive_client else None,
                 notification_queue=self._notification_queue,
@@ -142,7 +142,7 @@ class PipelineManager:
         if google_drive_client:
             self._upload_pool = [
                 UploadWorker(
-                    id=f"upload_worker_{index}",
+                    worker_id=f"upload_worker_{index}",
                     input_queue=self._upload_queue,
                     output_queue=None,
                     notification_queue=self._notification_queue,
@@ -153,7 +153,7 @@ class PipelineManager:
             ]
 
         self._notification_worker = NotificationWorker(
-            id="notification_worker",
+            worker_id="notification_worker",
             input_queue=self._notification_queue,
             on_status_update=self._on_status_update,
             benchmark=BenchmarkManager() if config.benchmark_enabled else None,

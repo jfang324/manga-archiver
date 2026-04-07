@@ -44,7 +44,7 @@ class Worker(ABC):
 
     def __init__(
         self,
-        id: str,  # noqa: A002
+        worker_id: str,
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         config: WorkerConfig,
@@ -53,13 +53,13 @@ class Worker(ABC):
         """Initialize the worker.
 
         Args:
-            id: The ID of the worker
+            worker_id: The ID of the worker
             input_queue: The input queue for the worker
             output_queue: The output queue for the worker
             config: The configuration for the worker
             notification_queue: The queue for notification jobs
         """
-        self._id = id
+        self._id = worker_id
         self._input_queue = input_queue
         self._output_queue = output_queue
         self._notification_queue = notification_queue

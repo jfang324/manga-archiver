@@ -28,7 +28,7 @@ class TestMergeWorkerDoWork:
 
         worker = MergeWorker(
             multi_format_exporter=mock_multi_format_exporter,
-            id="merge_worker_0",
+            worker_id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=mock_notification_queue,
@@ -60,7 +60,7 @@ class TestMergeWorkerDoWork:
 
         worker = MergeWorker(
             multi_format_exporter=mock_multi_format_exporter,
-            id="merge_worker_0",
+            worker_id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=AsyncMock(),
@@ -95,7 +95,7 @@ class TestMergeWorkerDoWork:
 
         worker = MergeWorker(
             multi_format_exporter=mock_multi_format_exporter,
-            id="merge_worker_0",
+            worker_id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=mock_notification_queue,
@@ -122,7 +122,7 @@ class TestMergeWorkerDoWork:
 
         worker = MergeWorker(
             multi_format_exporter=mock_multi_format_exporter,
-            id="merge_worker_0",
+            worker_id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=AsyncMock(),
@@ -148,7 +148,7 @@ class TestMergeWorkerDoWork:
 
         worker = MergeWorker(
             multi_format_exporter=mock_multi_format_exporter,
-            id="merge_worker_0",
+            worker_id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=AsyncMock(),
@@ -173,7 +173,7 @@ class TestMergeWorkerDoWork:
 
         worker = MergeWorker(
             multi_format_exporter=mock_multi_format_exporter,
-            id="merge_worker_0",
+            worker_id="merge_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=AsyncMock(),

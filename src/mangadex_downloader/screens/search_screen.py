@@ -86,8 +86,8 @@ class SearchScreen(Screen):
 
     @on(SearchPanel.Selected)
     def _navigate_to_chapter_screen(self, event: SearchPanel.Selected) -> None:
-        title, id = event.title, event.value  # noqa: A001
-        manga: ProcessedManga = {"title": title, "id": id}
+        title, manga_id = event.title, event.value
+        manga: ProcessedManga = {"title": title, "id": manga_id}
 
         self.app.push_screen(SelectionScreen(manga, self._mangadex_client))
 
@@ -97,7 +97,7 @@ class SearchScreen(Screen):
         if index < 0 or index >= len(self.results):
             return
 
-        title, id = self.results[index]  # noqa: A001
-        favorited_manga: FavoriteManga = {"manga_id": id, "manga_title": title}
+        title, manga_id = self.results[index]
+        favorited_manga: FavoriteManga = {"manga_id": manga_id, "manga_title": title}
 
         self.post_message(self.FavoriteAdded(favorited_manga))

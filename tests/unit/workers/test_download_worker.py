@@ -27,7 +27,7 @@ class TestDownloadWorkerDoWork:
         worker = DownloadWorker(
             download_client=mock_download_client,
             semaphore=mock_semaphore,
-            id="download_worker_0",
+            worker_id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=mock_notification_queue,
@@ -59,7 +59,7 @@ class TestDownloadWorkerDoWork:
         worker = DownloadWorker(
             download_client=mock_download_client,
             semaphore=mock_semaphore,
-            id="download_worker_0",
+            worker_id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=AsyncMock(),
@@ -91,7 +91,7 @@ class TestDownloadWorkerDoWork:
         worker = DownloadWorker(
             download_client=mock_download_client,
             semaphore=mock_semaphore,
-            id="download_worker_0",
+            worker_id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=mock_notification_queue,
@@ -120,7 +120,7 @@ class TestDownloadWorkerDoWork:
         worker = DownloadWorker(
             download_client=mock_download_client,
             semaphore=mock_semaphore,
-            id="download_worker_0",
+            worker_id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=AsyncMock(),
@@ -147,7 +147,7 @@ class TestDownloadWorkerDoWork:
         worker = DownloadWorker(
             download_client=mock_download_client,
             semaphore=mock_semaphore,
-            id="download_worker_0",
+            worker_id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             notification_queue=AsyncMock(),

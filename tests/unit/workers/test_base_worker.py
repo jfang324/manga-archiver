@@ -22,7 +22,7 @@ class TestBackoffCalculation:
     def test_exponential_backoff_no_jitter(self):
         config = WorkerConfig(max_retries=5, base_delay=2, jitter=False, await_output_space=False)
         worker = ConcreteWorker(
-            id="test_worker",
+            worker_id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             config=config,
@@ -38,7 +38,7 @@ class TestBackoffCalculation:
     def test_exponential_backoff_with_jitter(self):
         config = WorkerConfig(max_retries=5, base_delay=2, jitter=True, await_output_space=False)
         worker = ConcreteWorker(
-            id="test_worker",
+            worker_id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             config=config,
@@ -54,7 +54,7 @@ class TestBackoffCalculation:
     def test_backoff_uses_config_values(self):
         config = WorkerConfig(max_retries=5, base_delay=5, jitter=False, await_output_space=False)
         worker = ConcreteWorker(
-            id="test_worker",
+            worker_id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             config=config,
@@ -67,7 +67,7 @@ class TestBackoffCalculation:
 
     def test_stop_sets_running_false(self):
         worker = ConcreteWorker(
-            id="test_worker",
+            worker_id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             config=WorkerConfig(),
@@ -86,7 +86,7 @@ class TestRetryLogic:
         mock_notification_queue = AsyncMock()
 
         worker = ConcreteWorker(
-            id="test_worker",
+            worker_id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             config=config,
@@ -107,7 +107,7 @@ class TestRetryLogic:
         mock_notification_queue = AsyncMock()
 
         worker = ConcreteWorker(
-            id="test_worker",
+            worker_id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             config=config,
@@ -134,7 +134,7 @@ class TestRetryLogic:
         config = WorkerConfig(max_retries=2, base_delay=0)
 
         worker = ConcreteWorker(
-            id="test_worker",
+            worker_id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             config=config,
@@ -165,7 +165,7 @@ class TestRetryLogic:
         config = WorkerConfig(max_retries=3, base_delay=0)
 
         worker = ConcreteWorker(
-            id="test_worker",
+            worker_id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             config=config,
@@ -190,7 +190,7 @@ class TestRetryLogic:
         mock_notification_queue = AsyncMock()
 
         worker = ConcreteWorker(
-            id="test_worker",
+            worker_id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             config=config,
@@ -211,7 +211,7 @@ class TestRetryLogic:
         mock_notification_queue = AsyncMock()
 
         worker = ConcreteWorker(
-            id="test_worker",
+            worker_id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             config=config,
@@ -232,7 +232,7 @@ class TestRetryLogic:
         mock_notification_queue = AsyncMock()
 
         worker = ConcreteWorker(
-            id="test_worker",
+            worker_id="test_worker",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
             config=config,
