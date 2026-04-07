@@ -122,7 +122,7 @@ class MenuSelector(Widget):
             return
 
         if index < 0 or index >= len(self._menu_options):
-            self.log.error(f"Invalid index selected in MenuSelector: {index}")
+            self.log.error("Invalid index selected in MenuSelector: %s", index)
             self.notify("Invalid index selected", severity="error")
             return
 

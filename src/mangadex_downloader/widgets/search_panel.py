@@ -211,7 +211,7 @@ class SearchPanel(Widget):
         index = event.index
 
         if index is None or index < 0 or index >= len(self.results):
-            self.log.error(f"Invalid index selected in SearchPanel: {index}")
+            self.log.error("Invalid index selected in SearchPanel: %s", index)
             self.notify("Invalid index selected", severity="error")
             return
 

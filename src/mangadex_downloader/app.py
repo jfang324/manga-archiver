@@ -179,10 +179,10 @@ class MangaDexDownloaderApp(App):
         if self._pipeline_manager and self._pipeline_config.benchmark_enabled:
             benchmark_results = self._pipeline_manager.get_benchmark_results()
 
-            if benchmark_results:
-                logger.info("Aggregate Benchmark Results:")
-                for aggregate in benchmark_results:
-                    logger.info(f"[{aggregate}]: {benchmark_results[aggregate]}")
+        if benchmark_results:
+            logger.info("Aggregate Benchmark Results:")
+            for aggregate in benchmark_results:
+                logger.info("[%s]: %s", aggregate, benchmark_results[aggregate])
 
         self.exit()
 
