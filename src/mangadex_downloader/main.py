@@ -3,6 +3,7 @@ import sys
 
 from .app import MangaDexDownloaderApp
 from .cli import parse_args
+from .headless_sync import HeadlessSync
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .pipeline_manager import PipelineConfig
 from .repositories import FavoriteRepository
@@ -72,12 +73,27 @@ def main() -> None:
 
     favorite_repository = FavoriteRepository()
 
+    backlog = None
+    if args.headless:
+        if not google_drive_client:
+            print("headless mode requires a Google Drive client, try running with --archive")
+            sys.exit(1)
+
+        headless_sync = HeadlessSync(
+            favorite_repository=favorite_repository,
+            google_drive_client=google_drive_client,
+            output_directory=app_config.output_path,
+            output_format=str(app_config.output_format),
+        )
+        backlog = headless_sync.run()
+
     app = MangaDexDownloaderApp(
         pipeline_config=pipeline_config,
         app_config=app_config,
         favorite_repository=favorite_repository,
         google_drive_client=google_drive_client,
         headless=args.headless,
+        backlog=backlog,
     )
     app.run()
 

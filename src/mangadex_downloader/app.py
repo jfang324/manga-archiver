@@ -70,6 +70,7 @@ class MangaDexDownloaderApp(App):
         favorite_repository: FavoriteRepository,
         google_drive_client: GoogleDriveClient | None,
         headless: bool = False,
+        backlog: list[FetchingResourcesJob] | None = None,
         **kwargs,
     ) -> None:
         """Initialize the MangaDexDownloaderApp.
@@ -80,12 +81,14 @@ class MangaDexDownloaderApp(App):
             favorite_repository: The favorite repository
             google_drive_client: The Google Drive client
             headless: Run in headless sync mode
+            backlog: Pre-fetched jobs to enqueue after pipeline starts
         """
         super().__init__(**kwargs)
 
         self._pipeline_config = pipeline_config
         self._app_config = app_config
         self._headless = headless
+        self._backlog = backlog
 
         self._pipeline_manager: PipelineManager | None = None
         self._favorite_repository = favorite_repository
@@ -113,6 +116,11 @@ class MangaDexDownloaderApp(App):
         )
 
         await self._pipeline_manager.start()
+
+        if self._backlog:
+            pass
+            # commented out for now, will be used later
+            # await self._pipeline_manager.enqueue_jobs(self._backlog)
 
     @work
     @on(SelectionScreen.EnqueueJobs)

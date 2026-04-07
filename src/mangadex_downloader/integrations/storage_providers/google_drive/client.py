@@ -133,6 +133,30 @@ class GoogleDriveClient:
 
         return results.get("files", [])
 
+    def get_files_in_folder(self, folder_id: str, page_size: int | None = None) -> list[dict]:
+        """List all files in a specific folder.
+
+        Args:
+            folder_id: The ID of the folder to list files from
+            page_size: Maximum number of results to return (default: None)
+
+        Returns:
+            list[dict]: List of file dictionaries with 'id' and 'name' keys
+        """
+        query = f"'{folder_id}' in parents and trashed=false"
+
+        results = (
+            self._service.files()
+            .list(
+                q=query,
+                fields="files(id, name)",
+                pageSize=page_size,
+            )
+            .execute()
+        )
+
+        return results.get("files", [])
+
     def _create_folder_sync(self, name: str, parent_id: str | None = None) -> str:
         """Create a new folder in Google Drive.
 
