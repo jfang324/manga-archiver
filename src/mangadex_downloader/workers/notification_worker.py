@@ -40,10 +40,10 @@ class NotificationWorker:
         self._running = False
 
     async def run(self) -> None:
-        """Main loop for the notification worker.
+        """Pull notification jobs from the queue and process them continuously.
 
         Continuously pulls notification jobs from the queue and processes them.
-        """  # noqa: D401
+        """
         self._running = True
 
         while self._running:

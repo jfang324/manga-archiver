@@ -30,8 +30,7 @@ class ResolveWorker(Worker):
         api_client: MangaDexApiClient,
         semaphore: Semaphore,
     ):
-        """
-        Initialize the worker
+        """Initialize the worker.
 
         Args:
             id: The ID of the worker
@@ -41,14 +40,14 @@ class ResolveWorker(Worker):
             config: The configuration for the worker
             api_client: The API client for MangaDex
             semaphore: The semaphore to use for global rate limiting
-        """  # noqa: D415
+        """
         super().__init__(id, input_queue, output_queue, config, notification_queue)
 
         self._api_client = api_client
         self._semaphore = semaphore
 
     async def _do_work(self, job: FetchingResourcesJob) -> DownloadingJob:
-        """Fetch the resources process them and enqueue them for downloading
+        """Fetch, process resources and enqueue them for downloading.
 
         Args:
             job: The job to process
@@ -58,7 +57,7 @@ class ResolveWorker(Worker):
 
         Raises:
             ValueError: If the job is missing a chapter ID
-        """  # noqa: D415
+        """
         (
             job_id,
             chapter_id,

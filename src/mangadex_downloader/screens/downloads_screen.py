@@ -51,7 +51,7 @@ class DownloadsScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        """Setup polling for job status updates on mount."""  # noqa: D401
+        """Set up polling for job status updates on mount."""
         table = self.query_one(DataTable)
         table.add_columns("Job ID", "Manga", "Chapter", "Completed At", "Status")
 

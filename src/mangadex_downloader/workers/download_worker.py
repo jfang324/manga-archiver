@@ -24,8 +24,7 @@ class DownloadWorker(Worker):
         download_client: DownloadClient,
         semaphore: Semaphore,
     ):
-        """
-        Initialize the worker
+        """Initialize the worker.
 
         Args:
             id: The ID of the worker
@@ -35,14 +34,14 @@ class DownloadWorker(Worker):
             config: The configuration for the worker
             download_client: The client for downloading images
             semaphore: The semaphore to use for global rate limiting
-        """  # noqa: D415
+        """
         super().__init__(id, input_queue, output_queue, config, notification_queue)
 
         self._download_client = download_client
         self._semaphore = semaphore
 
     async def _do_work(self, job: DownloadingJob) -> MergingJob:
-        """Download the resources from a list of URLs and enqueue them for merging
+        """Download resources from URLs and enqueue them for merging.
 
         Args:
             job: The job to process
@@ -52,7 +51,7 @@ class DownloadWorker(Worker):
 
         Raises:
             ValueError: If the job is missing URLs
-        """  # noqa: D415
+        """
         (
             job_id,
             manga_title,

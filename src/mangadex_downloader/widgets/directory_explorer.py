@@ -11,7 +11,7 @@ from textual.widgets import DirectoryTree
 
 
 class FilteredDirectoryTree(DirectoryTree):
-    """A custom DirectoryTree widget that filters out files and hidden directories"""  # noqa: D415
+    """Custom DirectoryTree that filters out files and hidden directories."""
 
     def filter_paths(self, paths: Iterable[Path]) -> list[Path]:
         return [p for p in paths if not p.name.startswith(".") and p.is_dir()]
@@ -38,26 +38,25 @@ class DirectoryExplorer(Widget):
     current_directory: reactive[str] = reactive(".")
 
     class DirectoryChanged(Message):
-        """Message to indicate that the current directory has changed
+        """Indicate that the current directory has changed.
 
         Attributes:
             new_directory (str): The path of the new root directory
             control (Widget): A reference to the DirectoryExplorer widget
-        """  # noqa: D415
+        """
 
         @property
         def control(self) -> Widget:
-            """Required for @on decorator selector matching"""  # noqa: D415
+            """Enable @on decorator selector matching."""
             return self._control
 
         def __init__(self, new_directory: str, control: Widget, **kwargs) -> None:
-            """
-            Initializes the DirectoryChanged message
+            """Initialize the DirectoryChanged message.
 
             Args:
                 new_directory: The path of the new root directory
                 control: A reference to the DirectoryExplorer widget
-            """  # noqa: D401, D415
+            """
             super().__init__(**kwargs)
 
             self.new_directory = new_directory

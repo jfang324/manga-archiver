@@ -42,7 +42,7 @@ class AppConfig:
 
     @output_path.setter
     def output_path(self, value: Path) -> None:
-        """Validation function for output_path."""  # noqa: D401
+        """Validate output_path exists and is a directory."""
         if not value.exists():
             raise ValueError(f"output_path does not exist: {value}")
 
@@ -58,7 +58,7 @@ class AppConfig:
 
     @quality.setter
     def quality(self, value: int) -> None:
-        """Validation function for quality."""  # noqa: D401
+        """Validate quality is between 1 and 100."""
         if value < 1 or value > 100:
             raise ValueError(f"quality must be between 1 and 100: {value}")
 
@@ -71,7 +71,7 @@ class AppConfig:
 
     @output_format.setter
     def output_format(self, value: OutputFormat) -> None:
-        """Validation function for output_format."""  # noqa: D401
+        """Validate output_format is in OutputFormat enum."""
         if value not in OutputFormat:
             raise ValueError(f"output_format is not supported: {value}")
 

@@ -13,11 +13,11 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    """Main entry point for the MangaDex Downloader CLI.
+    """Provide CLI entry point for MangaDex Downloader.
 
     Parses command-line arguments, initializes the Google Drive client
     if in archive mode, and launches the Textual UI application.
-    """  # noqa: D401
+    """
     setup_logging()
 
     try:

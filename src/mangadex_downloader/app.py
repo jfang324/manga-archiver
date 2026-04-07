@@ -185,7 +185,7 @@ class MangaDexDownloaderApp(App):
         self.exit()
 
     def action_safe_pop_screen(self) -> None:
-        """A safe version of pop_screen that checks if the current screen is a MenuScreen before popping."""  # noqa: D401
+        """Check current screen safely before popping."""
         if isinstance(self.screen_stack[-1], MenuScreen):
             incomplete_count = (
                 self._pipeline_manager.incomplete_job_count() if self._pipeline_manager else 0

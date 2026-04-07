@@ -50,7 +50,7 @@ class Worker(ABC):
         config: WorkerConfig,
         notification_queue: Queue[NotificationJob],
     ) -> None:
-        """Initialize the worker
+        """Initialize the worker.
 
         Args:
             id: The ID of the worker
@@ -58,7 +58,7 @@ class Worker(ABC):
             output_queue: The output queue for the worker
             config: The configuration for the worker
             notification_queue: The queue for notification jobs
-        """  # noqa: D415
+        """
         self._id = id
         self._input_queue = input_queue
         self._output_queue = output_queue
@@ -68,7 +68,7 @@ class Worker(ABC):
         self._running = False
 
     async def run(self) -> None:
-        """Main loop - continuously pull jobs from the input queue and process them."""  # noqa: D401
+        """Pull jobs from the input queue and process them continuously."""
         self._running = True
 
         while self._running:

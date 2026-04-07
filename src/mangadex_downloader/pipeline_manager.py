@@ -162,11 +162,11 @@ class PipelineManager:
         self._benchmark_enabled = config.benchmark_enabled
 
     def _on_status_update(self, job_id: str, status: JobStatus, metadata: JobMetadata) -> None:
-        """Callback to update job status in the internal dict with automatic expiry.
+        """Update job status in internal dict with automatic expiry.
 
         Uses a queue to track completed jobs for efficient expiry checking.
         Modification of state MUST be done here to avoid race conditions.
-        """  # noqa: D401
+        """
         self._job_statuses[job_id] = (status, metadata)
 
         # Add to expiry queue when job completes
