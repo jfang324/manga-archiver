@@ -9,7 +9,7 @@ A terminal-based tool that makes it easy to search for and download manga from M
 ## Features
 
 - Interactive TUI with keyboard and mouse support
-- Download chapters in PDF or CBZ format
+- Download chapters in PDF, CBZ, or EPUB format
 - Configurable output settings via in-app Settings screen
 - Asynchronous download pipeline with configurable workers
 - Local file output or Google Drive upload modes
@@ -100,7 +100,7 @@ Press `Ctrl+S` on the Settings screen to save your preferences.
 Configurable options:
 
 - **Output Directory**: Where downloaded files are saved (local mode)
-- **Output Format**: PDF or CBZ
+- **Output Format**: PDF, CBZ, or EPUB
 - **Quality**: 1-100 (higher = better quality, larger files)
 - **Optimize**: Optimize PDF file size (slower generation)
 
@@ -194,6 +194,7 @@ pyright
 - aiohttp
 - asyncio
 - Pillow
+- ebooklib
 - SQLite
 
 ### UI
