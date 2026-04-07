@@ -96,10 +96,7 @@ class MenuSelector(Widget):
             with Vertical(id="navigation-column"):
                 yield Label(f"{self._title} 📖", id="navigation-label")
                 yield ListView(
-                    *[
-                        ListItem(Label(option.display_name))
-                        for option in self._menu_options
-                    ],
+                    *[ListItem(Label(option.display_name)) for option in self._menu_options],
                     id="navigation-list",
                 )
 
@@ -122,7 +119,7 @@ class MenuSelector(Widget):
             return
 
         if index < 0 or index >= len(self._menu_options):
-            self.log.error(f"Invalid index selected in MenuSelector: {index}")
+            self.log.error("Invalid index selected in MenuSelector: %s", index)
             self.notify("Invalid index selected", severity="error")
             return
 

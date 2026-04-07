@@ -83,9 +83,7 @@ class GoogleDriveClient:
 
         return self._root_folder_id
 
-    def _get_root_folders(
-        self, page_size: int | None = None
-    ) -> list[GoogleDriveDirectory]:
+    def _get_root_folders(self, page_size: int | None = None) -> list[GoogleDriveDirectory]:
         """List all folders in My Drive.
 
         Args:
@@ -253,11 +251,7 @@ class GoogleDriveClient:
         )
 
         try:
-            file = (
-                self._service.files()
-                .create(body=file_metadata, media_body=media)
-                .execute()
-            )
+            file = self._service.files().create(body=file_metadata, media_body=media).execute()
 
             return file.get("id")
         except HttpError as e:

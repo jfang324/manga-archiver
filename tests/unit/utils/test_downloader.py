@@ -91,9 +91,9 @@ class TestDownloadClientDownloadImages:
         ]
 
         if expect_error:
-            with patch(
-                "asyncio.create_task", side_effect=task_tracker
-            ) and pytest.raises(DownloadError, match="404"):
+            with patch("asyncio.create_task", side_effect=task_tracker) and pytest.raises(
+                DownloadError, match="404"
+            ):
                 await client.download_images(urls)
 
             for task in task_tracker.tasks:

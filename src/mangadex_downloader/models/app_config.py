@@ -29,7 +29,7 @@ class AppConfig:
     _quality: int = DEFAULT_QUALITY
     _output_format: OutputFormat = DEFAULT_OUTPUT_FORMAT
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize validated properties."""
         self.output_path = self._output_path
         self.quality = self._quality
@@ -41,8 +41,8 @@ class AppConfig:
         return self._output_path
 
     @output_path.setter
-    def output_path(self, value: Path):
-        """Validation function for output_path."""
+    def output_path(self, value: Path) -> None:
+        """Validate output_path exists and is a directory."""
         if not value.exists():
             raise ValueError(f"output_path does not exist: {value}")
 
@@ -57,8 +57,8 @@ class AppConfig:
         return self._quality
 
     @quality.setter
-    def quality(self, value: int):
-        """Validation function for quality."""
+    def quality(self, value: int) -> None:
+        """Validate quality is between 1 and 100."""
         if value < 1 or value > 100:
             raise ValueError(f"quality must be between 1 and 100: {value}")
 
@@ -70,8 +70,8 @@ class AppConfig:
         return self._output_format
 
     @output_format.setter
-    def output_format(self, value: OutputFormat):
-        """Validation function for output_format."""
+    def output_format(self, value: OutputFormat) -> None:
+        """Validate output_format is in OutputFormat enum."""
         if value not in OutputFormat:
             raise ValueError(f"output_format is not supported: {value}")
 

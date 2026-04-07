@@ -62,9 +62,7 @@ class BenchmarkManager:
     def __init__(self) -> None:
         self._metrics: dict[str, BenchmarkMetric] = {}
 
-    def record(
-        self, job_id: str, status: JobStatus, start_ns: float, end_ns: float
-    ) -> None:
+    def record(self, job_id: str, status: JobStatus, start_ns: float, end_ns: float) -> None:
         """Record timing for a job phase.
 
         Args:
@@ -105,11 +103,7 @@ class BenchmarkManager:
 
             for phase in self._TRACKED_PHASES:
                 phase_timings = timings.get(phase)
-                if (
-                    phase_timings
-                    and phase_timings["start_ns"]
-                    and phase_timings["end_ns"]
-                ):
+                if phase_timings and phase_timings["start_ns"] and phase_timings["end_ns"]:
                     duration = int(phase_timings["end_ns"] - phase_timings["start_ns"])
                     total_time_per_phase[phase] += duration
                     count_per_phase[phase] += 1
@@ -138,9 +132,7 @@ class BenchmarkManager:
             if (
                 fetching
                 and fetching["start_ns"]
-                and (
-                    earliest_resolve is None or fetching["start_ns"] < earliest_resolve
-                )
+                and (earliest_resolve is None or fetching["start_ns"] < earliest_resolve)
             ):
                 earliest_resolve = fetching["start_ns"]
 
@@ -151,11 +143,7 @@ class BenchmarkManager:
 
             # Track latest upload end
             uploading = timings.get(JobStatus.UPLOADING)
-            if (
-                uploading
-                and uploading["end_ns"]
-                and uploading["end_ns"] > latest_upload
-            ):
+            if uploading and uploading["end_ns"] and uploading["end_ns"] > latest_upload:
                 latest_upload = uploading["end_ns"]
 
         return earliest_resolve, latest_merge, latest_upload
@@ -214,14 +202,10 @@ class BenchmarkManager:
     def get_aggregates(self) -> BenchmarkAggregates:
         """Calculate aggregate metrics from all recorded jobs."""
         peak_memory_mb = self._get_memory()
-        total_time_per_phase, count_per_phase, total_times = (
-            self._calculate_phase_times()
-        )
+        total_time_per_phase, count_per_phase, total_times = self._calculate_phase_times()
         earliest_resolve, latest_merge, latest_upload = self._calculate_global_markers()
 
-        avg_time_per_phase = self._compute_averages(
-            total_time_per_phase, count_per_phase
-        )
+        avg_time_per_phase = self._compute_averages(total_time_per_phase, count_per_phase)
         avg_total = self._compute_avg_total(total_times)
         highest_download, highest_e2e = self._compute_highest_times(
             earliest_resolve, latest_merge, latest_upload

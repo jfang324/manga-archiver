@@ -87,9 +87,7 @@ class TestMangaDexApiClientGetNested:
         ],
         ids=["generic_keys", "actual_keys"],
     )
-    def test_missing_keys_returns_default(
-        self, raw_data, keys, default, expected_result
-    ):
+    def test_missing_keys_returns_default(self, raw_data, keys, default, expected_result):
         result = MangaDexApiClient._get_nested(raw_data, *keys, default=default)
 
         assert result == expected_result
@@ -105,9 +103,7 @@ class TestMangaDexApiClientSearchManga:
         indirect=["mock_api_response"],
         ids=["full_response", "empty_response"],
     )
-    async def test_search_manga_success(
-        self, mock_session, mock_api_response, expected_result
-    ):
+    async def test_search_manga_success(self, mock_session, mock_api_response, expected_result):
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = MangaDexApiClient(mock_session)
@@ -145,9 +141,7 @@ class TestMangaDexApiClientGetChapters:
         indirect=["mock_api_response"],
         ids=["full_response", "empty_response"],
     )
-    async def test_get_chapters_success(
-        self, mock_session, mock_api_response, expected_result
-    ):
+    async def test_get_chapters_success(self, mock_session, mock_api_response, expected_result):
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = MangaDexApiClient(mock_session)
@@ -245,8 +239,6 @@ class TestMangaDexApiClientProcessDownloadResource:
 
     def test_process_fallback_to_standard_when_saver_missing(self):
         client = MangaDexApiClient(MagicMock(), data_saver=True)
-        result = client._process_download_resource_data(
-            mock_malformed_download_resource_data
-        )
+        result = client._process_download_resource_data(mock_malformed_download_resource_data)
 
         assert result == mock_processed_download_resource_data

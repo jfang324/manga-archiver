@@ -15,7 +15,7 @@ class UploadWorker(Worker):
 
     def __init__(
         self,
-        id: str,
+        worker_id: str,
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
@@ -25,14 +25,14 @@ class UploadWorker(Worker):
         """Initialize the upload worker.
 
         Args:
-            id: The ID of the worker
+            worker_id: The ID of the worker
             input_queue: The input queue for the worker
             output_queue: The output queue for the worker
             notification_queue: The queue for notification jobs
             config: The configuration for the worker
             google_drive_client: The Google Drive client for uploads
         """
-        super().__init__(id, input_queue, output_queue, config, notification_queue)
+        super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
 
         self._google_drive_client = google_drive_client
 
@@ -64,9 +64,7 @@ class UploadWorker(Worker):
         await self._send_notification(job, JobStatus.UPLOADING, upload_start)
 
         try:
-            folder_id = await self._google_drive_client.get_or_create_manga_folder(
-                manga_title
-            )
+            folder_id = await self._google_drive_client.get_or_create_manga_folder(manga_title)
 
             uploaded_id = await self._google_drive_client.upload_file(
                 file_data=complete_file_data,
@@ -78,9 +76,7 @@ class UploadWorker(Worker):
             upload_end = time.perf_counter_ns()
 
             if uploaded_id:
-                await self._send_notification(
-                    job, JobStatus.UPLOADING, upload_start, upload_end
-                )
+                await self._send_notification(job, JobStatus.UPLOADING, upload_start, upload_end)
 
                 return None
             else:

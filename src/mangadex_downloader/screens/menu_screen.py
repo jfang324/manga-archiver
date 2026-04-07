@@ -26,8 +26,9 @@ class MenuScreen(Screen):
         requested_screen: str = event.screen
 
         if not requested_screen or requested_screen not in available_screens:
-            self.log.error(f"Invalid screen selected in MenuScreen: {requested_screen}")
+            self.log.error("Invalid screen selected in MenuScreen: %s", requested_screen)
             self.notify("Invalid screen selected", severity="error")
+
             return
 
         self.app.push_screen(requested_screen)

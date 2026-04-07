@@ -8,11 +8,15 @@ from .jobs import DownloadingJob, Job, MergingJob, NotificationJob
 
 
 class DownloadWorker(Worker):
-    """Worker class for downloading resources for a chapter"""
+    """Downloads image resources from MangaDex API and prepares them for merging.
+
+    Uses an async download client and semaphore-based rate limiting to fetch images
+    for a chapter from the MangaDex CDN URLs.
+    """
 
     def __init__(
         self,
-        id: str,
+        worker_id: str,
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
@@ -20,11 +24,10 @@ class DownloadWorker(Worker):
         download_client: DownloadClient,
         semaphore: Semaphore,
     ):
-        """
-        Initialize the worker
+        """Initialize the worker.
 
         Args:
-            id: The ID of the worker
+            worker_id: The ID of the worker
             input_queue: The input queue for the worker
             output_queue: The output queue for the worker
             notification_queue: The queue for notification jobs
@@ -32,13 +35,13 @@ class DownloadWorker(Worker):
             download_client: The client for downloading images
             semaphore: The semaphore to use for global rate limiting
         """
-        super().__init__(id, input_queue, output_queue, config, notification_queue)
+        super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
 
         self._download_client = download_client
         self._semaphore = semaphore
 
     async def _do_work(self, job: DownloadingJob) -> MergingJob:
-        """Download the resources from a list of URLs and enqueue them for merging
+        """Download resources from URLs and enqueue them for merging.
 
         Args:
             job: The job to process
@@ -75,9 +78,7 @@ class DownloadWorker(Worker):
             image_data: list[bytes] = await self._download_client.download_images(urls)
 
         download_end = time.perf_counter_ns()
-        await self._send_notification(
-            job, JobStatus.DOWNLOADING, download_start, download_end
-        )
+        await self._send_notification(job, JobStatus.DOWNLOADING, download_start, download_end)
 
         return MergingJob(
             id=job_id,

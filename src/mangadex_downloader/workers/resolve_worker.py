@@ -14,11 +14,15 @@ from .jobs import (
 
 
 class ResolveWorker(Worker):
-    """Worker class for fetching and processing resources for a chapter"""
+    """Fetches chapter resource data from MangaDex API and creates download jobs.
+
+    Processes FetchingResourcesJob inputs by querying the MangaDex API for chapter
+    download URLs and metadata, then outputs DownloadingJob objects.
+    """
 
     def __init__(
         self,
-        id: str,
+        worker_id: str,
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
@@ -26,11 +30,10 @@ class ResolveWorker(Worker):
         api_client: MangaDexApiClient,
         semaphore: Semaphore,
     ):
-        """
-        Initialize the worker
+        """Initialize the worker.
 
         Args:
-            id: The ID of the worker
+            worker_id: The ID of the worker
             input_queue: The input queue for the worker
             output_queue: The output queue for the worker
             notification_queue: The queue for notification jobs
@@ -38,13 +41,13 @@ class ResolveWorker(Worker):
             api_client: The API client for MangaDex
             semaphore: The semaphore to use for global rate limiting
         """
-        super().__init__(id, input_queue, output_queue, config, notification_queue)
+        super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
 
         self._api_client = api_client
         self._semaphore = semaphore
 
     async def _do_work(self, job: FetchingResourcesJob) -> DownloadingJob:
-        """Fetch the resources process them and enqueue them for downloading
+        """Fetch, process resources and enqueue them for downloading.
 
         Args:
             job: The job to process
@@ -78,14 +81,12 @@ class ResolveWorker(Worker):
         await self._send_notification(job, JobStatus.FETCHING_RESOURCES, resolve_start)
 
         async with self._semaphore:
-            resources: ProcessedDownloadResource = (
-                await self._api_client.get_download_resource(job.chapter_id)
+            resources: ProcessedDownloadResource = await self._api_client.get_download_resource(
+                job.chapter_id
             )
 
         resolve_end = time.perf_counter_ns()
-        await self._send_notification(
-            job, JobStatus.FETCHING_RESOURCES, resolve_start, resolve_end
-        )
+        await self._send_notification(job, JobStatus.FETCHING_RESOURCES, resolve_start, resolve_end)
 
         return DownloadingJob(
             id=job_id,

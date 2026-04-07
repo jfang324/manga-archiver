@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 @dataclass
 class MenuOption:
-    """A data container for menu options containing required data for display and navigation"""
+    """Container for menu options with display and navigation data."""
 
     display_name: str
     description: str

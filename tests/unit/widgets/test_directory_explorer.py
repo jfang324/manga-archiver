@@ -20,16 +20,12 @@ class DirectoryExplorerApp(App):
         yield DirectoryExplorer(title="Test")
 
     @on(DirectoryExplorer.DirectoryChanged)
-    def _record_directory_message(
-        self, message: DirectoryExplorer.DirectoryChanged
-    ) -> None:
+    def _record_directory_message(self, message: DirectoryExplorer.DirectoryChanged) -> None:
         self.directory_records.append(message)
 
 
 class TestFilteredDirectoryTree:
-    def _create_item(
-        self, parent_directory: Path, name: str, is_file: bool = False
-    ) -> Path:
+    def _create_item(self, parent_directory: Path, name: str, is_file: bool = False) -> Path:
         full_path: Path = parent_directory / name
 
         if is_file:
@@ -45,9 +41,7 @@ class TestFilteredDirectoryTree:
             visible_directory = self._create_item(Path(temp_dir), "visible")
             tree: FilteredDirectoryTree = FilteredDirectoryTree(temp_dir)
 
-            result: list[Path] = tree.filter_paths(
-                [hidden_directory, visible_directory]
-            )
+            result: list[Path] = tree.filter_paths([hidden_directory, visible_directory])
 
             assert len(result) == 1
             assert result[0] == visible_directory
@@ -68,9 +62,7 @@ class TestFilteredDirectoryTree:
             visible_directory_2 = self._create_item(Path(temp_dir), "2")
             tree: FilteredDirectoryTree = FilteredDirectoryTree(temp_dir)
 
-            result: list[Path] = tree.filter_paths(
-                [visible_directory_1, visible_directory_2]
-            )
+            result: list[Path] = tree.filter_paths([visible_directory_1, visible_directory_2])
 
             assert len(result) == 2
             assert result[0] == visible_directory_1
@@ -97,9 +89,7 @@ class TestDirectoryExplorer:
                 await pilot.press("down")
                 await pilot.press("enter")
 
-                directory_records: list[DirectoryExplorer.DirectoryChanged] = (
-                    app.directory_records
-                )
+                directory_records: list[DirectoryExplorer.DirectoryChanged] = app.directory_records
                 assert len(directory_records) == 1
 
                 message: DirectoryExplorer.DirectoryChanged = directory_records.pop()

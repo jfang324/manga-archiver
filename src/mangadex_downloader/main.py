@@ -12,8 +12,8 @@ from .utils.auth.google_drive import handle_auth_login, handle_auth_logout, load
 logger = logging.getLogger(__name__)
 
 
-def main():
-    """Main entry point for the MangaDex Downloader CLI.
+def main() -> None:
+    """Provide CLI entry point for MangaDex Downloader.
 
     Parses command-line arguments, initializes the Google Drive client
     if in archive mode, and launches the Textual UI application.
@@ -42,9 +42,7 @@ def main():
         token = load_token()
 
         if token is None:
-            print(
-                "Archive mode requires authentication. Run: mangadex-downloader auth login"
-            )
+            print("Archive mode requires authentication. Run: mangadex-downloader auth login")
             sys.exit(1)
 
         try:

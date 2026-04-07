@@ -67,7 +67,11 @@ class PipelineConfig:
 
 
 class PipelineManager:
-    """A class that controls the processing pipeline, managing and configuring workers and queues."""
+    """Controls the multi-stage processing pipeline, managing workers, queues, and job lifecycle.
+
+    Orchestrates the flow of jobs through fetch → download → merge → upload stages,
+    with built-in rate limiting, error handling, and status tracking.
+    """
 
     def __init__(
         self,
@@ -75,14 +79,14 @@ class PipelineManager:
         download_client: DownloadClient,
         config: PipelineConfig,
         google_drive_client: GoogleDriveClient | None = None,
-    ):
+    ) -> None:
         """Initialize the pipeline manager.
 
         Args:
             mangadex_api_client: The API client for MangaDex
             download_client: The client for downloading images
             config: The configuration for the pipeline
-            benchmark_callback: Optional callback for benchmark results
+            google_drive_client: The Google Drive client for uploading
         """
         self._resolve_queue: Queue[Job] = Queue()
         self._download_queue: Queue[Job] = Queue(maxsize=config.download_queue_size)
@@ -99,7 +103,7 @@ class PipelineManager:
 
         self._resolve_pool: list[ResolveWorker] = [
             ResolveWorker(
-                id=f"resolve_worker_{index}",
+                worker_id=f"resolve_worker_{index}",
                 input_queue=self._resolve_queue,
                 output_queue=self._download_queue,
                 notification_queue=self._notification_queue,
@@ -111,7 +115,7 @@ class PipelineManager:
         ]
         self._download_pool: list[DownloadWorker] = [
             DownloadWorker(
-                id=f"download_worker_{index}",
+                worker_id=f"download_worker_{index}",
                 input_queue=self._download_queue,
                 output_queue=self._merge_queue,
                 notification_queue=self._notification_queue,
@@ -123,7 +127,7 @@ class PipelineManager:
         ]
         self._merge_pool: list[MergeWorker] = [
             MergeWorker(
-                id=f"merge_worker_{index}",
+                worker_id=f"merge_worker_{index}",
                 input_queue=self._merge_queue,
                 output_queue=self._upload_queue if google_drive_client else None,
                 notification_queue=self._notification_queue,
@@ -138,7 +142,7 @@ class PipelineManager:
         if google_drive_client:
             self._upload_pool = [
                 UploadWorker(
-                    id=f"upload_worker_{index}",
+                    worker_id=f"upload_worker_{index}",
                     input_queue=self._upload_queue,
                     output_queue=None,
                     notification_queue=self._notification_queue,
@@ -149,7 +153,7 @@ class PipelineManager:
             ]
 
         self._notification_worker = NotificationWorker(
-            id="notification_worker",
+            worker_id="notification_worker",
             input_queue=self._notification_queue,
             on_status_update=self._on_status_update,
             benchmark=BenchmarkManager() if config.benchmark_enabled else None,
@@ -157,10 +161,8 @@ class PipelineManager:
 
         self._benchmark_enabled = config.benchmark_enabled
 
-    def _on_status_update(
-        self, job_id: str, status: JobStatus, metadata: JobMetadata
-    ) -> None:
-        """Callback to update job status in the internal dict with automatic expiry.
+    def _on_status_update(self, job_id: str, status: JobStatus, metadata: JobMetadata) -> None:
+        """Update job status in internal dict with automatic expiry.
 
         Uses a queue to track completed jobs for efficient expiry checking.
         Modification of state MUST be done here to avoid race conditions.
@@ -265,36 +267,22 @@ class PipelineManager:
                 JobStatus.FETCHING_RESOURCES, 0
             )
             / 1_000_000,
-            "fetching_avg_ms": aggregates.avg_time_per_phase.get(
-                JobStatus.FETCHING_RESOURCES, 0
-            )
+            "fetching_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.FETCHING_RESOURCES, 0)
             / 1_000_000,
-            "downloading_total_ms": aggregates.total_time_per_phase.get(
-                JobStatus.DOWNLOADING, 0
-            )
+            "downloading_total_ms": aggregates.total_time_per_phase.get(JobStatus.DOWNLOADING, 0)
             / 1_000_000,
-            "downloading_avg_ms": aggregates.avg_time_per_phase.get(
-                JobStatus.DOWNLOADING, 0
-            )
+            "downloading_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.DOWNLOADING, 0)
             / 1_000_000,
-            "merging_total_ms": aggregates.total_time_per_phase.get(
-                JobStatus.MERGING, 0
-            )
+            "merging_total_ms": aggregates.total_time_per_phase.get(JobStatus.MERGING, 0)
             / 1_000_000,
-            "merging_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.MERGING, 0)
+            "merging_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.MERGING, 0) / 1_000_000,
+            "uploading_total_ms": aggregates.total_time_per_phase.get(JobStatus.UPLOADING, 0)
             / 1_000_000,
-            "uploading_total_ms": aggregates.total_time_per_phase.get(
-                JobStatus.UPLOADING, 0
-            )
-            / 1_000_000,
-            "uploading_avg_ms": aggregates.avg_time_per_phase.get(
-                JobStatus.UPLOADING, 0
-            )
+            "uploading_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.UPLOADING, 0)
             / 1_000_000,
             "avg_total_time_ms": aggregates.avg_total_time / 1_000_000,
             "peak_memory_mb": aggregates.peak_memory_mb,
             "highest_perceived_download_time_ms": aggregates.highest_perceived_download_time
             / 1_000_000,
-            "highest_perceived_end_to_end_ms": aggregates.highest_perceived_end_to_end
-            / 1_000_000,
+            "highest_perceived_end_to_end_ms": aggregates.highest_perceived_end_to_end / 1_000_000,
         }

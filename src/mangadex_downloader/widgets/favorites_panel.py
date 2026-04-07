@@ -88,9 +88,7 @@ class FavoritesPanel(Widget):
         if not favorites:
             list_view.append(
                 ListItem(
-                    Label(
-                        "No favorites yet. Search for manga and press Ctrl+F to add favorites."
-                    )
+                    Label("No favorites yet. Search for manga and press Ctrl+F to add favorites.")
                 )
             )
             return

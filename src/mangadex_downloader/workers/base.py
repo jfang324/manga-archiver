@@ -35,26 +35,31 @@ class WorkerConfig:
 
 
 class Worker(ABC):
-    """The base worker class that all workers will implement."""
+    """Base class for async pipeline workers that process jobs with retry logic.
+
+    Workers operate in a continuous loop pulling jobs from an input queue, processing them,
+    and optionally passing them to an output queue. Implements configurable retry with
+    exponential backoff for different error types.
+    """
 
     def __init__(
         self,
-        id: str,
+        worker_id: str,
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         config: WorkerConfig,
         notification_queue: Queue[NotificationJob],
     ) -> None:
-        """Initialize the worker
+        """Initialize the worker.
 
         Args:
-            id: The ID of the worker
+            worker_id: The ID of the worker
             input_queue: The input queue for the worker
             output_queue: The output queue for the worker
             config: The configuration for the worker
             notification_queue: The queue for notification jobs
         """
-        self._id = id
+        self._id = worker_id
         self._input_queue = input_queue
         self._output_queue = output_queue
         self._notification_queue = notification_queue
@@ -63,7 +68,7 @@ class Worker(ABC):
         self._running = False
 
     async def run(self) -> None:
-        """Main loop - continuously pull jobs from the input queue and process them."""
+        """Pull jobs from the input queue and process them continuously."""
         self._running = True
 
         while self._running:
@@ -216,7 +221,7 @@ class Worker(ABC):
             float: The calculated backoff in seconds
         """
         max_delay = self._config.base_delay * (2**attempt)
-        jitter = random.uniform(0, max_delay) * 0.1 if self._config.jitter else 0
+        jitter = random.uniform(0, max_delay) * 0.1 if self._config.jitter else 0  # noqa: S311 - non-crypto jitter for retry backoff, security not required
 
         return max_delay + jitter
 

@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 from asyncio import Queue
-from typing import Callable
+from collections.abc import Callable
 
 from ..enums import JobStatus
 from .benchmark import BenchmarkManager
@@ -20,7 +20,7 @@ class NotificationWorker:
 
     def __init__(
         self,
-        id: str,
+        worker_id: str,
         input_queue: Queue,
         on_status_update: Callable[[str, JobStatus, JobMetadata], None],
         benchmark: BenchmarkManager | None = None,
@@ -28,19 +28,19 @@ class NotificationWorker:
         """Initialize the notification worker.
 
         Args:
-            id: The ID of the worker
+            worker_id: The ID of the worker
             input_queue: The queue to receive notification jobs from
             on_status_update: Callback to update job status in PipelineManager
             benchmark: Optional benchmark manager for collecting metrics
         """
-        self._id = id
+        self._id = worker_id
         self._input_queue = input_queue
         self._on_status_update = on_status_update
         self._benchmark = benchmark
         self._running = False
 
     async def run(self) -> None:
-        """Main loop for the notification worker.
+        """Pull notification jobs from the queue and process them continuously.
 
         Continuously pulls notification jobs from the queue and processes them.
         """
@@ -53,7 +53,7 @@ class NotificationWorker:
                 await self._do_work(job)
 
                 self._input_queue.task_done()
-            except asyncio.CancelledError:
+            except asyncio.CancelledError:  # noqa: PERF203 - required for graceful shutdown of async worker
                 self._running = False
                 break
 
@@ -86,8 +86,7 @@ class NotificationWorker:
                 "merge_avg_ms=%.2f, upload_avg_ms=%.2f, peak_memory_mb=%.2f",
                 job.id,
                 aggregates.total_job_count,
-                aggregates.avg_time_per_phase.get(JobStatus.FETCHING_RESOURCES, 0)
-                / 1_000_000,
+                aggregates.avg_time_per_phase.get(JobStatus.FETCHING_RESOURCES, 0) / 1_000_000,
                 aggregates.avg_time_per_phase.get(JobStatus.DOWNLOADING, 0) / 1_000_000,
                 aggregates.avg_time_per_phase.get(JobStatus.MERGING, 0) / 1_000_000,
                 aggregates.avg_time_per_phase.get(JobStatus.UPLOADING, 0) / 1_000_000,

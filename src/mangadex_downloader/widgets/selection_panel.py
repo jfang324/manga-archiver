@@ -76,9 +76,7 @@ class SelectionPanel(Widget):
             yield Label(id="selection-label")
             yield SelectionList(id="selection-list")
 
-    def _build_selection_options(
-        self, options: list[tuple[str | None, str, str]]
-    ) -> None:
+    def _build_selection_options(self, options: list[tuple[str | None, str, str]]) -> None:
         selection_list: SelectionList = self.query_one("#selection-list", SelectionList)
         selection_items: list[Selection] = []
 
@@ -92,9 +90,7 @@ class SelectionPanel(Widget):
         selection_list.add_options(selection_items)
 
     def watch_options(self, new_options: list[tuple[str | None, str, str]]) -> None:
-        self.query_one("#selection-label", Label).update(
-            f"{self._title} ({len(new_options)})"
-        )
+        self.query_one("#selection-label", Label).update(f"{self._title} ({len(new_options)})")
         self._build_selection_options(new_options)
 
     @on(SelectionList.SelectedChanged, "#selection-list")

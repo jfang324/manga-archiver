@@ -53,11 +53,14 @@ def _fetch_device_code(client_id: str) -> GoogleAuthDeviceCode:
 
     Raises:
         requests.HTTPError: If the request fails
+        requests.Timeout: If the request exceeds 30 seconds
+        requests.ConnectionError: If the connection fails
     """
     response = requests.post(
         DEVICE_AUTH_URL,
         data={"client_id": client_id, "scope": DRIVE_SCOPE},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30,
     )
     response.raise_for_status()
 
@@ -80,6 +83,10 @@ def _poll_for_token(
 
     Returns:
         str | GoogleAuthDeviceFlowResult: Refresh token on success, or GoogleAuthDeviceFlowResult on failure
+
+    Raises:
+        requests.Timeout: If a request exceeds 30 seconds
+        requests.ConnectionError: If the connection fails
     """
     interval = 5
     start_time = time.time()
@@ -96,6 +103,7 @@ def _poll_for_token(
                 "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=30,
         )
 
         if token_response.status_code == 200:
@@ -201,6 +209,14 @@ def handle_auth_login() -> int:
         print("Authentication failed. Please try again.")
         return 1
 
+    except (requests.Timeout, requests.ConnectionError) as e:
+        logger.error("Network error during authentication: %s", e)
+        print(f"Network error: {e}")
+        return 1
+    except requests.HTTPError as e:
+        logger.error("HTTP error during authentication: %s", e)
+        print(f"Server error: {e}")
+        return 1
     except Exception as e:
         logger.error("Failed to complete authentication: %s", e)
         print(f"Error: {e}")
@@ -231,15 +247,18 @@ def handle_auth_logout() -> int:
             REVOKE_URL,
             params={"token": token["refresh_token"]},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=30,
         )
-        response.raise_for_status()
 
-        delete_token()
-        print("Logged out of Google Drive")
-        return 0
+        if response.status_code == 200:
+            delete_token()
+            return 0
+        else:
+            print(f"Failed to revoke token: {response.text}")
+            return 1
     except requests.HTTPError as e:
-        print("Failed to revoke token: %s", e)
+        print(f"Failed to send revocation request: {e}")
         return 1
     except (requests.Timeout, requests.ConnectionError) as e:
-        print("Network error: %s", e)
+        print(f"Network error: {e}")
         return 1

@@ -96,9 +96,9 @@ class SettingsPanel(Widget):
 
     def compose(self) -> ComposeResult:
         with Horizontal():
-            yield DirectoryExplorer(
-                title="Output Directory", id="directory-explorer"
-            ).data_bind(current_directory=SettingsPanel._output_directory)
+            yield DirectoryExplorer(title="Output Directory", id="directory-explorer").data_bind(
+                current_directory=SettingsPanel._output_directory
+            )
 
             with Vertical(id="other-settings"):
                 with Vertical(classes="field-container"):
@@ -133,9 +133,7 @@ class SettingsPanel(Widget):
                     yield Switch(value=self._optimize, id="optimize-switch")
 
     @on(DirectoryExplorer.DirectoryChanged)
-    def _update_output_directory(
-        self, event: DirectoryExplorer.DirectoryChanged
-    ) -> None:
+    def _update_output_directory(self, event: DirectoryExplorer.DirectoryChanged) -> None:
         self._output_directory = event.new_directory
 
     @on(Select.Changed)
@@ -143,7 +141,7 @@ class SettingsPanel(Widget):
         str_format = str(event.value)
 
         if str_format not in OutputFormat.list_formats():
-            self.log.error(f"Invalid output format: {str_format}")
+            self.log.error("Invalid output format: %s", str_format)
             self.notify("Invalid output format", severity="error")
             return
 

@@ -185,12 +185,10 @@ class SearchPanel(Widget):
             self._debounce_task.cancel()
 
         search_query: str = event.input.value
-        self._debounce_task = asyncio.create_task(
-            self._delayed_search_task(search_query)
-        )
+        self._debounce_task = asyncio.create_task(self._delayed_search_task(search_query))
 
     async def _delayed_search_task(self, search_query: str) -> None:
-        """Function that delays posting the query message to the parent."""
+        """Delay posting the query message to the parent."""
         await asyncio.sleep(self._debounce_duration / 1000)
 
         self.post_message(self.Search(search_query))
@@ -211,7 +209,7 @@ class SearchPanel(Widget):
         index = event.index
 
         if index is None or index < 0 or index >= len(self.results):
-            self.log.error(f"Invalid index selected in SearchPanel: {index}")
+            self.log.error("Invalid index selected in SearchPanel: %s", index)
             self.notify("Invalid index selected", severity="error")
             return
 
