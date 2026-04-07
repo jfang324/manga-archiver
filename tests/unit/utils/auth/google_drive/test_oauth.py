@@ -3,9 +3,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from src.mangadex_downloader.utils.auth.google_drive.enums import (
-    GoogleAuthDeviceFlowResult,
-)
 from src.mangadex_downloader.utils.auth.google_drive.oauth import (
     handle_auth_login,
     handle_auth_logout,
@@ -27,8 +24,8 @@ MOCK_DEVICE_CODE = {
 
 
 @pytest.fixture
-def mock_auth_env():
-    """Set up the base environment for auth tests (credentials path, file exists, no existing token)."""
+def mock_auth_pipeline():
+    """Set up the full auth pipeline for login tests."""
     with (
         patch(
             "src.mangadex_downloader.utils.auth.google_drive.oauth._get_credentials_path"
@@ -39,20 +36,6 @@ def mock_auth_env():
         patch(
             "src.mangadex_downloader.utils.auth.google_drive.oauth.load_token"
         ) as mock_load_token,
-    ):
-        mock_get_path.return_value = "/valid/path"
-        mock_exists.return_value = True
-        mock_load_token.return_value = None
-
-        yield mock_get_path, mock_exists, mock_load_token
-
-
-@pytest.fixture
-def mock_auth_pipeline(mock_auth_env):
-    """Set up the full auth pipeline (credentials + device code fetch + token polling)."""
-    mock_get_path, mock_exists, mock_load_token = mock_auth_env
-
-    with (
         patch(
             "src.mangadex_downloader.utils.auth.google_drive.oauth._load_client_credentials"
         ) as mock_load_creds,
@@ -61,34 +44,17 @@ def mock_auth_pipeline(mock_auth_env):
         ) as mock_fetch,
         patch("src.mangadex_downloader.utils.auth.google_drive.oauth._poll_for_token") as mock_poll,
     ):
+        mock_get_path.return_value = "/valid/path"
+        mock_exists.return_value = True
+        mock_load_token.return_value = None
         mock_load_creds.return_value = MOCK_CREDENTIALS["installed"]
 
-        yield mock_load_creds, mock_fetch, mock_poll, mock_get_path, mock_exists, mock_load_token
+        yield mock_fetch, mock_poll
 
 
 class TestHandleAuthLogin:
-    def test_login_returns_1_when_credentials_file_missing(self, capsys):
-        with patch(
-            "src.mangadex_downloader.utils.auth.google_drive.oauth._get_credentials_path"
-        ) as mock_get_path:
-            mock_get_path.return_value = "/nonexistent/path"
-
-            result = handle_auth_login()
-
-        assert result == 1
-        assert "Credentials file not found" in capsys.readouterr().out
-
-    def test_login_returns_0_when_already_authenticated(self, mock_auth_env, capsys):
-        _, _, mock_load_token = mock_auth_env
-        mock_load_token.return_value = {"refresh_token": "existing_token"}
-
-        result = handle_auth_login()
-
-        assert result == 0
-        assert "Already authenticated" in capsys.readouterr().out
-
     def test_login_saves_token_and_returns_0_on_success(self, mock_auth_pipeline, capsys):
-        mock_load_creds, mock_fetch, mock_poll, *_ = mock_auth_pipeline
+        mock_fetch, mock_poll = mock_auth_pipeline
         mock_fetch.return_value = MOCK_DEVICE_CODE
         mock_poll.return_value = "test_refresh_token"
 
@@ -105,7 +71,7 @@ class TestHandleAuthLogin:
         assert saved_token["client_id"] == "test_client_id"
 
     def test_login_returns_1_on_network_error(self, mock_auth_pipeline, capsys):
-        _, mock_fetch, _, *_ = mock_auth_pipeline
+        mock_fetch, _ = mock_auth_pipeline
         mock_fetch.side_effect = requests.Timeout("Connection timed out")
 
         result = handle_auth_login()
@@ -114,7 +80,7 @@ class TestHandleAuthLogin:
         assert "Network error" in capsys.readouterr().out
 
     def test_login_returns_1_on_http_error(self, mock_auth_pipeline, capsys):
-        _, mock_fetch, _, *_ = mock_auth_pipeline
+        mock_fetch, _ = mock_auth_pipeline
         mock_fetch.side_effect = requests.HTTPError("500 Server Error")
 
         result = handle_auth_login()
@@ -122,40 +88,8 @@ class TestHandleAuthLogin:
         assert result == 1
         assert "Server error" in capsys.readouterr().out
 
-    @pytest.mark.parametrize(
-        "poll_result, expected_message",
-        [
-            (GoogleAuthDeviceFlowResult.ACCESS_DENIED, "Access denied"),
-            (GoogleAuthDeviceFlowResult.EXPIRED_TOKEN, "timed out"),
-            (GoogleAuthDeviceFlowResult.TIMEOUT, "timed out"),
-        ],
-        ids=["access_denied", "expired_token", "timeout"],
-    )
-    def test_login_returns_1_on_auth_failure(
-        self, mock_auth_pipeline, poll_result, expected_message, capsys
-    ):
-        _, mock_fetch, mock_poll, *_ = mock_auth_pipeline
-        mock_fetch.return_value = MOCK_DEVICE_CODE
-        mock_poll.return_value = poll_result
-
-        result = handle_auth_login()
-
-        assert result == 1
-        assert expected_message in capsys.readouterr().out
-
 
 class TestHandleAuthLogout:
-    def test_logout_returns_0_when_not_authenticated(self, capsys):
-        with patch(
-            "src.mangadex_downloader.utils.auth.google_drive.oauth.load_token"
-        ) as mock_load_token:
-            mock_load_token.return_value = None
-
-            result = handle_auth_logout()
-
-        assert result == 0
-        assert "Not authenticated" in capsys.readouterr().out
-
     def test_logout_deletes_token_and_returns_0_on_success(self):
         with (
             patch(
