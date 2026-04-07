@@ -159,7 +159,8 @@ class GoogleDriveClient:
     async def get_or_create_manga_folder(self, manga_title: str) -> str:
         """Get or create a folder for a manga title.
 
-        Checks the cache first, then creates the folder in Google Drive if needed.
+        Checks the cache first, searches Google Drive if not found in cache,
+        then creates the folder if neither cache nor search finds it.
 
         Args:
             manga_title: The title of the manga
@@ -176,12 +177,45 @@ class GoogleDriveClient:
         if not self._root_folder_id:
             raise RuntimeError("Client not initialized. Call initialize() first.")
 
+        existing_id = await asyncio.to_thread(
+            self._search_folder_by_name, manga_title, self._root_folder_id
+        )
+
+        if existing_id:
+            self._folder_cache[manga_title] = existing_id
+            return existing_id
+
         folder_id = await asyncio.to_thread(
             self._create_folder_sync, manga_title, self._root_folder_id
         )
         self._folder_cache[manga_title] = folder_id
 
         return folder_id
+
+    def _search_folder_by_name(self, name: str, parent_id: str) -> str | None:
+        """Search for a folder by name within a parent folder.
+
+        Args:
+            name: The folder name to search for
+            parent_id: The ID of the parent folder
+
+        Returns:
+            str | None: Folder ID if found, None otherwise
+        """
+        query = f"name='{name}' and '{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+
+        results = (
+            self._service.files()
+            .list(
+                q=query,
+                fields="files(id, name)",
+                pageSize=1,
+            )
+            .execute()
+        )
+
+        files = results.get("files", [])
+        return files[0]["id"] if files else None
 
     def _upload_file_sync(
         self,
