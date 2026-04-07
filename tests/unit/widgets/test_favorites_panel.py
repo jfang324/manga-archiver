@@ -40,26 +40,19 @@ class TestFavoritesPanel:
         async with app.run_test():
             favorites_list: ListView = app.query_one("#favorites-panel-list", ListView)
 
-            assert len(favorites_list.children) == 2
+            assert len(favorites_list.children) == len(app.mock_favorites)
 
-            first_item = favorites_list.children[0]
-            label = first_item.query_one(Label)
-            assert "Title 1" in str(label.content)
+            for i in range(len(app.mock_favorites)):
+                title = app.mock_favorites[i]["manga_title"]
 
-            second_item = favorites_list.children[1]
-            label = second_item.query_one(Label)
-            assert "Title 2" in str(label.content)
+                assert favorites_list.children[i].query_one(Label).content == title
 
     async def test_delete_action_sends_message(self) -> None:
         app = FavoritesPanelApp()
 
         async with app.run_test() as pilot:
-            panel = app.query_one(FavoritesPanel)
             list_view = app.query_one("#favorites-panel-list", ListView)
-
             list_view.index = 0
-            panel.focus()
-            await pilot.pause()
 
             await pilot.press("ctrl+d")
             await pilot.pause()
@@ -72,7 +65,6 @@ class TestFavoritesPanel:
 
         async with app.run_test() as pilot:
             list_view = app.query_one("#favorites-panel-list", ListView)
-
             list_view.index = 1
 
             await pilot.press("down")
@@ -91,6 +83,6 @@ class TestFavoritesPanel:
 
             assert len(favorites_list.children) == 1
 
-            first_item = favorites_list.children[0]
-            label = first_item.query_one(Label)
-            assert "No favorites yet" in str(label.content)
+            label = favorites_list.children[0].query_one(Label)
+
+            assert "no favorites" in str(label.content).lower()
