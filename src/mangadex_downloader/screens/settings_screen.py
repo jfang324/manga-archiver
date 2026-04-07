@@ -19,14 +19,19 @@ from ..widgets import SettingsPanel
 
 
 class SettingsScreen(Screen):
-    """
-    Settings screen for the application.
+    """Settings screen for the application.
 
     Reactive Attributes:
         app_config (AppConfig): The application configuration
     """
 
-    class ScheduleSettingsSave(Message):
+    class Save(Message):
+        """Message to schedule settings saving.
+
+        Attributes:
+            app_config (AppConfig): The application configuration
+        """
+
         def __init__(self, app_config: AppConfig, **kwargs) -> None:
             super().__init__(**kwargs)
 
@@ -90,4 +95,4 @@ class SettingsScreen(Screen):
             self.app.notify("Invalid settings values", severity="error")
             return
 
-        self.post_message(SettingsScreen.ScheduleSettingsSave(config))
+        self.post_message(SettingsScreen.Save(config))

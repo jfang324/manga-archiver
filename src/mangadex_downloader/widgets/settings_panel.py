@@ -82,10 +82,10 @@ class SettingsPanel(Widget):
         Initialize the settings panel.
 
         Args:
-            output_directory (str): The directory to save output files
-            output_format (str): The output format (PDF, CBZ, etc.)
-            quality (int): The quality setting for output
-            optimize (bool): Whether to optimize output file size
+            output_directory: The directory to save output files
+            output_format: The output format (PDF, CBZ, etc.)
+            quality: The quality setting for output
+            optimize: Whether to optimize output file size
         """
         super().__init__(**kwargs)
 

@@ -9,9 +9,7 @@ from ..widgets import MenuSelector
 
 
 class MenuScreen(Screen):
-    """
-    The main menu screen of the application.
-    """
+    """The main menu screen of the application."""
 
     def compose(self) -> ComposeResult:
         with Vertical():

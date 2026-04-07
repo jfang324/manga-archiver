@@ -13,8 +13,7 @@ from ..enums import OutputFormat
 
 @dataclass
 class AppConfig:
-    """
-    Application configuration with validation.
+    """Application configuration with validation.
 
     Attributes:
         optimize (bool): Whether to optimize output file size
@@ -43,6 +42,7 @@ class AppConfig:
 
     @output_path.setter
     def output_path(self, value: Path):
+        """Validation function for output_path."""
         if not value.exists():
             raise ValueError(f"output_path does not exist: {value}")
 
@@ -58,6 +58,7 @@ class AppConfig:
 
     @quality.setter
     def quality(self, value: int):
+        """Validation function for quality."""
         if value < 1 or value > 100:
             raise ValueError(f"quality must be between 1 and 100: {value}")
 
@@ -70,6 +71,7 @@ class AppConfig:
 
     @output_format.setter
     def output_format(self, value: OutputFormat):
+        """Validation function for output_format."""
         if value not in OutputFormat:
             raise ValueError(f"output_format is not supported: {value}")
 

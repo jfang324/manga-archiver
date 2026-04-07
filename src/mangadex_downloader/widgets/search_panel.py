@@ -11,8 +11,10 @@ from textual.widgets import Input, Label, ListItem, ListView
 
 
 class SearchItem(ListItem):
-    """
-    A ListItem widget for displaying search results.
+    """A ListItem widget for displaying search results.
+
+    Attributes:
+        title (str): The title of the search result
     """
 
     DEFAULT_CSS = """
@@ -27,11 +29,10 @@ class SearchItem(ListItem):
     """
 
     def __init__(self, title: str, **kwargs) -> None:
-        """
-        Initialize the SearchItem widget.
+        """Initialize the SearchItem widget.
 
         Args:
-            title (str): The title of the search result
+            title: The title of the search result
         """
         super().__init__(**kwargs)
 
@@ -42,8 +43,7 @@ class SearchItem(ListItem):
 
 
 class SearchPanel(Widget):
-    """
-    A search panel widget for searching queries and displaying results.
+    """A search panel widget for searching queries and displaying results.
 
     Attributes:
         debounce_duration (int): The duration in milliseconds to debounce the search query
@@ -103,27 +103,24 @@ class SearchPanel(Widget):
     ]
 
     class Search(Message):
-        """
-        Message to indicate that a search query has been made.
+        """Message to indicate that a search query has been made.
 
         Attributes:
             query (str): The search query
         """
 
         def __init__(self, query: str, **kwargs) -> None:
-            """
-            Initialize the Search message.
+            """Initialize the Search message.
 
             Args:
-                query (str): The search query
+                query: The search query
             """
             super().__init__(**kwargs)
 
             self.query = query
 
     class Selected(Message):
-        """
-        Message to indicate that a search result has been selected.
+        """Message to indicate that a search result has been selected.
 
         Attributes:
             title (str): The title of the selected search result
@@ -131,12 +128,11 @@ class SearchPanel(Widget):
         """
 
         def __init__(self, title: str, value: str, **kwargs) -> None:
-            """
-            Initialize the Selected message.
+            """Initialize the Selected message.
 
             Args:
-                title (str): The title of the selected search result
-                value (str): The value of the selected search result
+                title: The title of the selected search result
+                value: The value of the selected search result
             """
             super().__init__(**kwargs)
 
@@ -144,23 +140,26 @@ class SearchPanel(Widget):
             self.value = value
 
     class Favorite(Message):
-        """
-        Message to indicate that a search result should be favorited.
+        """Message to indicate that a search result should be favorited.
 
         Attributes:
             index (int): The index of the result to favorite
         """
 
         def __init__(self, index: int, **kwargs) -> None:
+            """Initialize the Favorite message.
+
+            Args:
+                index: The index of the result to favorite
+            """
             super().__init__(**kwargs)
             self.index = index
 
     def __init__(self, debounce_duration: int = 500, **kwargs) -> None:
-        """
-        Initialize the SearchPanel widget.
+        """Initialize the SearchPanel widget.
 
         Args:
-            debounce_duration (int): The duration in milliseconds to debounce the search query. Defaults to 500
+            debounce_duration: The duration in milliseconds to debounce the search query. Defaults to 500
         """
         super().__init__(**kwargs)
 

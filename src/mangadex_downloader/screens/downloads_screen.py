@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Callable
 
 from textual.app import ComposeResult
@@ -8,9 +9,15 @@ from textual.widgets import DataTable, Footer
 from ..enums import JobStatus
 from ..workers.jobs import JobMetadata
 
+JobStatusRecord = tuple[JobStatus, JobMetadata]
+
 
 class DownloadsScreen(Screen):
-    """Downloads screen showing real-time job status updates."""
+    """Downloads screen showing real-time job status updates.
+
+    Reactive Attributes:
+        jobs (dict[str, JobStatusRecord]): Dictionary of job IDs to tuples of (status, metadata)
+    """
 
     DEFAULT_CSS = """
     DownloadsScreen {
@@ -23,15 +30,14 @@ class DownloadsScreen(Screen):
     }
     """
 
-    jobs: reactive[dict[str, tuple[JobStatus, JobMetadata]]] = reactive({})
+    jobs: reactive[dict[str, JobStatusRecord]] = reactive({})
 
     def __init__(
         self,
-        get_jobs: Callable[[], dict[str, tuple[JobStatus, JobMetadata]]],
+        get_jobs: Callable[[], dict[str, JobStatusRecord]],
         **kwargs,
     ) -> None:
-        """
-        Initialize the DownloadsScreen.
+        """Initialize the DownloadsScreen.
 
         Args:
             get_jobs: Callable that returns the current job statuses
@@ -45,8 +51,10 @@ class DownloadsScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
+        """Setup polling for job status updates on mount."""
         table = self.query_one(DataTable)
-        table.add_columns("Job ID", "Manga", "Chapter", "Download Time", "Status")
+        table.add_columns("Job ID", "Manga", "Chapter", "Completed At", "Status")
+
         self.set_interval(1, self._poll_jobs)
 
     def _poll_jobs(self) -> None:
@@ -57,16 +65,17 @@ class DownloadsScreen(Screen):
         table.clear()
 
         for job_id, (status, metadata) in self.jobs.items():
-            if metadata.end_time == -1:
-                download_time = "N/A"
-            else:
-                duration_s = (metadata.end_time - metadata.start_time) / 1_000_000_000
-                download_time = f"{duration_s:.2f}s"
+            completed = "—"
+
+            if metadata.completed_at != -1:
+                completed = datetime.fromtimestamp(metadata.completed_at).strftime(
+                    "%H:%M:%S"
+                )
 
             table.add_row(
                 job_id,
                 metadata.manga_title,
                 metadata.chapter_title,
-                download_time,
+                completed,
                 status.value,
             )

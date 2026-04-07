@@ -6,17 +6,14 @@ from ..enums import JobStatus, OutputFormat
 
 @dataclass
 class Job:
-    """
-    Base class for all jobs.
+    """Base class for all jobs.
 
     Attributes:
-        id: The unique identifier for the job
-        manga_title: The title of the manga
-        chapter_title: The title of the chapter
-        output_directory: The directory to save the output file
-        output_format: The output format (PDF, CBZ, etc.)
-        start_time: The start time in nanoseconds (-1 if not started)
-        end_time: The end time in nanoseconds (-1 if not completed)
+        id (str): The unique identifier for the job
+        manga_title (str): The title of the manga
+        chapter_title (str): The title of the chapter
+        output_directory (Path): The directory to save output files
+        output_format (OutputFormat): The output format (PDF, CBZ, etc.)
     """
 
     id: str
@@ -24,8 +21,38 @@ class Job:
     chapter_title: str
     output_directory: Path
     output_format: OutputFormat
-    start_time: float
-    end_time: float
+
+
+@dataclass
+class JobMetadata:
+    """Metadata for tracking job progress in the Downloads screen.
+
+    Attributes:
+        manga_title (str): The title of the manga
+        chapter_id (str): The ID of the chapter
+        chapter_title (str): The title of the chapter
+        completed_at (float): Unix timestamp when job completed (set only on terminal status)
+    """
+
+    manga_title: str
+    chapter_id: str
+    chapter_title: str
+    completed_at: float = -1
+
+
+@dataclass
+class NotificationJob(Job):
+    """Job for notifying status changes in the pipeline.
+
+    Attributes:
+        status (JobStatus): The status of the job
+        start_time (float): Start time of phase in nanoseconds (-1 if not started)
+        end_time (float): End time of phase in nanoseconds (-1 if not completed)
+    """
+
+    status: JobStatus
+    start_time: float = -1
+    end_time: float = -1
 
 
 @dataclass
@@ -33,7 +60,7 @@ class FetchingResourcesJob(Job):
     """Job for fetching chapter resources from MangaDex API.
 
     Attributes:
-        chapter_id: The ID of the chapter to fetch
+        chapter_id (str): The ID of the chapter to fetch
     """
 
     chapter_id: str
@@ -41,11 +68,10 @@ class FetchingResourcesJob(Job):
 
 @dataclass
 class DownloadingJob(Job):
-    """
-    Job for downloading images from URLs.
+    """Job for downloading images from URLs.
 
     Attributes:
-        urls: List of image URLs to download
+        urls (list[str]): List of image URLs to download
     """
 
     urls: list[str]
@@ -53,34 +79,23 @@ class DownloadingJob(Job):
 
 @dataclass
 class MergingJob(Job):
-    """
-    Job for merging images into output format.
+    """Job for merging images into output format.
 
     Attributes:
-        image_data: List of image bytes to merge
+        image_data (list[bytes]): List of image bytes to merge
     """
 
     image_data: list[bytes]
 
 
 @dataclass
-class BenchmarkJob(Job):
-    """Job for tracking job timing across the pipeline."""
+class UploadJob(Job):
+    """Job for uploading merged files to a cloud storage provider.
 
+    Attributes:
+        complete_file_data (bytes): The file bytes to upload
+        full_name (str): The full name of the file to upload
+    """
 
-@dataclass
-class JobMetadata:
-    """Metadata for tracking job progress in the Downloads screen."""
-
-    chapter_id: str
-    manga_title: str
-    chapter_title: str
-    start_time: float  # initialized to -1 on enqueue, workers set to time.perf_counter_ns() on start
-    end_time: float  # initialized to -1 on enqueue, workers set to time.perf_counter_ns() on end
-
-
-@dataclass
-class NotificationJob(Job):
-    """Job for notifying status changes in the pipeline."""
-
-    status: JobStatus
+    complete_file_data: bytes
+    full_name: str

@@ -9,11 +9,12 @@ from ..constants import MenuOption
 
 
 class MenuSelector(Widget):
-    """
-    A Menu widget for selecting a screen to display.
+    """A Menu widget for selecting a screen to display.
 
     Attributes:
         options (list[MenuOption]): List of MenuOption objects to display
+        title (str): Title of the widget
+        description_title (str): Title of the description column
     """
 
     DEFAULT_CSS = """
@@ -53,8 +54,7 @@ class MenuSelector(Widget):
     """
 
     class Selected(Message):
-        """
-        Message to indicate that a MenuOption has been selected.
+        """Message to indicate that a MenuOption has been selected.
 
         Attributes:
             screen (str): The screen to display when the option is selected
@@ -65,7 +65,7 @@ class MenuSelector(Widget):
             Initialize the Selected message.
 
             Args:
-                screen (str): The screen to display when the option is selected
+                screen: The screen to display when the option is selected
             """
             super().__init__(**kwargs)
 
@@ -78,13 +78,12 @@ class MenuSelector(Widget):
         description_title: str,
         **kwargs,
     ) -> None:
-        """
-        Initialize the MenuSelector widget.
+        """Initialize the MenuSelector widget.
 
         Args:
-            menu_options (list[MenuOption]): List of MenuOption objects to display
-            title (str): Title of the widget
-            description_title (str): Title of the description column
+            menu_options: List of MenuOption objects to display
+            title: Title of the widget
+            description_title: Title of the description column
         """
         super().__init__(**kwargs)
 

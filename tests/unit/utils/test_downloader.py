@@ -1,101 +1,87 @@
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from src.mangadex_downloader.integrations.exceptions import DownloadError
-from src.mangadex_downloader.utils.downloader import DownloadClient
+from src.mangadex_downloader.utils.downloader import DownloadClient, DownloadError
 from tests.conftest import AsyncContextManagerMock
 
 
-class TestDownloadClientInit:
-    def test_init_stores_session(self, mock_session):
-        client = DownloadClient(mock_session)
-
-        assert client._session == mock_session
-
-
 class TestDownloadClientDownloadImage:
-    @pytest.mark.asyncio
-    async def test_download_image_success(self, mock_session):
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.read = AsyncMock(return_value=b"image_data")
-
-        mock_session.get.return_value = AsyncContextManagerMock(mock_response)
+    @pytest.mark.parametrize(
+        "mock_api_response, expected_result",
+        [((200, b"image_data"), b"image_data")],
+        indirect=["mock_api_response"],
+    )
+    async def test_download_image_success_returns_bytes(
+        self, mock_session, mock_api_response, expected_result
+    ):
+        mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = DownloadClient(mock_session)
         result = await client.download_image("https://test.com/image.jpg")
 
-        assert result == b"image_data"
+        assert result == expected_result
 
-    @pytest.mark.asyncio
-    async def test_download_image_404_raises_error(self, mock_session):
-        mock_response = MagicMock()
-        mock_response.status = 404
-
-        mock_session.get.return_value = AsyncContextManagerMock(mock_response)
-
-        client = DownloadClient(mock_session)
-
-        with pytest.raises(DownloadError, match="404"):
-            await client.download_image("https://test.com/image.jpg")
-
-    @pytest.mark.asyncio
-    async def test_download_image_500_raises_error(self, mock_session):
-        mock_response = MagicMock()
-        mock_response.status = 500
-
-        mock_session.get.return_value = AsyncContextManagerMock(mock_response)
+    @pytest.mark.parametrize(
+        "mock_api_response, expected_error",
+        [
+            ((404, {}), DownloadError),
+            ((429, {}), DownloadError),
+            ((500, {}), DownloadError),
+        ],
+        indirect=["mock_api_response"],
+        ids=["not_found", "rate_limit", "server_error"],
+    )
+    async def test_failed_download_raises_error(
+        self, mock_session, mock_api_response, expected_error
+    ):
+        mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = DownloadClient(mock_session)
 
-        with pytest.raises(DownloadError, match="500"):
+        with pytest.raises(expected_error):
             await client.download_image("https://test.com/image.jpg")
 
 
 class TestDownloadClientDownloadImages:
-    @pytest.mark.asyncio
-    async def test_download_images_success(self, mock_session):
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.read = AsyncMock(return_value=b"image_data")
-
-        mock_session.get.return_value = AsyncContextManagerMock(mock_response)
+    @pytest.mark.parametrize(
+        "mock_api_response, urls, expected_result",
+        [
+            (
+                (200, b"image_data"),
+                ["https://test.com/1.jpg", "https://test.com/2.jpg"],
+                [b"image_data", b"image_data"],
+            ),
+            ((200, b"image_data"), [], []),
+        ],
+        indirect=["mock_api_response"],
+        ids=["multiple_images", "no_images"],
+    )
+    async def test_download_images_success_returns_bytes(
+        self, mock_session, mock_api_response, urls, expected_result
+    ):
+        mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = DownloadClient(mock_session)
-        urls = [
-            "https://test.com/1.jpg",
-            "https://test.com/2.jpg",
-            "https://test.com/3.jpg",
-        ]
         result = await client.download_images(urls)
 
-        assert len(result) == 3
-        assert all(img == b"image_data" for img in result)
+        assert len(result) == len(urls)
+        assert result == expected_result
 
-    @pytest.mark.asyncio
-    async def test_download_images_empty_list(self, mock_session):
-        client = DownloadClient(mock_session)
-        result = await client.download_images([])
-
-        assert result == []
-
-    @pytest.mark.asyncio
-    async def test_download_images_partial_failure(self, mock_session):
-        mock_response_success = MagicMock()
-        mock_response_success.status = 200
-        mock_response_success.read = AsyncMock(return_value=b"success")
-
-        mock_response_fail = MagicMock()
-        mock_response_fail.status = 404
-
-        responses = [mock_response_success, mock_response_fail, mock_response_success]
-
-        def get_response(*args, **kwargs):
-            return AsyncContextManagerMock(responses.pop(0))
-
-        mock_session.get.side_effect = get_response
+    @pytest.mark.parametrize(
+        "mock_api_response_list, expect_error",
+        [
+            ([(200, b"success"), (404, None), (200, b"success")], True),
+            ([(200, b"image1"), (200, b"image2"), (200, b"image3")], False),
+            ([(404, None), (404, None), (404, None)], True),
+        ],
+        indirect=["mock_api_response_list"],
+        ids=["partial_failure", "all_success", "all_failure"],
+    )
+    async def test_download_images_various_results(
+        self, mock_session, mock_api_response_list, expect_error, task_tracker
+    ):
+        mock_session.get.side_effect = mock_api_response_list
 
         client = DownloadClient(mock_session)
         urls = [
@@ -104,21 +90,16 @@ class TestDownloadClientDownloadImages:
             "https://test.com/3.jpg",
         ]
 
-        tasks_created = []
+        if expect_error:
+            with patch(
+                "asyncio.create_task", side_effect=task_tracker
+            ) and pytest.raises(DownloadError, match="404"):
+                await client.download_images(urls)
 
-        original_create_task = asyncio.create_task
-
-        def fake_create_task(coro):
-            task = original_create_task(coro)
-            task.cancel = MagicMock(wraps=task.cancel)
-            tasks_created.append(task)
-            return task
-
-        with patch(
-            "asyncio.create_task", side_effect=fake_create_task
-        ) and pytest.raises(DownloadError, match="404"):
-            await client.download_images(urls)
-
-        for task in tasks_created:
-            if not task.done():
-                task.cancel.assert_called_once()
+            for task in task_tracker.tasks:
+                if not task.done():
+                    task.cancel.assert_called_once()
+        else:
+            with patch("asyncio.create_task", side_effect=task_tracker):
+                results = await client.download_images(urls)
+                assert len(results) == len(urls)

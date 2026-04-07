@@ -1,8 +1,9 @@
+import time
 from asyncio import Queue, Semaphore
-from typing import TYPE_CHECKING
 
 from ..enums import JobStatus
-from ..integrations import MangaDexApiClient
+from ..integrations.content_providers import MangaDexApiClient
+from ..types import ProcessedDownloadResource
 from .base import Worker, WorkerConfig
 from .jobs import (
     DownloadingJob,
@@ -11,16 +12,9 @@ from .jobs import (
     NotificationJob,
 )
 
-if TYPE_CHECKING:
-    from ..types import ProcessedDownloadResource
-
-import time
-
 
 class ResolveWorker(Worker):
-    """
-    Worker class for fetching and processing resources for a chapter
-    """
+    """Worker class for fetching and processing resources for a chapter"""
 
     def __init__(
         self,
@@ -28,7 +22,7 @@ class ResolveWorker(Worker):
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
-        config: WorkerConfig | None,
+        config: WorkerConfig,
         api_client: MangaDexApiClient,
         semaphore: Semaphore,
     ):
@@ -36,13 +30,13 @@ class ResolveWorker(Worker):
         Initialize the worker
 
         Args:
-            id (str): The ID of the worker
-            input_queue (Queue[Job]): The input queue for the worker
-            output_queue (Queue[Job] | None): The output queue for the worker
-            notification_queue (Queue[NotificationJob]): The queue for notification jobs
-            config (WorkerConfig): The configuration for the worker
-            api_client (MangaDexApiClient): The API client for MangaDex
-            semaphore (Semaphore): The semaphore to use for global rate limiting
+            id: The ID of the worker
+            input_queue: The input queue for the worker
+            output_queue: The output queue for the worker
+            notification_queue: The queue for notification jobs
+            config: The configuration for the worker
+            api_client: The API client for MangaDex
+            semaphore: The semaphore to use for global rate limiting
         """
         super().__init__(id, input_queue, output_queue, config, notification_queue)
 
@@ -50,11 +44,10 @@ class ResolveWorker(Worker):
         self._semaphore = semaphore
 
     async def _do_work(self, job: FetchingResourcesJob) -> DownloadingJob:
-        """
-        Fetch the resources process them and enqueue them for downloading
+        """Fetch the resources process them and enqueue them for downloading
 
         Args:
-            job (FetchingResourcesJob): The job to process
+            job: The job to process
 
         Returns:
             DownloadingJob: The next job in the pipeline
@@ -69,8 +62,6 @@ class ResolveWorker(Worker):
             chapter_title,
             output_directory,
             output_format,
-            start_time,
-            end_time,
         ) = (
             job.id,
             job.chapter_id,
@@ -78,32 +69,23 @@ class ResolveWorker(Worker):
             job.chapter_title,
             job.output_directory,
             job.output_format,
-            job.start_time,
-            job.end_time,
         )
 
         if not chapter_id:
             raise ValueError(f"Invalid FetchingResourcesJob missing chapter_id: {job}")
 
-        await self._notification_queue.put(
-            NotificationJob(
-                id=job_id,
-                manga_title=manga_title,
-                chapter_title=chapter_title,
-                output_directory=output_directory,
-                output_format=output_format,
-                start_time=start_time,
-                end_time=end_time,
-                status=JobStatus.FETCHING_RESOURCES,
-            )
-        )
-
-        start_time = time.perf_counter_ns()
+        resolve_start = time.perf_counter_ns()
+        await self._send_notification(job, JobStatus.FETCHING_RESOURCES, resolve_start)
 
         async with self._semaphore:
             resources: ProcessedDownloadResource = (
                 await self._api_client.get_download_resource(job.chapter_id)
             )
+
+        resolve_end = time.perf_counter_ns()
+        await self._send_notification(
+            job, JobStatus.FETCHING_RESOURCES, resolve_start, resolve_end
+        )
 
         return DownloadingJob(
             id=job_id,
@@ -112,6 +94,4 @@ class ResolveWorker(Worker):
             output_directory=output_directory,
             output_format=output_format,
             urls=resources["urls"],
-            start_time=start_time,
-            end_time=end_time,
         )

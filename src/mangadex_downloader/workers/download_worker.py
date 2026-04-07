@@ -1,3 +1,4 @@
+import time
 from asyncio import Queue, Semaphore
 
 from ..enums import JobStatus
@@ -7,9 +8,7 @@ from .jobs import DownloadingJob, Job, MergingJob, NotificationJob
 
 
 class DownloadWorker(Worker):
-    """
-    Worker class for downloading resources for a chapter
-    """
+    """Worker class for downloading resources for a chapter"""
 
     def __init__(
         self,
@@ -17,7 +16,7 @@ class DownloadWorker(Worker):
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
-        config: WorkerConfig | None,
+        config: WorkerConfig,
         download_client: DownloadClient,
         semaphore: Semaphore,
     ):
@@ -25,13 +24,13 @@ class DownloadWorker(Worker):
         Initialize the worker
 
         Args:
-            id (str): The ID of the worker
-            input_queue (Queue[Job]): The input queue for the worker
-            output_queue (Queue[Job] | None): The output queue for the worker
-            notification_queue (Queue[NotificationJob]): The queue for notification jobs
-            config (WorkerConfig): The configuration for the worker
-            download_client (DownloadClient): The client for downloading images
-            semaphore (Semaphore): The semaphore to use for global rate limiting
+            id: The ID of the worker
+            input_queue: The input queue for the worker
+            output_queue: The output queue for the worker
+            notification_queue: The queue for notification jobs
+            config: The configuration for the worker
+            download_client: The client for downloading images
+            semaphore: The semaphore to use for global rate limiting
         """
         super().__init__(id, input_queue, output_queue, config, notification_queue)
 
@@ -39,11 +38,10 @@ class DownloadWorker(Worker):
         self._semaphore = semaphore
 
     async def _do_work(self, job: DownloadingJob) -> MergingJob:
-        """
-        Download the resources from a list of URLs and enqueue them for merging
+        """Download the resources from a list of URLs and enqueue them for merging
 
         Args:
-            job (DownloadingJob): The job to process
+            job: The job to process
 
         Returns:
             MergingJob: The next job in the pipeline
@@ -58,8 +56,6 @@ class DownloadWorker(Worker):
             output_directory,
             output_format,
             urls,
-            start_time,
-            end_time,
         ) = (
             job.id,
             job.manga_title,
@@ -67,28 +63,21 @@ class DownloadWorker(Worker):
             job.output_directory,
             job.output_format,
             job.urls,
-            job.start_time,
-            job.end_time,
         )
 
         if not urls:
             raise ValueError(f"Invalid DownloadingJob missing urls: {job}")
 
-        await self._notification_queue.put(
-            NotificationJob(
-                id=job_id,
-                manga_title=manga_title,
-                chapter_title=chapter_title,
-                output_directory=output_directory,
-                output_format=output_format,
-                start_time=start_time,
-                end_time=end_time,
-                status=JobStatus.DOWNLOADING,
-            )
-        )
+        download_start = time.perf_counter_ns()
+        await self._send_notification(job, JobStatus.DOWNLOADING, download_start)
 
         async with self._semaphore:
             image_data: list[bytes] = await self._download_client.download_images(urls)
+
+        download_end = time.perf_counter_ns()
+        await self._send_notification(
+            job, JobStatus.DOWNLOADING, download_start, download_end
+        )
 
         return MergingJob(
             id=job_id,
@@ -97,6 +86,4 @@ class DownloadWorker(Worker):
             output_directory=output_directory,
             output_format=output_format,
             image_data=image_data,
-            start_time=start_time,
-            end_time=end_time,
         )

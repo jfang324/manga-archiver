@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+import pytest
 from textual.app import App, ComposeResult
 from textual.validation import ValidationResult
 from textual.widgets import Input, Select, Switch
@@ -79,62 +80,29 @@ class TestSettingsPanel:
             await pilot.pause()
             assert settings_panel._output_format == "cbz"
 
-    async def test_input_quality_valid(self):
+    @pytest.mark.parametrize(
+        ("input_value", "validation_result", "expected_quality"),
+        [
+            ("50", valid_result(), 50),
+            ("", valid_result(), DEFAULT_QUALITY),
+            ("-1", invalid_result(), DEFAULT_QUALITY),
+            ("101", invalid_result(), DEFAULT_QUALITY),
+        ],
+        ids=["valid", "empty", "below_min", "above_max"],
+    )
+    async def test_input_quality_various_inputs(
+        self, input_value, validation_result, expected_quality
+    ):
         app = SettingsPanelTestApp()
 
         async with app.run_test() as pilot:
             settings_panel: SettingsPanel = app.query_one(SettingsPanel)
             input_field: Input = settings_panel.query_one(Input)
 
-            input_field.value = "50"
-            input_field.post_message(Input.Changed(input_field, "50", valid_result()))  # type: ignore[arg-type]
-            await pilot.pause()
-
-            assert settings_panel._quality == 50
-
-    async def test_input_quality_empty(self):
-        app = SettingsPanelTestApp()
-
-        async with app.run_test() as pilot:
-            settings_panel: SettingsPanel = app.query_one(SettingsPanel)
-            input_field: Input = settings_panel.query_one(Input)
-
-            initial_value: int = settings_panel._quality
-
-            input_field.value = ""
-            input_field.post_message(Input.Changed(input_field, "", valid_result()))  # type: ignore[arg-type]
-            await pilot.pause()
-
-            assert settings_panel._quality == initial_value
-
-    async def test_input_quality_below_min(self):
-        app = SettingsPanelTestApp()
-
-        async with app.run_test() as pilot:
-            settings_panel: SettingsPanel = app.query_one(SettingsPanel)
-            input_field: Input = settings_panel.query_one(Input)
-
-            initial_value: int = settings_panel._quality
-
-            input_field.value = "-1"
-            input_field.post_message(Input.Changed(input_field, "-1", invalid_result()))  # type: ignore[arg-type]
-            await pilot.pause()
-
-            assert settings_panel._quality == initial_value
-
-    async def test_input_quality_above_max(self):
-        app = SettingsPanelTestApp()
-
-        async with app.run_test() as pilot:
-            settings_panel: SettingsPanel = app.query_one(SettingsPanel)
-            input_field: Input = settings_panel.query_one(Input)
-
-            initial_value: int = settings_panel._quality
-
-            input_field.value = "101"
+            input_field.value = input_value
             input_field.post_message(
-                Input.Changed(input_field, "101", invalid_result())
+                Input.Changed(input_field, input_value, validation_result)
             )  # type: ignore[arg-type]
             await pilot.pause()
 
-            assert settings_panel._quality == initial_value
+            assert settings_panel._quality == expected_quality

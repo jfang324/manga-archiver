@@ -1,11 +1,5 @@
 """Mock data for unit tests."""
 
-# Base test data
-mock_url: str = "https://test.com"
-mock_query: str = "test"
-mock_manga_id: str = "1"
-mock_chapter_id: str = "1000"
-
 # Manga search response data
 mock_manga_data: dict = {
     "data": [
@@ -130,28 +124,26 @@ mock_processed_chapter_data: list[dict] = [
         "chapter": "2",
     },
     {
-        "title": None,
+        "title": "",
         "id": "3",
         "chapter": "3",
     },
 ]
 
-# Download resource response
-mock_download_resource_data: dict = {
+# # Download resource response
+mock_malformed_download_resource_data: dict = {
     "baseUrl": "https://mangaCDN.com",
     "chapter": {
         "hash": "hash",
         "data": [
-            "chapter1.jpg",
-            "chapter2.jpg",
-            "chapter3.jpg",
-            "chapter4.jpg",
+            "chapter1.png",
+            "chapter2.png",
         ],
     },
 }
 
 # Download resource with data-saver
-mock_download_resource_data_with_saver: dict = {
+mock_download_resource_data: dict = {
     "baseUrl": "https://mangaCDN.com",
     "chapter": {
         "hash": "hash",
@@ -166,26 +158,8 @@ mock_download_resource_data_with_saver: dict = {
     },
 }
 
+# processed resource with no data-saver
 mock_processed_download_resource_data: dict = {
-    "urls": [
-        "https://mangaCDN.com/data/hash/chapter1.jpg",
-        "https://mangaCDN.com/data/hash/chapter2.jpg",
-        "https://mangaCDN.com/data/hash/chapter3.jpg",
-        "https://mangaCDN.com/data/hash/chapter4.jpg",
-    ],
-    "hash": "hash",
-}
-
-mock_processed_download_resource_data_saver: dict = {
-    "urls": [
-        "https://mangaCDN.com/data-saver/hash/chapter1-saver.jpg",
-        "https://mangaCDN.com/data-saver/hash/chapter2-saver.jpg",
-    ],
-    "hash": "hash",
-}
-
-# Expected processed data for mock_download_resource_data_with_saver using standard quality
-mock_processed_download_resource_data_from_saver: dict = {
     "urls": [
         "https://mangaCDN.com/data/hash/chapter1.png",
         "https://mangaCDN.com/data/hash/chapter2.png",
@@ -193,33 +167,14 @@ mock_processed_download_resource_data_from_saver: dict = {
     "hash": "hash",
 }
 
-# Image data
-mock_image_data: bytes = b"A long string of bytes representing an image"
-mock_url_list: list[str] = [
-    "https://test.com/1.jpg",
-    "https://test.com/2.jpg",
-    "https://test.com/3.jpg",
-    "https://test.com/4.jpg",
-]
-
-mock_image_data_list: list[bytes] = [
-    b"A long string of bytes representing an image",
-    b"Another long string of bytes representing an image",
-    b"Yet another long string of bytes representing an image",
-]
-
-mock_image_paths: list[str] = [
-    "1.jpg",
-    "2.jpg",
-    "3.jpg",
-]
-
-mock_directory: str = "c:/usr/test"
-
-# API error responses
-mock_not_found_response: dict = {"result": "error", "errors": [{"status": 404}]}
-mock_rate_limit_response: dict = {"result": "error", "errors": [{"status": 429}]}
-mock_api_error_response: dict = {"result": "error", "errors": [{"status": 500}]}
+# processed resource with data-saver
+mock_processed_download_resource_data_saver: dict = {
+    "urls": [
+        "https://mangaCDN.com/data-saver/hash/chapter1-saver.jpg",
+        "https://mangaCDN.com/data-saver/hash/chapter2-saver.jpg",
+    ],
+    "hash": "hash",
+}
 
 # Nested test data for _get_nested helper
 mock_nested_data: dict = {
@@ -229,9 +184,6 @@ mock_nested_data: dict = {
     "empty": {},
     "null_value": None,
 }
-
-# Expected manga processing results
-expected_processed_manga_single: dict = {"title": "Test Title", "id": "1"}
 
 # Empty response data
 mock_empty_manga_data: dict = {"data": []}

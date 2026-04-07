@@ -1,24 +1,25 @@
+import logging
 import re
 import zipfile
 from io import BytesIO
 from pathlib import Path
+from typing import cast
 
 from PIL import Image
 
 from ..enums import OutputFormat
 
+logger = logging.getLogger(__name__)
+
 
 class MultiFormatExporter:
-    """
-    Exporter for merging images into a merged format.
-    """
+    """Exporter for merging images into a merged format."""
 
     def _sanitize(self, path: str) -> str:
-        """
-        Sanitize a path to be used as a filename.
+        """Sanitize a path to be used as a filename.
 
         Args:
-            path (str): The path to sanitize
+            path: The path to sanitize
 
         Returns:
             str: The sanitized path
@@ -40,30 +41,78 @@ class MultiFormatExporter:
 
         return sanitized
 
-    # ruff: disable[C901] - This function is complex but we will refactor it after we add epub support
-    def generate(
+    def _generate_cbz(
+        self, images: list[Image.Image], write_location: Path | BytesIO
+    ) -> bytes:
+        """Generate a CBZ file from a list of images.
+
+        Args:
+            images: The list of images to generate
+            write_location: The location to write the CBZ file
+
+        Returns:
+            bytes: The CBZ file data
+        """
+        try:
+            with zipfile.ZipFile(
+                write_location, "w", compression=zipfile.ZIP_DEFLATED
+            ) as cbz:
+                for i, img in enumerate(images, start=1):
+                    img_buf = BytesIO()
+                    img.save(img_buf, format="PNG")
+                    img_buf.seek(0)
+                    cbz.writestr(f"page_{i:03}.png", img_buf.read())
+
+            if isinstance(write_location, BytesIO):
+                return write_location.getvalue()
+            return b""
+        except Exception as e:
+            logger.error("Error generating CBZ file: %s", e)
+            raise
+
+    def _generate_pdf(
+        self,
+        images: list[Image.Image],
+        write_location: Path | BytesIO,
+        quality: int = 75,
+        optimize: bool = False,
+    ) -> None:
+        """Generate a PDF file from a list of images.
+
+        Args:
+            images: The list of images to generate
+            write_location: The location to write the PDF file
+
+        Returns:
+            None: The PDF file data is written to the write_location regardless of if it was a BytesIO or Path
+        """
+        try:
+            images[0].save(
+                write_location,
+                format=str(OutputFormat.PDF),
+                save_all=True,
+                append_images=images[1:],
+                quality=quality,
+                optimize=optimize,
+            )
+        except Exception as e:
+            logger.error("Error generating PDF file: %s", e)
+            raise
+
+    def _validate_inputs(
         self,
         image_data_list: list[bytes],
         output_directory: Path,
         output_name: str,
-        output_format: OutputFormat,
-        quality: int = 75,
-        optimize: bool = False,
-    ) -> str:
-        """
-        Merge the image data list into a merged format.
-        Loads images directly from bytes in memory without writing to disk.
+        quality: int,
+    ) -> None:
+        """Validate inputs for the generate method.
 
         Args:
-            image_data_list (list[bytes]): The list of image data to merge
-            output_directory (Path): The directory to save the file
-            output_name (str): The name of the output file
-            output_format (OutputFormat): The format of the output file
-            quality (int): The quality of the PDF (1-100, default: 75)
-            optimize (bool): Whether to optimize PDF file size (default: False)
-
-        Returns:
-            str: The path to the generated file
+            image_data_list: The list of image data to merge
+            output_directory: The directory to save the file
+            output_name: The name of the output file
+            quality: The quality of the PDF (1-100)
 
         Raises:
             ValueError: If any of the arguments are invalid
@@ -71,7 +120,7 @@ class MultiFormatExporter:
         if not image_data_list:
             raise ValueError("Image data list cannot be empty")
 
-        if not output_directory.exists() and not output_directory.is_dir():
+        if not output_directory.exists() or not output_directory.is_dir():
             raise ValueError(
                 f"Output directory must be a valid directory: {output_directory}"
             )
@@ -82,48 +131,91 @@ class MultiFormatExporter:
         if quality < 1 or quality > 100:
             raise ValueError("Quality must be between 1 and 100")
 
-        full_output_path: Path = (
-            output_directory / f"{self._sanitize(output_name)}.{str(output_format)}"
-        )
+    def _load_images(self, image_data_list: list[bytes]) -> list[Image.Image]:
+        """Load images from bytes and convert to RGB.
 
+        Args:
+            image_data_list: The list of image data to load
+
+        Returns:
+            list[Image.Image]: List of loaded images in RGB mode
+
+        Raises:
+            ValueError: If any image data is invalid
+        """
         images: list[Image.Image] = []
 
+        for image_data in image_data_list:
+            try:
+                img = Image.open(BytesIO(image_data))
+            except Exception as e:
+                raise ValueError(f"Invalid image data: {e}") from e
+
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+
+            images.append(img)
+
+        if not images:
+            raise ValueError("No valid images to generate output")
+
+        return images
+
+    def generate(
+        self,
+        image_data_list: list[bytes],
+        output_directory: Path,
+        output_name: str,
+        output_format: OutputFormat,
+        quality: int = 75,
+        optimize: bool = False,
+        return_bytes: bool = False,
+    ) -> tuple[str, bytes]:
+        """Merge the image data list into a merged format.
+
+        Loads images directly from bytes in memory without writing to disk.
+
+        Args:
+            image_data_list: The list of image data to merge
+            output_directory: The directory to save the file
+            output_name: The name of the output file
+            output_format: The format of the output file
+            quality: The quality of the PDF (1-100, default: 75)
+            optimize: Whether to optimize PDF file size (default: False)
+            return_bytes: If True, return file bytes instead of writing to disk (default: False)
+
+        Returns:
+            tuple[str, bytes]: (full_name, file_bytes)
+                - file_name: The full filename with extension
+                - file_bytes: If return_bytes=True, the file bytes; otherwise empty bytes
+
+        Raises:
+            ValueError: If any of the arguments are invalid
+        """
+        self._validate_inputs(image_data_list, output_directory, output_name, quality)
+
+        file_name: str = f"{self._sanitize(output_name)}.{str(output_format)}"
+        full_output_path: Path = output_directory / file_name
+
+        output_data: bytes = b""
+
+        images = self._load_images(image_data_list)
+
         try:
-            for image_data in image_data_list:
-                try:
-                    img = Image.open(BytesIO(image_data))
-                except Exception as e:
-                    raise ValueError(f"Invalid image data: {e}") from e
-
-                if img.mode in ("RGBA", "P"):
-                    img = img.convert("RGB")
-
-                images.append(img)
-
-            if not images:
-                raise ValueError("No valid images to generate output")
-
             if output_format == OutputFormat.CBZ:
-                with zipfile.ZipFile(
-                    full_output_path, "w", compression=zipfile.ZIP_DEFLATED
-                ) as cbz:
-                    for i, img in enumerate(images, start=1):
-                        img_buf = BytesIO()
-                        img.save(img_buf, format="PNG")  # or "JPEG" for smaller files
-                        img_buf.seek(0)
-                        cbz.writestr(f"page_{i:03}.png", img_buf.read())
+                write_location = BytesIO() if return_bytes else full_output_path
+                file_data = self._generate_cbz(images, write_location)
             else:
-                images[0].save(
-                    full_output_path,
-                    save_all=True,
-                    append_images=images[1:],
-                    quality=quality,
-                    optimize=optimize,
-                )
+                write_location = BytesIO() if return_bytes else full_output_path
+                self._generate_pdf(images, write_location, quality, optimize)
 
-            return str(full_output_path)
+                if isinstance(write_location, BytesIO):
+                    file_data = cast("BytesIO", write_location).getvalue()
+
+            if return_bytes:
+                output_data = file_data
+
+            return file_name, output_data
         finally:
             for img in images:
                 img.close()
-
-    # ruff: enable[C901]

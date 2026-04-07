@@ -44,8 +44,7 @@ class QuitScreen(ModalScreen[bool]):
     """
 
     def __init__(self, incomplete_count: int = 0, **kwargs) -> None:
-        """
-        Initialize the QuitScreen.
+        """Initialize the QuitScreen.
 
         Args:
             incomplete_count: Number of jobs not yet in a terminal state

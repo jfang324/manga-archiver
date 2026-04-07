@@ -2,22 +2,19 @@ from enum import Enum
 
 
 class JobStatus(Enum):
-    """
-    An enum class for the status of a job.
-    """
+    """An enum class for the status of a job."""
 
     QUEUED = "queued"
     FETCHING_RESOURCES = "fetching_resources"
     DOWNLOADING = "downloading"
     MERGING = "merging"
+    UPLOADING = "uploading"
     COMPLETED = "completed"
     FAILED = "failed"
 
 
 class OutputFormat(Enum):
-    """
-    An enum class for the supported output formats.
-    """
+    """An enum class for the supported output formats."""
 
     PDF = "pdf"
     CBZ = "cbz"
@@ -29,3 +26,13 @@ class OutputFormat(Enum):
     @classmethod
     def list_formats(cls) -> list[str]:
         return [format.value for format in cls]
+
+    @property
+    def mime_type(self) -> str:
+        return _MIME_TYPE_MAP[self]
+
+
+_MIME_TYPE_MAP = {
+    OutputFormat.PDF: "application/pdf",
+    OutputFormat.CBZ: "application/x-cbz",
+}

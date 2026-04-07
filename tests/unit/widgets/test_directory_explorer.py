@@ -26,48 +26,46 @@ class DirectoryExplorerApp(App):
         self.directory_records.append(message)
 
 
-# Decorator to ignore errors produced by using Textual widgets directly in tests
-@pytest.mark.filterwarnings("ignore::RuntimeWarning")
-@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 class TestFilteredDirectoryTree:
+    def _create_item(
+        self, parent_directory: Path, name: str, is_file: bool = False
+    ) -> Path:
+        full_path: Path = parent_directory / name
+
+        if is_file:
+            full_path.touch()
+        else:
+            full_path.mkdir()
+
+        return full_path
+
     def test_filters_hidden_directories(self):
         with TemporaryDirectory() as temp_dir:
-            hidden_director: Path = Path(temp_dir) / ".hidden"
-            visible_directory: Path = Path(temp_dir) / "visible"
-
-            hidden_director.mkdir()
-            visible_directory.mkdir()
-
+            hidden_directory = self._create_item(Path(temp_dir), ".hidden")
+            visible_directory = self._create_item(Path(temp_dir), "visible")
             tree: FilteredDirectoryTree = FilteredDirectoryTree(temp_dir)
 
-            result: list[Path] = tree.filter_paths([hidden_director, visible_directory])
+            result: list[Path] = tree.filter_paths(
+                [hidden_directory, visible_directory]
+            )
 
             assert len(result) == 1
             assert result[0] == visible_directory
 
     def test_filters_files(self):
         with TemporaryDirectory() as temp_dir:
-            visible_files: Path = Path(temp_dir) / "file.txt"
-            visible_directory: Path = Path(temp_dir) / "directory"
-
-            visible_files.touch()
-            visible_directory.mkdir()
-
+            visible_file = self._create_item(Path(temp_dir), "visible.txt", True)
+            hidden_file = self._create_item(Path(temp_dir), ".hidden.txt", True)
             tree: FilteredDirectoryTree = FilteredDirectoryTree(temp_dir)
 
-            result: list[Path] = tree.filter_paths([visible_files, visible_directory])
+            result: list[Path] = tree.filter_paths([visible_file, hidden_file])
 
-            assert len(result) == 1
-            assert result[0] == visible_directory
+            assert len(result) == 0
 
     def test_passes_through_normal_directories(self):
         with TemporaryDirectory() as temp_dir:
-            visible_directory_1: Path = Path(temp_dir) / "dir1"
-            visible_directory_2: Path = Path(temp_dir) / "dir2"
-
-            visible_directory_1.mkdir()
-            visible_directory_2.mkdir()
-
+            visible_directory_1 = self._create_item(Path(temp_dir), "1")
+            visible_directory_2 = self._create_item(Path(temp_dir), "2")
             tree: FilteredDirectoryTree = FilteredDirectoryTree(temp_dir)
 
             result: list[Path] = tree.filter_paths(

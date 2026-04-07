@@ -6,7 +6,7 @@ from .settings_manager import load_settings, save_settings
 __all__ = [
     "DownloadClient",
     "MultiFormatExporter",
+    "setup_logging",
     "load_settings",
     "save_settings",
-    "setup_logging",
 ]

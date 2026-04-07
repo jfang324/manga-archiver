@@ -7,16 +7,20 @@ LOG_DIR = Path(os.path.expanduser("~/.mangadex-downloader/logs"))
 
 
 def setup_logging() -> None:
-    """
-    Configure application logging with time-based rotation.
+    """Configure application logging with time-based rotation.
 
-    Creates two log files with daily rotation:
+    Creates three log files with daily rotation:
     - debug.log: All DEBUG and above messages
     - error.log: Only ERROR and above messages
+    - info.log: INFO and above messages (for benchmark output)
 
     Keeps 7 days of log history (auto-deletes older logs).
     """
     LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.handlers.clear()
 
     debug_handler = TimedRotatingFileHandler(
         LOG_DIR / "debug.log",
@@ -28,6 +32,7 @@ def setup_logging() -> None:
     debug_handler.setFormatter(
         logging.Formatter("%(asctime)s - [%(name)s] - %(levelname)s - %(message)s")
     )
+    root_logger.addHandler(debug_handler)
 
     error_handler = TimedRotatingFileHandler(
         LOG_DIR / "error.log",
@@ -39,5 +44,16 @@ def setup_logging() -> None:
     error_handler.setFormatter(
         logging.Formatter("%(asctime)s - [%(name)s] - %(levelname)s - %(message)s")
     )
+    root_logger.addHandler(error_handler)
 
-    logging.basicConfig(level=logging.DEBUG, handlers=[debug_handler, error_handler])
+    info_handler = TimedRotatingFileHandler(
+        LOG_DIR / "info.log",
+        when="midnight",
+        interval=1,
+        backupCount=7,
+    )
+    info_handler.setLevel(logging.INFO)
+    info_handler.setFormatter(
+        logging.Formatter("%(asctime)s - [%(name)s] - %(levelname)s - %(message)s")
+    )
+    root_logger.addHandler(info_handler)
