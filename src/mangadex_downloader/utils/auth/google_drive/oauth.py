@@ -203,6 +203,14 @@ def handle_auth_login() -> int:
         print("Authentication failed. Please try again.")
         return 1
 
+    except (requests.Timeout, requests.ConnectionError) as e:
+        logger.error("Network error during authentication: %s", e)
+        print(f"Network error: {e}")
+        return 1
+    except requests.HTTPError as e:
+        logger.error("HTTP error during authentication: %s", e)
+        print(f"Server error: {e}")
+        return 1
     except Exception as e:
         logger.error("Failed to complete authentication: %s", e)
         print(f"Error: {e}")
