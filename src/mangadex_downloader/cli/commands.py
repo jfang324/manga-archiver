@@ -84,6 +84,12 @@ def create_parser() -> ArgumentParser:
         help="Enable performance benchmarking",
     )
 
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="Run in headless mode (sync favorites with Google Drive)",
+    )
+
     return parser
 
 

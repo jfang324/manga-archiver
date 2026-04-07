@@ -77,6 +77,7 @@ def main() -> None:
         app_config=app_config,
         favorite_repository=favorite_repository,
         google_drive_client=google_drive_client,
+        headless=args.headless,
     )
     app.run()
 

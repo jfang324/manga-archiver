@@ -69,6 +69,7 @@ class MangaDexDownloaderApp(App):
         app_config: AppConfig,
         favorite_repository: FavoriteRepository,
         google_drive_client: GoogleDriveClient | None,
+        headless: bool = False,
         **kwargs,
     ) -> None:
         """Initialize the MangaDexDownloaderApp.
@@ -78,11 +79,13 @@ class MangaDexDownloaderApp(App):
             app_config: The application configuration
             favorite_repository: The favorite repository
             google_drive_client: The Google Drive client
+            headless: Run in headless sync mode
         """
         super().__init__(**kwargs)
 
         self._pipeline_config = pipeline_config
         self._app_config = app_config
+        self._headless = headless
 
         self._pipeline_manager: PipelineManager | None = None
         self._favorite_repository = favorite_repository
