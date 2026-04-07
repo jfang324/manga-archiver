@@ -1,8 +1,9 @@
+import time
 from asyncio import Queue, Semaphore
-from typing import TYPE_CHECKING
 
 from ..enums import JobStatus
 from ..integrations.content_providers import MangaDexApiClient
+from ..types import ProcessedDownloadResource
 from .base import Worker, WorkerConfig
 from .jobs import (
     DownloadingJob,
@@ -10,11 +11,6 @@ from .jobs import (
     Job,
     NotificationJob,
 )
-
-if TYPE_CHECKING:
-    from ..types import ProcessedDownloadResource
-
-import time
 
 
 class ResolveWorker(Worker):

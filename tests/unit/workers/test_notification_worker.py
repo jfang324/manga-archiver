@@ -10,7 +10,7 @@ from src.mangadex_downloader.workers.notification_worker import NotificationWork
 
 class TestNotificationWorkerDoWork:
     @pytest.mark.asyncio
-    async def test_do_work_calls_callback_with_job_data(self):
+    async def test_do_work_passes_callback_args(self):
         mock_callback = MagicMock()
         worker = NotificationWorker(
             id="test_notification_worker",
@@ -35,12 +35,25 @@ class TestNotificationWorkerDoWork:
         call_args = mock_callback.call_args[0]
         assert call_args[0] == "job_123"
         assert call_args[1] == JobStatus.COMPLETED
-        assert isinstance(call_args[2], JobMetadata)
-        assert call_args[2].manga_title == "Test Manga"
-        assert call_args[2].chapter_title == "Chapter 1"
+        metadata = call_args[2]
+        assert isinstance(metadata, JobMetadata)
+        assert metadata.manga_title == "Test Manga"
+        assert metadata.chapter_title == "Chapter 1"
+        assert metadata.chapter_id == "job_123"
+        assert metadata.completed_at > 0
 
     @pytest.mark.asyncio
-    async def test_do_work_extracts_metadata_from_job(self):
+    @pytest.mark.parametrize(
+        "status,expected_completed_at",
+        [
+            (JobStatus.FAILED, True),
+            (JobStatus.DOWNLOADING, False),
+            (JobStatus.FETCHING_RESOURCES, False),
+        ],
+    )
+    async def test_do_work_completed_at_based_on_status(
+        self, status, expected_completed_at
+    ):
         mock_callback = MagicMock()
         worker = NotificationWorker(
             id="test_notification_worker",
@@ -49,26 +62,58 @@ class TestNotificationWorkerDoWork:
         )
 
         job = NotificationJob(
-            id="job_456",
-            manga_title="One Piece",
-            chapter_title="Chapter 100",
-            output_directory=Path("/downloads"),
-            output_format=OutputFormat.CBZ,
-            start_time=5000,
-            end_time=8000,
-            status=JobStatus.DOWNLOADING,
+            id="job_123",
+            manga_title="Test Manga",
+            chapter_title="Chapter 1",
+            output_directory=Path("/output"),
+            output_format=OutputFormat.PDF,
+            start_time=1000,
+            end_time=2000,
+            status=status,
         )
 
         await worker._do_work(job)
 
-        mock_callback.assert_called_once()
-        job_id, status, metadata = mock_callback.call_args[0]
+        _, _, metadata = mock_callback.call_args[0]
+        if expected_completed_at:
+            assert metadata.completed_at > 0
+        else:
+            assert metadata.completed_at == -1
 
-        assert job_id == "job_456"
-        assert status == JobStatus.DOWNLOADING
-        assert metadata.chapter_id == "job_456"
-        assert metadata.manga_title == "One Piece"
-        assert metadata.chapter_title == "Chapter 100"
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "status",
+        [
+            JobStatus.COMPLETED,
+            JobStatus.DOWNLOADING,
+            JobStatus.MERGING,
+        ],
+    )
+    async def test_do_work_records_benchmark_timing(self, status):
+        mock_callback = MagicMock()
+        mock_benchmark = MagicMock()
+
+        worker = NotificationWorker(
+            id="test_notification_worker",
+            input_queue=MagicMock(),
+            on_status_update=mock_callback,
+            benchmark=mock_benchmark,
+        )
+
+        job = NotificationJob(
+            id="job_123",
+            manga_title="Test Manga",
+            chapter_title="Chapter 1",
+            output_directory=Path("/output"),
+            output_format=OutputFormat.PDF,
+            start_time=1000,
+            end_time=2000,
+            status=status,
+        )
+
+        await worker._do_work(job)
+
+        mock_benchmark.record.assert_called_once_with("job_123", status, 1000, 2000)
 
 
 class TestNotificationWorker:

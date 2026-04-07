@@ -63,7 +63,7 @@ class PipelineConfig:
     merge_queue_size: int = DEFAULT_QUEUE_SIZE
     upload_queue_size: int = DEFAULT_QUEUE_SIZE
 
-    benchmark_enabled: bool = True
+    benchmark_enabled: bool = False
 
 
 class PipelineManager:

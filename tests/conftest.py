@@ -2,6 +2,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.mangadex_downloader.workers.jobs import Job
+
 
 class AsyncContextManagerMock:
     """Helper class to create async context manager mocks."""
@@ -75,3 +77,24 @@ def mock_api_response_list(request):
 
     response_iter = iter(mock_responses)
     return lambda *args, **kwargs: AsyncContextManagerMock(next(response_iter))
+
+
+@pytest.fixture
+def mock_job():
+    """Create a mock Job for testing workers."""
+    job = MagicMock(spec=Job)
+    job.id = "test_job"
+    job.manga_title = "Test Manga"
+    job.chapter_title = "Chapter 1"
+    job.output_directory = MagicMock()
+    job.output_format = MagicMock()
+    return job
+
+
+@pytest.fixture
+def mock_semaphore():
+    """Create a mock asyncio Semaphore for testing workers."""
+    semaphore = MagicMock()
+    semaphore.__aenter__ = AsyncMock()
+    semaphore.__aexit__ = AsyncMock()
+    return semaphore

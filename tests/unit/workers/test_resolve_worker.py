@@ -10,18 +10,18 @@ from src.mangadex_downloader.workers.resolve_worker import ResolveWorker
 
 
 class TestResolveWorkerDoWork:
-    @pytest.mark.asyncio
-    async def test_do_work_returns_downloading_job(self):
-        mock_api_client = AsyncMock()
-        mock_api_client.get_download_resource = AsyncMock(
-            return_value={
-                "urls": ["http://example.com/1.jpg", "http://example.com/2.jpg"]
-            }
+    def _create_mock_api_client(self, urls: list[str] | None = None):
+        client = MagicMock()
+        client.get_download_resource = AsyncMock(
+            return_value={"urls": urls or ["http://example.com/1.jpg"]}
         )
+        return client
 
-        mock_semaphore = MagicMock()
-        mock_semaphore.__aenter__ = AsyncMock()
-        mock_semaphore.__aexit__ = AsyncMock()
+    @pytest.mark.asyncio
+    async def test_do_work_returns_downloading_job(self, mock_semaphore):
+        mock_api_client = self._create_mock_api_client(
+            ["http://example.com/1.jpg", "http://example.com/2.jpg"]
+        )
 
         mock_notification_queue = AsyncMock()
 
@@ -53,15 +53,8 @@ class TestResolveWorkerDoWork:
         assert result.urls == ["http://example.com/1.jpg", "http://example.com/2.jpg"]
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_api_client_with_chapter_id(self):
-        mock_api_client = AsyncMock()
-        mock_api_client.get_download_resource = AsyncMock(
-            return_value={"urls": ["http://example.com/1.jpg"]}
-        )
-
-        mock_semaphore = MagicMock()
-        mock_semaphore.__aenter__ = AsyncMock()
-        mock_semaphore.__aexit__ = AsyncMock()
+    async def test_do_work_calls_api_client_with_chapter_id(self, mock_semaphore):
+        mock_api_client = self._create_mock_api_client()
 
         job = FetchingResourcesJob(
             id="job_123",
@@ -87,15 +80,8 @@ class TestResolveWorkerDoWork:
         mock_api_client.get_download_resource.assert_called_once_with("chapter_456")
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_status_change(self):
-        mock_api_client = AsyncMock()
-        mock_api_client.get_download_resource = AsyncMock(
-            return_value={"urls": ["http://example.com/1.jpg"]}
-        )
-
-        mock_semaphore = MagicMock()
-        mock_semaphore.__aenter__ = AsyncMock()
-        mock_semaphore.__aexit__ = AsyncMock()
+    async def test_do_work_sends_notification(self, mock_semaphore):
+        mock_api_client = self._create_mock_api_client()
 
         mock_notification_queue = AsyncMock()
 
@@ -123,10 +109,8 @@ class TestResolveWorkerDoWork:
         assert mock_notification_queue.put.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_do_work_raises_error_for_missing_chapter_id(self):
+    async def test_do_work_raises_error_for_missing_chapter_id(self, mock_semaphore):
         mock_api_client = AsyncMock()
-
-        mock_semaphore = MagicMock()
 
         job = FetchingResourcesJob(
             id="job_123",
@@ -153,15 +137,8 @@ class TestResolveWorkerDoWork:
             await worker._do_work(job)
 
     @pytest.mark.asyncio
-    async def test_do_work_uses_semaphore(self):
-        mock_api_client = AsyncMock()
-        mock_api_client.get_download_resource = AsyncMock(
-            return_value={"urls": ["http://example.com/1.jpg"]}
-        )
-
-        mock_semaphore = MagicMock()
-        mock_semaphore.__aenter__ = AsyncMock()
-        mock_semaphore.__aexit__ = AsyncMock()
+    async def test_do_work_uses_semaphore(self, mock_semaphore):
+        mock_api_client = self._create_mock_api_client()
 
         job = FetchingResourcesJob(
             id="job_123",
@@ -184,6 +161,5 @@ class TestResolveWorkerDoWork:
 
         await worker._do_work(job)
 
-        # Verify semaphore was entered and exited
         mock_semaphore.__aenter__.assert_called()
         mock_semaphore.__aexit__.assert_called()
