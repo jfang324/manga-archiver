@@ -54,10 +54,11 @@ def _fetch_device_code(client_id: str) -> GoogleAuthDeviceCode:
     Raises:
         requests.HTTPError: If the request fails
     """
-    response = requests.post(  # noqa: S113
+    response = requests.post(
         DEVICE_AUTH_URL,
         data={"client_id": client_id, "scope": DRIVE_SCOPE},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30,
     )
     response.raise_for_status()
 
@@ -87,7 +88,7 @@ def _poll_for_token(
     while time.time() - start_time < timeout:
         time.sleep(interval)
 
-        token_response = requests.post(  # noqa: S113
+        token_response = requests.post(
             TOKEN_URL,
             data={
                 "client_id": client_id,
@@ -96,6 +97,7 @@ def _poll_for_token(
                 "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=30,
         )
 
         if token_response.status_code == 200:
@@ -227,18 +229,21 @@ def handle_auth_logout() -> int:
         return 0
 
     try:
-        response = requests.post(  # noqa: S113
+        response = requests.post(
             REVOKE_URL,
             params={"token": token["refresh_token"]},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=30,
         )
-        response.raise_for_status()
 
-        delete_token()
-        print("Logged out of Google Drive")
-        return 0
+        if response.status_code == 200:
+            delete_token()
+            return 0
+        else:
+            print(f"Failed to revoke token: {response.text}")
+            return 1
     except requests.HTTPError as e:
-        print("Failed to revoke token: %s", e)
+        print(f"Failed to send revocation request: {e}")
         return 1
     except (requests.Timeout, requests.ConnectionError) as e:
         print("Network error: %s", e)
