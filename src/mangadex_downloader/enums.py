@@ -35,4 +35,5 @@ class OutputFormat(Enum):
 _MIME_TYPE_MAP = {
     OutputFormat.PDF: "application/pdf",
     OutputFormat.CBZ: "application/x-cbz",
+    OutputFormat.EPUB: "application/epub",
 }
