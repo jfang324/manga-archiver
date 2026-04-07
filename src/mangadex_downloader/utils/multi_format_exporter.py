@@ -1,10 +1,11 @@
 import logging
 import re
+import uuid
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from typing import cast
 
+from ebooklib import epub
 from PIL import Image
 
 from ..enums import OutputFormat
@@ -95,6 +96,74 @@ class MultiFormatExporter:
             logger.error("Error generating PDF file: %s", e)
             raise
 
+    def _generate_epub(
+        self,
+        images: list[Image.Image],
+        write_location: Path | BytesIO,
+    ) -> None:
+        """Generate an EPUB file from a list of images (single chapter format).
+
+        Args:
+            images: The list of images to generate
+            write_location: The location to write the EPUB file
+
+        Returns:
+            None: The EPUB file is written to write_location
+        """
+        try:
+            book = epub.EpubBook()
+            book.set_identifier(str(uuid.uuid4()))
+            book.set_language("en")
+
+            css = """
+                body { margin: 0; padding: 0; width: 100%; height: 100%; }
+                img { width: 100%; height: 100%; display: block; }
+            """
+            nav_css = epub.EpubItem(
+                uid="style_nav",
+                file_name="style/nav.css",
+                media_type="text/css",
+                content=css,
+            )
+            book.add_item(nav_css)
+
+            pages = []
+            for i, img in enumerate(images, start=1):
+                buffer = BytesIO()
+                img.save(buffer, format="JPEG")
+                img_data = buffer.getvalue()
+
+                img_item = epub.EpubItem(
+                    uid=f"page_{i}",
+                    file_name=f"images/page_{i:03}.jpg",
+                    media_type="image/jpeg",
+                    content=img_data,
+                )
+                book.add_item(img_item)
+
+                page = epub.EpubHtml(
+                    title=f"Page {i}",
+                    file_name=f"page_{i}.xhtml",
+                )
+                page.set_content(
+                    f"<html><head></head><body><img src='images/page_{i:03}.jpg' alt='Page {i}'/></body></html>"
+                )
+                page.add_item(nav_css)
+                book.add_item(page)
+                pages.append(page)
+
+                if i == 1:
+                    book.set_cover("cover.jpg", img_data)
+
+            book.add_item(epub.EpubNcx())
+            book.add_item(epub.EpubNav())
+            book.spine = pages
+
+            epub.write_epub(write_location, book, {})
+        except Exception as e:
+            logger.error("Error generating EPUB file: %s", e)
+            raise
+
     def _validate_inputs(
         self,
         image_data_list: list[bytes],
@@ -167,7 +236,7 @@ class MultiFormatExporter:
     ) -> tuple[str, bytes]:
         """Merge images into a merged format.
 
-        Processes image bytes and generates either a PDF or CBZ file.
+        Processes image bytes and generates a PDF, CBZ, or EPUB file.
         Can write output to disk or return file data based on the return_bytes flag.
 
         Args:
@@ -200,12 +269,18 @@ class MultiFormatExporter:
             if output_format == OutputFormat.CBZ:
                 write_location = BytesIO() if return_bytes else full_output_path
                 file_data = self._generate_cbz(images, write_location)
+            elif output_format == OutputFormat.EPUB:
+                write_location = BytesIO() if return_bytes else full_output_path
+                self._generate_epub(images, write_location)
+
+                if isinstance(write_location, BytesIO):
+                    file_data = write_location.getvalue()
             else:
                 write_location = BytesIO() if return_bytes else full_output_path
                 self._generate_pdf(images, write_location, quality, optimize)
 
                 if isinstance(write_location, BytesIO):
-                    file_data = cast("BytesIO", write_location).getvalue()
+                    file_data = write_location.getvalue()
 
             if return_bytes:
                 output_data = file_data

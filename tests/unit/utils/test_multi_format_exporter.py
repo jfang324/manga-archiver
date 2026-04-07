@@ -237,3 +237,22 @@ class TestMultiFormatExporterGenerate:
 
         assert full_name == "test.cbz"
         assert len(file_data) > 0
+
+    def test_generate_epub_to_path(self, tmp_path, _image_bytes):
+        exporter = MultiFormatExporter()
+        full_name, file_data = exporter.generate(
+            [_image_bytes], tmp_path, "test", OutputFormat.EPUB
+        )
+
+        assert full_name == "test.epub"
+        assert (tmp_path / "test.epub").exists()
+        assert file_data == b""
+
+    def test_generate_epub_to_buffer(self, tmp_path, _image_bytes):
+        exporter = MultiFormatExporter()
+        full_name, file_data = exporter.generate(
+            [_image_bytes], tmp_path, "test", OutputFormat.EPUB, return_bytes=True
+        )
+
+        assert full_name == "test.epub"
+        assert len(file_data) > 0
