@@ -11,7 +11,7 @@ from textual.widgets import DirectoryTree
 
 
 class FilteredDirectoryTree(DirectoryTree):
-    """A custom DirectoryTree widget that filters out files and hidden directories"""
+    """A custom DirectoryTree widget that filters out files and hidden directories"""  # noqa: D415
 
     def filter_paths(self, paths: Iterable[Path]) -> list[Path]:
         return [p for p in paths if not p.name.startswith(".") and p.is_dir()]
@@ -43,11 +43,11 @@ class DirectoryExplorer(Widget):
         Attributes:
             new_directory (str): The path of the new root directory
             control (Widget): A reference to the DirectoryExplorer widget
-        """
+        """  # noqa: D415
 
         @property
         def control(self) -> Widget:
-            """Required for @on decorator selector matching"""
+            """Required for @on decorator selector matching"""  # noqa: D415
             return self._control
 
         def __init__(self, new_directory: str, control: Widget, **kwargs) -> None:
@@ -57,7 +57,7 @@ class DirectoryExplorer(Widget):
             Args:
                 new_directory: The path of the new root directory
                 control: A reference to the DirectoryExplorer widget
-            """
+            """  # noqa: D401, D415
             super().__init__(**kwargs)
 
             self.new_directory = new_directory
@@ -90,9 +90,7 @@ class DirectoryExplorer(Widget):
         self._reload_directory_tree(self.current_directory)
 
     @on(DirectoryTree.DirectorySelected)
-    def _signal_navigate_to_child_directory(
-        self, event: DirectoryTree.DirectorySelected
-    ) -> None:
+    def _signal_navigate_to_child_directory(self, event: DirectoryTree.DirectorySelected) -> None:
         new_directory = str(event.path)
 
         self.post_message(self.DirectoryChanged(new_directory, self))

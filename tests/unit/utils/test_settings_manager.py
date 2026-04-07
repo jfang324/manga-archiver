@@ -109,9 +109,7 @@ class TestLoadSettings:
     def test_load_settings_creates_file_with_defaults_when_not_exists(self, tmp_path):
         settings_file = tmp_path / "settings.json"
 
-        with patch.object(
-            settings_manager, "_get_settings_path", return_value=settings_file
-        ):
+        with patch.object(settings_manager, "_get_settings_path", return_value=settings_file):
             config = settings_manager.load_settings()
 
         assert settings_file.exists()
@@ -133,9 +131,7 @@ class TestLoadSettings:
         settings_file = tmp_path / "settings.json"
         settings_file.write_text("{ invalid json")
 
-        with patch.object(
-            settings_manager, "_get_settings_path", return_value=settings_file
-        ):
+        with patch.object(settings_manager, "_get_settings_path", return_value=settings_file):
             config = settings_manager.load_settings()
 
         assert config.quality == DEFAULT_QUALITY
@@ -157,9 +153,7 @@ class TestLoadSettings:
             )
         )
 
-        with patch.object(
-            settings_manager, "_get_settings_path", return_value=settings_file
-        ):
+        with patch.object(settings_manager, "_get_settings_path", return_value=settings_file):
             config = settings_manager.load_settings()
 
         assert config.quality == 80
@@ -173,9 +167,7 @@ class TestSaveSettings:
     def test_save_settings_writes_valid_config(self, tmp_path):
         settings_file = tmp_path / "settings.json"
 
-        with patch.object(
-            settings_manager, "_get_settings_path", return_value=settings_file
-        ):
+        with patch.object(settings_manager, "_get_settings_path", return_value=settings_file):
             config = AppConfig(
                 optimize=True,
                 data_saver=False,
@@ -197,9 +189,7 @@ class TestSaveSettings:
         mock_path = MagicMock()
         mock_path.write_text.side_effect = OSError("Permission denied")
 
-        with patch.object(
-            settings_manager, "_get_settings_path", return_value=mock_path
-        ):
+        with patch.object(settings_manager, "_get_settings_path", return_value=mock_path):
             config = AppConfig(
                 optimize=False,
                 data_saver=False,
@@ -212,9 +202,7 @@ class TestSaveSettings:
                 settings_manager.save_settings(config)
 
     def test_save_settings_raises_on_invalid_config(self):
-        with patch(
-            "src.mangadex_downloader.utils.settings_manager.AppConfig"
-        ) as mock_config:
+        with patch("src.mangadex_downloader.utils.settings_manager.AppConfig") as mock_config:
             mock_config.side_effect = ValueError("quality must be between 1 and 100")
 
             with pytest.raises(ValueError, match="Invalid settings"):

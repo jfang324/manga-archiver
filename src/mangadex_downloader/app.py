@@ -151,9 +151,7 @@ class MangaDexDownloaderApp(App):
             DownloadsScreen(
                 # Lambda captures self by reference; null guard handles the window
                 # between screen install and pipeline initialization
-                lambda: (
-                    self._pipeline_manager.get_jobs() if self._pipeline_manager else {}
-                )
+                lambda: self._pipeline_manager.get_jobs() if self._pipeline_manager else {}
             ),
             name="downloads_screen",
         )
@@ -187,12 +185,10 @@ class MangaDexDownloaderApp(App):
         self.exit()
 
     def action_safe_pop_screen(self) -> None:
-        """A safe version of pop_screen that checks if the current screen is a MenuScreen before popping."""
+        """A safe version of pop_screen that checks if the current screen is a MenuScreen before popping."""  # noqa: D401
         if isinstance(self.screen_stack[-1], MenuScreen):
             incomplete_count = (
-                self._pipeline_manager.incomplete_job_count()
-                if self._pipeline_manager
-                else 0
+                self._pipeline_manager.incomplete_job_count() if self._pipeline_manager else 0
             )
             self.push_screen(
                 QuitScreen(incomplete_count),

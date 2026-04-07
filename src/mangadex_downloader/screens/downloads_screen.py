@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from datetime import datetime
-from typing import Callable
 
 from textual.app import ComposeResult
 from textual.reactive import reactive
@@ -51,7 +51,7 @@ class DownloadsScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        """Setup polling for job status updates on mount."""
+        """Setup polling for job status updates on mount."""  # noqa: D401
         table = self.query_one(DataTable)
         table.add_columns("Job ID", "Manga", "Chapter", "Completed At", "Status")
 
@@ -68,9 +68,7 @@ class DownloadsScreen(Screen):
             completed = "—"
 
             if metadata.completed_at != -1:
-                completed = datetime.fromtimestamp(metadata.completed_at).strftime(
-                    "%H:%M:%S"
-                )
+                completed = datetime.fromtimestamp(metadata.completed_at).strftime("%H:%M:%S")
 
             table.add_row(
                 job_id,

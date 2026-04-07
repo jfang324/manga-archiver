@@ -16,7 +16,7 @@ class DownloadWorker(Worker):
 
     def __init__(
         self,
-        id: str,
+        id: str,  # noqa: A002
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
@@ -35,7 +35,7 @@ class DownloadWorker(Worker):
             config: The configuration for the worker
             download_client: The client for downloading images
             semaphore: The semaphore to use for global rate limiting
-        """
+        """  # noqa: D415
         super().__init__(id, input_queue, output_queue, config, notification_queue)
 
         self._download_client = download_client
@@ -52,7 +52,7 @@ class DownloadWorker(Worker):
 
         Raises:
             ValueError: If the job is missing URLs
-        """
+        """  # noqa: D415
         (
             job_id,
             manga_title,
@@ -79,9 +79,7 @@ class DownloadWorker(Worker):
             image_data: list[bytes] = await self._download_client.download_images(urls)
 
         download_end = time.perf_counter_ns()
-        await self._send_notification(
-            job, JobStatus.DOWNLOADING, download_start, download_end
-        )
+        await self._send_notification(job, JobStatus.DOWNLOADING, download_start, download_end)
 
         return MergingJob(
             id=job_id,

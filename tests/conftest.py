@@ -76,7 +76,7 @@ def mock_api_response_list(request):
     ]
 
     response_iter = iter(mock_responses)
-    return lambda *args, **kwargs: AsyncContextManagerMock(next(response_iter))
+    return lambda *args, **kwargs: AsyncContextManagerMock(next(response_iter))  # noqa: ARG005
 
 
 @pytest.fixture

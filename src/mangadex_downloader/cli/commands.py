@@ -28,16 +28,12 @@ def create_parser() -> ArgumentParser:
     Returns:
         ArgumentParser: Configured ArgumentParser instance
     """
-    parser = ArgumentParser(
-        description="MangaDex Downloader - Download manga from MangaDex"
-    )
+    parser = ArgumentParser(description="MangaDex Downloader - Download manga from MangaDex")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     auth_parser = subparsers.add_parser("auth", help="Google Drive authentication")
-    auth_subparsers = auth_parser.add_subparsers(
-        dest="subcommand", help="Auth subcommands"
-    )
+    auth_subparsers = auth_parser.add_subparsers(dest="subcommand", help="Auth subcommands")
     auth_subparsers.add_parser("login", help="Log in to Google Drive")
     auth_subparsers.add_parser("logout", help="Log out of Google Drive")
 

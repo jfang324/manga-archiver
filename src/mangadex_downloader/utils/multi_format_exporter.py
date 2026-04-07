@@ -41,9 +41,7 @@ class MultiFormatExporter:
 
         return sanitized
 
-    def _generate_cbz(
-        self, images: list[Image.Image], write_location: Path | BytesIO
-    ) -> bytes:
+    def _generate_cbz(self, images: list[Image.Image], write_location: Path | BytesIO) -> bytes:
         """Generate a CBZ file from a list of images.
 
         Args:
@@ -54,9 +52,7 @@ class MultiFormatExporter:
             bytes: The CBZ file data
         """
         try:
-            with zipfile.ZipFile(
-                write_location, "w", compression=zipfile.ZIP_DEFLATED
-            ) as cbz:
+            with zipfile.ZipFile(write_location, "w", compression=zipfile.ZIP_DEFLATED) as cbz:
                 for i, img in enumerate(images, start=1):
                     img_buf = BytesIO()
                     img.save(img_buf, format="PNG")
@@ -121,9 +117,7 @@ class MultiFormatExporter:
             raise ValueError("Image data list cannot be empty")
 
         if not output_directory.exists() or not output_directory.is_dir():
-            raise ValueError(
-                f"Output directory must be a valid directory: {output_directory}"
-            )
+            raise ValueError(f"Output directory must be a valid directory: {output_directory}")
 
         if not output_name:
             raise ValueError("Output name cannot be empty")

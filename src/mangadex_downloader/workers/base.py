@@ -44,7 +44,7 @@ class Worker(ABC):
 
     def __init__(
         self,
-        id: str,
+        id: str,  # noqa: A002
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         config: WorkerConfig,
@@ -58,7 +58,7 @@ class Worker(ABC):
             output_queue: The output queue for the worker
             config: The configuration for the worker
             notification_queue: The queue for notification jobs
-        """
+        """  # noqa: D415
         self._id = id
         self._input_queue = input_queue
         self._output_queue = output_queue
@@ -68,7 +68,7 @@ class Worker(ABC):
         self._running = False
 
     async def run(self) -> None:
-        """Main loop - continuously pull jobs from the input queue and process them."""
+        """Main loop - continuously pull jobs from the input queue and process them."""  # noqa: D401
         self._running = True
 
         while self._running:
@@ -221,7 +221,7 @@ class Worker(ABC):
             float: The calculated backoff in seconds
         """
         max_delay = self._config.base_delay * (2**attempt)
-        jitter = random.uniform(0, max_delay) * 0.1 if self._config.jitter else 0
+        jitter = random.uniform(0, max_delay) * 0.1 if self._config.jitter else 0  # noqa: S311
 
         return max_delay + jitter
 

@@ -25,7 +25,7 @@ class OutputFormat(Enum):
 
     @classmethod
     def list_formats(cls) -> list[str]:
-        return [format.value for format in cls]
+        return [format.value for format in cls]  # noqa: A001
 
     @property
     def mime_type(self) -> str:

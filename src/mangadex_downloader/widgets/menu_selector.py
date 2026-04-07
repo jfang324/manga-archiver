@@ -96,10 +96,7 @@ class MenuSelector(Widget):
             with Vertical(id="navigation-column"):
                 yield Label(f"{self._title} 📖", id="navigation-label")
                 yield ListView(
-                    *[
-                        ListItem(Label(option.display_name))
-                        for option in self._menu_options
-                    ],
+                    *[ListItem(Label(option.display_name)) for option in self._menu_options],
                     id="navigation-list",
                 )
 

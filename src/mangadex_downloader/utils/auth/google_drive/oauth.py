@@ -54,7 +54,7 @@ def _fetch_device_code(client_id: str) -> GoogleAuthDeviceCode:
     Raises:
         requests.HTTPError: If the request fails
     """
-    response = requests.post(
+    response = requests.post(  # noqa: S113
         DEVICE_AUTH_URL,
         data={"client_id": client_id, "scope": DRIVE_SCOPE},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -87,7 +87,7 @@ def _poll_for_token(
     while time.time() - start_time < timeout:
         time.sleep(interval)
 
-        token_response = requests.post(
+        token_response = requests.post(  # noqa: S113
             TOKEN_URL,
             data={
                 "client_id": client_id,
@@ -227,7 +227,7 @@ def handle_auth_logout() -> int:
         return 0
 
     try:
-        response = requests.post(
+        response = requests.post(  # noqa: S113
             REVOKE_URL,
             params={"token": token["refresh_token"]},
             headers={"Content-Type": "application/x-www-form-urlencoded"},

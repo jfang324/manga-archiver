@@ -43,8 +43,7 @@ class DownloadClient:
                     response.status,
                 )
                 raise DownloadError(
-                    f"Failed to download image from {url}. "
-                    f"Status code: {response.status}"
+                    f"Failed to download image from {url}. Status code: {response.status}"
                 )
 
     async def download_images(self, urls: list[str]) -> list[bytes]:

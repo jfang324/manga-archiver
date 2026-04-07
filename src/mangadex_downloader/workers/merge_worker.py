@@ -17,7 +17,7 @@ class MergeWorker(Worker):
 
     def __init__(
         self,
-        id: str,
+        id: str,  # noqa: A002
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],

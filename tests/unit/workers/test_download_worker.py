@@ -11,9 +11,7 @@ class TestDownloadWorkerDoWork:
     @pytest.mark.asyncio
     async def test_do_work_returns_merging_job(self, mock_semaphore):
         mock_download_client = MagicMock()
-        mock_download_client.download_images = AsyncMock(
-            return_value=[b"image1", b"image2"]
-        )
+        mock_download_client.download_images = AsyncMock(return_value=[b"image1", b"image2"])
 
         mock_notification_queue = AsyncMock()
 

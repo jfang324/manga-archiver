@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 from asyncio import Queue
-from typing import Callable
+from collections.abc import Callable
 
 from ..enums import JobStatus
 from .benchmark import BenchmarkManager
@@ -20,7 +20,7 @@ class NotificationWorker:
 
     def __init__(
         self,
-        id: str,
+        id: str,  # noqa: A002
         input_queue: Queue,
         on_status_update: Callable[[str, JobStatus, JobMetadata], None],
         benchmark: BenchmarkManager | None = None,
@@ -43,7 +43,7 @@ class NotificationWorker:
         """Main loop for the notification worker.
 
         Continuously pulls notification jobs from the queue and processes them.
-        """
+        """  # noqa: D401
         self._running = True
 
         while self._running:
@@ -53,7 +53,7 @@ class NotificationWorker:
                 await self._do_work(job)
 
                 self._input_queue.task_done()
-            except asyncio.CancelledError:
+            except asyncio.CancelledError:  # noqa: PERF203
                 self._running = False
                 break
 
@@ -86,8 +86,7 @@ class NotificationWorker:
                 "merge_avg_ms=%.2f, upload_avg_ms=%.2f, peak_memory_mb=%.2f",
                 job.id,
                 aggregates.total_job_count,
-                aggregates.avg_time_per_phase.get(JobStatus.FETCHING_RESOURCES, 0)
-                / 1_000_000,
+                aggregates.avg_time_per_phase.get(JobStatus.FETCHING_RESOURCES, 0) / 1_000_000,
                 aggregates.avg_time_per_phase.get(JobStatus.DOWNLOADING, 0) / 1_000_000,
                 aggregates.avg_time_per_phase.get(JobStatus.MERGING, 0) / 1_000_000,
                 aggregates.avg_time_per_phase.get(JobStatus.UPLOADING, 0) / 1_000_000,

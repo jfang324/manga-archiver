@@ -22,7 +22,7 @@ class ResolveWorker(Worker):
 
     def __init__(
         self,
-        id: str,
+        id: str,  # noqa: A002
         input_queue: Queue[Job],
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
@@ -41,7 +41,7 @@ class ResolveWorker(Worker):
             config: The configuration for the worker
             api_client: The API client for MangaDex
             semaphore: The semaphore to use for global rate limiting
-        """
+        """  # noqa: D415
         super().__init__(id, input_queue, output_queue, config, notification_queue)
 
         self._api_client = api_client
@@ -58,7 +58,7 @@ class ResolveWorker(Worker):
 
         Raises:
             ValueError: If the job is missing a chapter ID
-        """
+        """  # noqa: D415
         (
             job_id,
             chapter_id,
@@ -82,14 +82,12 @@ class ResolveWorker(Worker):
         await self._send_notification(job, JobStatus.FETCHING_RESOURCES, resolve_start)
 
         async with self._semaphore:
-            resources: ProcessedDownloadResource = (
-                await self._api_client.get_download_resource(job.chapter_id)
+            resources: ProcessedDownloadResource = await self._api_client.get_download_resource(
+                job.chapter_id
             )
 
         resolve_end = time.perf_counter_ns()
-        await self._send_notification(
-            job, JobStatus.FETCHING_RESOURCES, resolve_start, resolve_end
-        )
+        await self._send_notification(job, JobStatus.FETCHING_RESOURCES, resolve_start, resolve_end)
 
         return DownloadingJob(
             id=job_id,

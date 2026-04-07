@@ -22,9 +22,7 @@ class SelectionPanelApp(App):
         self.selection_records: list[SelectionPanel.Selected] = []
 
     def compose(self) -> ComposeResult:
-        yield SelectionPanel(title="Test").data_bind(
-            options=SelectionPanelApp.mock_options
-        )
+        yield SelectionPanel(title="Test").data_bind(options=SelectionPanelApp.mock_options)
 
     @on(SelectionPanel.Selected)
     def _record_selection_message(self, message: SelectionPanel.Selected) -> None:
@@ -40,9 +38,7 @@ class TestSelectionPanel:
         app = SelectionPanelApp()
 
         async with app.run_test() as pilot:
-            selection_list: SelectionList = app.query_one(
-                "#selection-list", SelectionList
-            )
+            selection_list: SelectionList = app.query_one("#selection-list", SelectionList)
 
             selection_list.focus()
             await pilot.press("down")
@@ -61,9 +57,7 @@ class TestSelectionPanel:
         app = SelectionPanelApp()
 
         async with app.run_test() as pilot:
-            selection_list: SelectionList = app.query_one(
-                "#selection-list", SelectionList
-            )
+            selection_list: SelectionList = app.query_one("#selection-list", SelectionList)
 
             selection_list.focus()
             await pilot.press("down")
@@ -85,9 +79,7 @@ class TestSelectionPanel:
         app = SelectionPanelApp()
 
         async with app.run_test():
-            selection_list: SelectionList = app.query_one(
-                "#selection-list", SelectionList
-            )
+            selection_list: SelectionList = app.query_one("#selection-list", SelectionList)
             mock_options = app.mock_options
 
             assert len(selection_list.options) == len(mock_options)

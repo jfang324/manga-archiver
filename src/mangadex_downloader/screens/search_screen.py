@@ -63,9 +63,7 @@ class SearchScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield SearchPanel(debounce_duration=250).data_bind(
-                results=SearchScreen.results
-            )
+            yield SearchPanel(debounce_duration=250).data_bind(results=SearchScreen.results)
             yield Footer()
 
     @work(exclusive=True)
@@ -74,9 +72,7 @@ class SearchScreen(Screen):
         query: str = event.query
 
         try:
-            search_results: list[
-                ProcessedManga
-            ] = await self._mangadex_client.search_manga(query)
+            search_results: list[ProcessedManga] = await self._mangadex_client.search_manga(query)
 
         except RateLimitError:
             self.notify("Too many requests. Please wait a moment.", severity="error")
@@ -85,14 +81,12 @@ class SearchScreen(Screen):
             self.notify("Error searching for manga", severity="error")
             return
 
-        new_results = [
-            SearchResult(item["title"], item["id"]) for item in search_results
-        ]
+        new_results = [SearchResult(item["title"], item["id"]) for item in search_results]
         self.results = new_results
 
     @on(SearchPanel.Selected)
     def _navigate_to_chapter_screen(self, event: SearchPanel.Selected) -> None:
-        title, id = event.title, event.value
+        title, id = event.title, event.value  # noqa: A001
         manga: ProcessedManga = {"title": title, "id": id}
 
         self.app.push_screen(SelectionScreen(manga, self._mangadex_client))
@@ -103,7 +97,7 @@ class SearchScreen(Screen):
         if index < 0 or index >= len(self.results):
             return
 
-        title, id = self.results[index]
+        title, id = self.results[index]  # noqa: A001
         favorited_manga: FavoriteManga = {"manga_id": id, "manga_title": title}
 
         self.post_message(self.FavoriteAdded(favorited_manga))

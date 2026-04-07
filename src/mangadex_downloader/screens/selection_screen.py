@@ -55,9 +55,7 @@ class SelectionScreen(Screen):
 
     results: reactive[list[ChapterResult]] = reactive([])
 
-    def __init__(
-        self, manga: ProcessedManga, mangadex_client: MangaDexApiClient, **kwargs
-    ) -> None:
+    def __init__(self, manga: ProcessedManga, mangadex_client: MangaDexApiClient, **kwargs) -> None:
         """Initialize the SelectionScreen.
 
         Args:
@@ -94,9 +92,7 @@ class SelectionScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield SelectionPanel(self._manga_title).data_bind(
-                options=SelectionScreen.results
-            )
+            yield SelectionPanel(self._manga_title).data_bind(options=SelectionScreen.results)
             yield Footer()
 
     def _queue_downloads(self, selected_chapters: list[tuple[str, str]]) -> None:
@@ -110,9 +106,7 @@ class SelectionScreen(Screen):
         ]
 
         self.post_message(self.EnqueueJobs(partial_jobs))
-        self.notify(
-            f"Queued {len(selected_chapters)} downloads for {self._manga_title}"
-        )
+        self.notify(f"Queued {len(selected_chapters)} downloads for {self._manga_title}")
 
     @on(SelectionPanel.Selected)
     def _navigate_to_menu_screen(self, event: SelectionPanel.Selected) -> None:

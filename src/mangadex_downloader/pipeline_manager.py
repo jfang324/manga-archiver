@@ -161,14 +161,12 @@ class PipelineManager:
 
         self._benchmark_enabled = config.benchmark_enabled
 
-    def _on_status_update(
-        self, job_id: str, status: JobStatus, metadata: JobMetadata
-    ) -> None:
+    def _on_status_update(self, job_id: str, status: JobStatus, metadata: JobMetadata) -> None:
         """Callback to update job status in the internal dict with automatic expiry.
 
         Uses a queue to track completed jobs for efficient expiry checking.
         Modification of state MUST be done here to avoid race conditions.
-        """
+        """  # noqa: D401
         self._job_statuses[job_id] = (status, metadata)
 
         # Add to expiry queue when job completes
@@ -269,36 +267,22 @@ class PipelineManager:
                 JobStatus.FETCHING_RESOURCES, 0
             )
             / 1_000_000,
-            "fetching_avg_ms": aggregates.avg_time_per_phase.get(
-                JobStatus.FETCHING_RESOURCES, 0
-            )
+            "fetching_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.FETCHING_RESOURCES, 0)
             / 1_000_000,
-            "downloading_total_ms": aggregates.total_time_per_phase.get(
-                JobStatus.DOWNLOADING, 0
-            )
+            "downloading_total_ms": aggregates.total_time_per_phase.get(JobStatus.DOWNLOADING, 0)
             / 1_000_000,
-            "downloading_avg_ms": aggregates.avg_time_per_phase.get(
-                JobStatus.DOWNLOADING, 0
-            )
+            "downloading_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.DOWNLOADING, 0)
             / 1_000_000,
-            "merging_total_ms": aggregates.total_time_per_phase.get(
-                JobStatus.MERGING, 0
-            )
+            "merging_total_ms": aggregates.total_time_per_phase.get(JobStatus.MERGING, 0)
             / 1_000_000,
-            "merging_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.MERGING, 0)
+            "merging_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.MERGING, 0) / 1_000_000,
+            "uploading_total_ms": aggregates.total_time_per_phase.get(JobStatus.UPLOADING, 0)
             / 1_000_000,
-            "uploading_total_ms": aggregates.total_time_per_phase.get(
-                JobStatus.UPLOADING, 0
-            )
-            / 1_000_000,
-            "uploading_avg_ms": aggregates.avg_time_per_phase.get(
-                JobStatus.UPLOADING, 0
-            )
+            "uploading_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.UPLOADING, 0)
             / 1_000_000,
             "avg_total_time_ms": aggregates.avg_total_time / 1_000_000,
             "peak_memory_mb": aggregates.peak_memory_mb,
             "highest_perceived_download_time_ms": aggregates.highest_perceived_download_time
             / 1_000_000,
-            "highest_perceived_end_to_end_ms": aggregates.highest_perceived_end_to_end
-            / 1_000_000,
+            "highest_perceived_end_to_end_ms": aggregates.highest_perceived_end_to_end / 1_000_000,
         }

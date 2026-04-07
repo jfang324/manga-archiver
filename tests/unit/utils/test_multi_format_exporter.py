@@ -61,18 +61,14 @@ class TestValidateInputs:
         file_path = tmp_path / "file.txt"
         file_path.write_text("not a directory")
 
-        with pytest.raises(
-            ValueError, match="Output directory must be a valid directory"
-        ):
+        with pytest.raises(ValueError, match="Output directory must be a valid directory"):
             exporter._validate_inputs([b"data"], file_path, "test", 75)
 
     def test_validate_inputs_nonexistent_directory(self, tmp_path):
         exporter = MultiFormatExporter()
         nonexistent = tmp_path / "nonexistent"
 
-        with pytest.raises(
-            ValueError, match="Output directory must be a valid directory"
-        ):
+        with pytest.raises(ValueError, match="Output directory must be a valid directory"):
             exporter._validate_inputs([b"data"], nonexistent, "test", 75)
 
     def test_validate_inputs_valid_inputs(self, tmp_path):
@@ -210,9 +206,7 @@ class TestMultiFormatExporterGenerate:
 
     def test_generate_pdf_to_path(self, tmp_path, _image_bytes):
         exporter = MultiFormatExporter()
-        full_name, file_data = exporter.generate(
-            [_image_bytes], tmp_path, "test", OutputFormat.PDF
-        )
+        full_name, file_data = exporter.generate([_image_bytes], tmp_path, "test", OutputFormat.PDF)
 
         assert full_name == "test.pdf"
         assert (tmp_path / "test.pdf").exists()
@@ -229,9 +223,7 @@ class TestMultiFormatExporterGenerate:
 
     def test_generate_cbz_to_path(self, tmp_path, _image_bytes):
         exporter = MultiFormatExporter()
-        full_name, file_data = exporter.generate(
-            [_image_bytes], tmp_path, "test", OutputFormat.CBZ
-        )
+        full_name, file_data = exporter.generate([_image_bytes], tmp_path, "test", OutputFormat.CBZ)
 
         assert full_name == "test.cbz"
         assert (tmp_path / "test.cbz").exists()

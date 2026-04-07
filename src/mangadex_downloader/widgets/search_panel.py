@@ -185,12 +185,10 @@ class SearchPanel(Widget):
             self._debounce_task.cancel()
 
         search_query: str = event.input.value
-        self._debounce_task = asyncio.create_task(
-            self._delayed_search_task(search_query)
-        )
+        self._debounce_task = asyncio.create_task(self._delayed_search_task(search_query))
 
     async def _delayed_search_task(self, search_query: str) -> None:
-        """Function that delays posting the query message to the parent."""
+        """Function that delays posting the query message to the parent."""  # noqa: D401
         await asyncio.sleep(self._debounce_duration / 1000)
 
         self.post_message(self.Search(search_query))

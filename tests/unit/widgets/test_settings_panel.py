@@ -100,9 +100,7 @@ class TestSettingsPanel:
             input_field: Input = settings_panel.query_one(Input)
 
             input_field.value = input_value
-            input_field.post_message(
-                Input.Changed(input_field, input_value, validation_result)
-            )  # type: ignore[arg-type]
+            input_field.post_message(Input.Changed(input_field, input_value, validation_result))  # type: ignore[arg-type]
             await pilot.pause()
 
             assert settings_panel._quality == expected_quality

@@ -14,15 +14,13 @@ from src.mangadex_downloader.workers.jobs import Job
 class ConcreteWorker(Worker):
     """Concrete implementation of Worker for testing."""
 
-    async def _do_work(self, job: Job) -> Job | None:
+    async def _do_work(self, job: Job) -> Job | None:  # noqa: ARG002
         return None
 
 
 class TestBackoffCalculation:
     def test_exponential_backoff_no_jitter(self):
-        config = WorkerConfig(
-            max_retries=5, base_delay=2, jitter=False, await_output_space=False
-        )
+        config = WorkerConfig(max_retries=5, base_delay=2, jitter=False, await_output_space=False)
         worker = ConcreteWorker(
             id="test_worker",
             input_queue=MagicMock(),
@@ -38,9 +36,7 @@ class TestBackoffCalculation:
         assert worker._calculate_backoff(4) == 32.0
 
     def test_exponential_backoff_with_jitter(self):
-        config = WorkerConfig(
-            max_retries=5, base_delay=2, jitter=True, await_output_space=False
-        )
+        config = WorkerConfig(max_retries=5, base_delay=2, jitter=True, await_output_space=False)
         worker = ConcreteWorker(
             id="test_worker",
             input_queue=MagicMock(),
@@ -56,9 +52,7 @@ class TestBackoffCalculation:
         assert 4.0 <= backoff <= 4.4
 
     def test_backoff_uses_config_values(self):
-        config = WorkerConfig(
-            max_retries=5, base_delay=5, jitter=False, await_output_space=False
-        )
+        config = WorkerConfig(max_retries=5, base_delay=5, jitter=False, await_output_space=False)
         worker = ConcreteWorker(
             id="test_worker",
             input_queue=MagicMock(),
@@ -122,7 +116,7 @@ class TestRetryLogic:
 
         call_count = 0
 
-        async def mock_do_work(job):
+        async def mock_do_work(job):  # noqa: ARG001
             nonlocal call_count
             call_count += 1
             raise RateLimitError("429")
@@ -149,7 +143,7 @@ class TestRetryLogic:
 
         call_count = 0
 
-        async def mock_do_work(job):
+        async def mock_do_work(job):  # noqa: ARG001
             nonlocal call_count
             call_count += 1
             raise TimeoutError("Simulated timeout")
@@ -180,7 +174,7 @@ class TestRetryLogic:
 
         call_count = 0
 
-        async def mock_do_work(job):
+        async def mock_do_work(job):  # noqa: ARG001
             nonlocal call_count
             call_count += 1
             raise TimeoutError("Simulated timeout")

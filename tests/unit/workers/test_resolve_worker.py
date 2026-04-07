@@ -131,9 +131,7 @@ class TestResolveWorkerDoWork:
             config=MagicMock(),
         )
 
-        with pytest.raises(
-            ValueError, match="Invalid FetchingResourcesJob missing chapter_id"
-        ):
+        with pytest.raises(ValueError, match="Invalid FetchingResourcesJob missing chapter_id"):
             await worker._do_work(job)
 
     @pytest.mark.asyncio

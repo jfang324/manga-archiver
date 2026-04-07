@@ -40,9 +40,7 @@ class TestUploadWorkerDoWork:
 
         result = await worker._do_work(job)
 
-        mock_drive_client.get_or_create_manga_folder.assert_called_once_with(
-            "Test Manga"
-        )
+        mock_drive_client.get_or_create_manga_folder.assert_called_once_with("Test Manga")
         mock_drive_client.upload_file.assert_called_once_with(
             file_data=b"fake pdf data",
             file_name="Test Manga [1] - Chapter 1.pdf",
@@ -117,9 +115,7 @@ class TestUploadWorkerDoWork:
     @pytest.mark.asyncio
     async def test_do_work_raises_exception(self):
         mock_drive_client = self._create_mock_drive_client()
-        mock_drive_client.get_or_create_manga_folder = AsyncMock(
-            side_effect=Exception("API error")
-        )
+        mock_drive_client.get_or_create_manga_folder = AsyncMock(side_effect=Exception("API error"))
 
         job = UploadJob(
             id="job_123",

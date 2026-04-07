@@ -17,7 +17,7 @@ def main() -> None:
 
     Parses command-line arguments, initializes the Google Drive client
     if in archive mode, and launches the Textual UI application.
-    """
+    """  # noqa: D401
     setup_logging()
 
     try:
@@ -42,9 +42,7 @@ def main() -> None:
         token = load_token()
 
         if token is None:
-            print(
-                "Archive mode requires authentication. Run: mangadex-downloader auth login"
-            )
+            print("Archive mode requires authentication. Run: mangadex-downloader auth login")
             sys.exit(1)
 
         try:

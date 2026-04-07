@@ -67,9 +67,7 @@ def _create_app_config(settings_data: SettingsData) -> AppConfig:
     """Create an AppConfig object from a dictionary of settings data."""
     try:
         return AppConfig(
-            _output_path=Path(
-                settings_data.get("output_path", str(DEFAULT_OUTPUT_PATH))
-            ),
+            _output_path=Path(settings_data.get("output_path", str(DEFAULT_OUTPUT_PATH))),
             _output_format=OutputFormat(
                 settings_data.get("output_format", str(DEFAULT_OUTPUT_FORMAT))
             ),
@@ -78,9 +76,7 @@ def _create_app_config(settings_data: SettingsData) -> AppConfig:
             data_saver=settings_data.get("data_saver", DEFAULT_DATA_SAVER),
         )
     except ValueError as e:
-        logger.error(
-            "Configuration validation failed: %s. Using default settings instead.", e
-        )
+        logger.error("Configuration validation failed: %s. Using default settings instead.", e)
         # Use current working directory as fallback since DEFAULT_OUTPUT_PATH
         # may not exist (e.g., CI environment or deleted Downloads folder).
         # This is a safe fallback as cwd is guaranteed to exist.
@@ -104,9 +100,7 @@ def load_settings() -> AppConfig:
         config_dir.mkdir(parents=True, exist_ok=True)
         default_settings: SettingsData = _get_default_settings()
         settings_path.write_text(json.dumps(default_settings, indent=2))
-        logger.debug(
-            "Settings file not found at %s, created with defaults", settings_path
-        )
+        logger.debug("Settings file not found at %s, created with defaults", settings_path)
 
     settings_data: SettingsData | None = _parse_settings_file(settings_path)
 

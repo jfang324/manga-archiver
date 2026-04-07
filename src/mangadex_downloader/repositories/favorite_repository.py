@@ -17,9 +17,7 @@ class FavoriteRepository:
                 cursor.execute("SELECT manga_id, manga_title FROM favorite_manga")
                 rows = cursor.fetchall()
 
-                return [
-                    FavoriteManga(manga_id=row[0], manga_title=row[1]) for row in rows
-                ]
+                return [FavoriteManga(manga_id=row[0], manga_title=row[1]) for row in rows]
         except Exception as e:
             logger.error("Failed to get favorites: %s", e)
             return []
@@ -44,9 +42,7 @@ class FavoriteRepository:
         try:
             with get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    "DELETE FROM favorite_manga WHERE manga_id = ?", (manga_id,)
-                )
+                cursor.execute("DELETE FROM favorite_manga WHERE manga_id = ?", (manga_id,))
 
                 conn.commit()
         except Exception as e:
