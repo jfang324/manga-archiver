@@ -82,6 +82,12 @@ def create_parser() -> ArgumentParser:
         help="Enable archive mode (upload to Google Drive instead of local save)",
     )
 
+    parser.add_argument(
+        "--benchmark",
+        action="store_true",
+        help="Enable performance benchmarking",
+    )
+
     return parser
 
 

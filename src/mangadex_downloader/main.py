@@ -64,6 +64,7 @@ def main():
             num_merge_workers=args.merge_workers,
             resolve_rate_limit=args.resolve_rate_limit,
             download_rate_limit=args.download_rate_limit,
+            benchmark_enabled=args.benchmark,
         )
 
         app_config = load_settings()
