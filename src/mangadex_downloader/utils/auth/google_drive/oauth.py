@@ -53,6 +53,8 @@ def _fetch_device_code(client_id: str) -> GoogleAuthDeviceCode:
 
     Raises:
         requests.HTTPError: If the request fails
+        requests.Timeout: If the request exceeds 30 seconds
+        requests.ConnectionError: If the connection fails
     """
     response = requests.post(
         DEVICE_AUTH_URL,
@@ -81,6 +83,10 @@ def _poll_for_token(
 
     Returns:
         str | GoogleAuthDeviceFlowResult: Refresh token on success, or GoogleAuthDeviceFlowResult on failure
+
+    Raises:
+        requests.Timeout: If a request exceeds 30 seconds
+        requests.ConnectionError: If the connection fails
     """
     interval = 5
     start_time = time.time()
@@ -254,5 +260,5 @@ def handle_auth_logout() -> int:
         print(f"Failed to send revocation request: {e}")
         return 1
     except (requests.Timeout, requests.ConnectionError) as e:
-        print("Network error: %s", e)
+        print(f"Network error: {e}")
         return 1

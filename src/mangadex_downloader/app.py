@@ -174,6 +174,8 @@ class MangaDexDownloaderApp(App):
         if self._session:
             await self._session.close()
 
+        benchmark_results = None
+
         if self._pipeline_manager and self._pipeline_config.benchmark_enabled:
             benchmark_results = self._pipeline_manager.get_benchmark_results()
 
