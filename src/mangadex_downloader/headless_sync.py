@@ -3,6 +3,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+import aiohttp
+
+from .integrations.content_providers import MangaDexApiClient
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .repositories import FavoriteRepository
 from .types import ProcessedChapter
@@ -18,7 +21,7 @@ class MangaChapters:
     manga_id: str
     manga_title: str
     api_chapters: list[ProcessedChapter]
-    gdrive_chapters: list[int]
+    google_drive_chapters: list[int]
 
 
 class HeadlessSync:
@@ -45,35 +48,97 @@ class HeadlessSync:
         self._output_format = output_format
         self._manga_chapters: list[MangaChapters] = []
 
-    def run(self) -> list[FetchingResourcesJob]:
+    async def run(self) -> list[FetchingResourcesJob]:
         """Run the headless sync process.
+
+        Note: We create the aiohttp ClientSession here instead of passing it in
+        because this method runs in its own event loop (via asyncio.run()) in main.py.
+        The CLI entry point doesn't have an active event loop, so we can't create
+        the session there - we create it here where we have an active loop.
 
         Returns:
             list[FetchingResourcesJob]: Jobs to enqueue (missing chapters)
         """
         print("=== Headless Sync ===")
 
-        favorites = self._favorite_repository.get_all()
-        print(f"Found {len(favorites)} favorites")
+        async with aiohttp.ClientSession() as session:
+            mangadex_client = MangaDexApiClient(session)
 
-        if not favorites:
-            print("No favorites to sync")
-            return []
+            favorites = self._favorite_repository.get_all()
+            print(f"Found {len(favorites)} favorites")
 
-        for favorite in favorites:
-            manga_title = favorite["manga_title"]
+            if not favorites:
+                print("No favorites to sync")
+                return []
 
-            gdrive_folder_id = self._google_drive_client._folder_cache.get(manga_title)
-            if gdrive_folder_id:
-                files = self._google_drive_client.get_files_in_folder(gdrive_folder_id)
-                gdrive_chapters = self._parse_chapter_numbers(files)
-            else:
-                gdrive_chapters = []
+            for favorite in favorites:
+                manga_id = favorite["manga_id"]
+                manga_title = favorite["manga_title"]
 
-            print(f"  {manga_title}: {len(gdrive_chapters)} chapters in Google Drive")
+                print(f"Fetching chapters for '{manga_title}'...")
 
-        print(f"\nScanned {len(self._manga_chapters)} manga in Google Drive")
+                api_chapters = await self._fetch_api_chapters(
+                    mangadex_client, manga_id, manga_title
+                )
+                if api_chapters is None:
+                    continue
 
+                google_drive_chapters = self._fetch_google_drive_chapters(manga_title)
+
+                print(
+                    f"  {manga_title}: {len(api_chapters)} from API, "
+                    f"{len(google_drive_chapters)} in Google Drive"
+                )
+
+                self._manga_chapters.append(
+                    MangaChapters(
+                        manga_id=manga_id,
+                        manga_title=manga_title,
+                        api_chapters=api_chapters,
+                        google_drive_chapters=google_drive_chapters,
+                    )
+                )
+
+            print(f"\nScanned {len(self._manga_chapters)} manga")
+
+        return []
+
+    async def _fetch_api_chapters(
+        self,
+        client: MangaDexApiClient,
+        manga_id: str,
+        manga_title: str,
+    ) -> list[ProcessedChapter] | None:
+        """Fetch chapters from MangaDex API.
+
+        Args:
+            client: MangaDex API client
+            manga_id: The manga ID
+            manga_title: The manga title (for logging)
+
+        Returns:
+            List of chapters, or None if fetch failed
+        """
+        try:
+            return await client.get_chapters(manga_id)
+        except Exception as e:
+            logger.error("Failed to get chapters for %s: %s", manga_title, e)
+            print(f"  ERROR: Failed to get chapters for '{manga_title}'")
+            return None
+
+    def _fetch_google_drive_chapters(self, manga_title: str) -> list[int]:
+        """Fetch chapter numbers from Google Drive folder.
+
+        Args:
+            manga_title: The manga title to look up in folder cache
+
+        Returns:
+            List of chapter numbers found in Google Drive
+        """
+        folder_id = self._google_drive_client._folder_cache.get(manga_title)
+        if folder_id:
+            files = self._google_drive_client.get_files_in_folder(folder_id)
+            return self._parse_chapter_numbers(files)
         return []
 
     def _parse_chapter_numbers(self, files: list[dict]) -> list[int]:

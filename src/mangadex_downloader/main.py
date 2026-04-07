@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 
@@ -78,14 +79,13 @@ def main() -> None:
         if not google_drive_client:
             print("headless mode requires a Google Drive client, try running with --archive")
             sys.exit(1)
-
         headless_sync = HeadlessSync(
             favorite_repository=favorite_repository,
             google_drive_client=google_drive_client,
             output_directory=app_config.output_path,
             output_format=str(app_config.output_format),
         )
-        backlog = headless_sync.run()
+        backlog = asyncio.run(headless_sync.run())
 
     app = MangaDexDownloaderApp(
         pipeline_config=pipeline_config,
