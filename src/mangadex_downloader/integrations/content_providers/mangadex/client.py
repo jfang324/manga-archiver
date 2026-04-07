@@ -251,6 +251,6 @@ class MangaDexApiClient(Provider):
             url_quality = "data"
 
         for element in chapter_data[file_list_key]:
-            download_urls.append(f"{base_url}/{url_quality}/{url_hash}/{element}")
+            download_urls.append(f"{base_url}/{url_quality}/{url_hash}/{element}")  # noqa:PERF401 - explicit loop for clarity, variable conditions prevent list comprehension
 
         return ProcessedDownloadResource(urls=download_urls, hash=url_hash)

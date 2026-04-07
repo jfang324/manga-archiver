@@ -7,5 +7,5 @@ class GoogleAuthDeviceFlowResult(Enum):
     AUTHORIZATION_PENDING = "authorization_pending"
     SLOW_DOWN = "slow_down"
     ACCESS_DENIED = "access_denied"
-    EXPIRED_TOKEN = "expired_token"
+    EXPIRED_TOKEN = "expired_token"  # noqa: S105 - OAuth error code string, not a credential
     TIMEOUT = "timeout"

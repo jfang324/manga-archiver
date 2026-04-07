@@ -53,7 +53,7 @@ class NotificationWorker:
                 await self._do_work(job)
 
                 self._input_queue.task_done()
-            except asyncio.CancelledError:
+            except asyncio.CancelledError:  # noqa: PERF203 - required for graceful shutdown of async worker
                 self._running = False
                 break
 
