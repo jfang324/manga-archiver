@@ -12,7 +12,7 @@ from .utils.auth.google_drive import handle_auth_login, handle_auth_logout, load
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main() -> None:
     """Main entry point for the MangaDex Downloader CLI.
 
     Parses command-line arguments, initializes the Google Drive client
