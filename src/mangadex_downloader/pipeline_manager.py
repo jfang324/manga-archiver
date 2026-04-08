@@ -202,6 +202,7 @@ class PipelineManager:
             notification_job = NotificationJob(
                 id=job.chapter_id,
                 manga_title=job.manga_title,
+                chapter_number=job.chapter_number,
                 chapter_title=job.chapter_title,
                 output_directory=job.output_directory,
                 output_format=job.output_format,
@@ -215,11 +216,17 @@ class PipelineManager:
                 ]
             )
 
-    async def start(self):
+    async def start(self, jobs: list[FetchingResourcesJob] | None = None):
         """Start all workers in the pipeline.
 
-        Launches all worker pools (resolve, download, merge, upload, notification)
+        Args:
+            jobs | None: Optional list of jobs to enqueue BEFORE workers start.
+                  This ensures workers have work ready immediately.
         """
+        # Enqueue jobs BEFORE starting workers
+        if jobs:
+            await self.enqueue_jobs(jobs)
+
         if self._benchmark_enabled:
             tracemalloc.start()
 

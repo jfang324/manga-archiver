@@ -42,14 +42,14 @@ class SelectionPanel(Widget):
         """Message to indicate that a selection has been made.
 
         Attributes:
-            selected_pairs (list[tuple[str, str]]): A list of selected (name, value) pairs
+            selected_pairs (list[tuple[str, str, str]]): A list of selected (name, id, chapter_number) tuples
         """
 
-        def __init__(self, selected_pairs: list[tuple[str, str]], **kwargs) -> None:
+        def __init__(self, selected_pairs: list[tuple[str, str, str]], **kwargs) -> None:
             """Initialize the Selected message.
 
             Args:
-                selected_pairs: A list of selected (name, value) pairs
+                selected_pairs: A list of selected (name, id, chapter_number) tuples
             """
             super().__init__(**kwargs)
 
@@ -69,7 +69,7 @@ class SelectionPanel(Widget):
         self._selected_values: list[str] = []
 
         # SelectionList only returns a list of values, so we need to map the values to their names
-        self._name_map: dict[str, str] = {}
+        self._name_map: dict[str, tuple[str, str]] = {}
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -81,9 +81,10 @@ class SelectionPanel(Widget):
         selection_items: list[Selection] = []
 
         for title, value, chapter in options:
-            name = f"{chapter}. {title}"
+            display_title = title if title else "untitled"
+            name = f"{chapter}. {display_title}"
 
-            self._name_map[value] = name
+            self._name_map[value] = (name, chapter)
             selection_items.append(Selection(name, value))
 
         selection_list.clear_options()
@@ -98,9 +99,15 @@ class SelectionPanel(Widget):
         self._selected_values = event.selection_list.selected
 
     def action_request_download(self) -> None:
-        name_and_id_pairs: list[tuple[str, str]] = [
-            (self._name_map.get(value, ""), value) for value in self._selected_values
-        ]
+        name_and_id_pairs: list[tuple[str, str, str]] = []
+        for value in self._selected_values:
+            info = self._name_map.get(value)
+
+            if not info:
+                self.notify(f"Failed to find info for {value}", severity="error")
+                return
+
+            name_and_id_pairs.append((info[0], value, info[1]))
 
         self.post_message(self.Selected(name_and_id_pairs))
 

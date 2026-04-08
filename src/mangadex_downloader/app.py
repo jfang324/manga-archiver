@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING
 
 import aiohttp
@@ -10,7 +11,7 @@ from .integrations.content_providers import MangaDexApiClient
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .models import AppConfig
 from .pipeline_manager import PipelineConfig, PipelineManager
-from .repositories import FavoriteRepository
+from .repositories import FavoriteManga, FavoriteRepository
 from .screens import (
     DownloadsScreen,
     FavoritesScreen,
@@ -26,12 +27,6 @@ from .workers.jobs import FetchingResourcesJob
 if TYPE_CHECKING:
     from .screens.selection_screen import PartialJob
     from .types import ProcessedManga
-
-import logging
-
-from textual import events
-
-from .repositories import FavoriteManga
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +76,7 @@ class MangaDexDownloaderApp(App):
             app_config: The application configuration
             favorite_repository: The favorite repository
             google_drive_client: The Google Drive client
-            backlog: Pre-fetched jobs to enqueue after pipeline starts
+            backlog: Pre-fetched jobs to enqueue when pipeline starts
         """
         super().__init__(**kwargs)
 
@@ -104,25 +99,9 @@ class MangaDexDownloaderApp(App):
         self.mutate_reactive(MangaDexDownloaderApp._app_config)
         self.mutate_reactive(MangaDexDownloaderApp._favorites)
 
-    @on(events.Key)
-    async def _process_backlog(self, event: events.Key) -> None:
-        if event.key != "a":
-            return
-
-        """enqueue jobs from backlog."""
-        if not self._backlog:
-            return
-
-        if not self._pipeline_manager:
-            self.notify("Pipeline manager not initialized", severity="error")
-            return
-
-        self.notify(f"Enqueueing backlog: {len(self._backlog)} jobs", severity="information")
-        await self._pipeline_manager.enqueue_jobs(self._backlog)
-
     @work
     async def _setup_pipeline_manager(self) -> None:
-        """Set up the pipeline manager and start it."""
+        """Set up the pipeline manager, process backlog, and start it."""
         self._pipeline_manager = PipelineManager(
             self._mangadex_client,
             self._download_client,
@@ -130,7 +109,13 @@ class MangaDexDownloaderApp(App):
             google_drive_client=self._google_drive_client,
         )
 
-        await self._pipeline_manager.start()
+        if self._backlog:
+            self.notify(
+                f"Enqueueing {len(self._backlog)} jobs from backlog, this may take a while...",
+                severity="information",
+            )
+
+        await self._pipeline_manager.start(self._backlog)
 
     @work
     @on(SelectionScreen.EnqueueJobs)
@@ -147,6 +132,7 @@ class MangaDexDownloaderApp(App):
                 id=partial_job["chapter_id"],
                 manga_title=partial_job["manga_title"],
                 chapter_id=partial_job["chapter_id"],
+                chapter_number=partial_job["chapter_number"],
                 chapter_title=partial_job["chapter_title"],
                 output_directory=self._app_config.output_path,
                 output_format=self._app_config.output_format,

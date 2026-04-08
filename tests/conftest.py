@@ -85,6 +85,7 @@ def mock_job():
     job = MagicMock(spec=Job)
     job.id = "test_job"
     job.manga_title = "Test Manga"
+    job.chapter_number = "1"
     job.chapter_title = "Chapter 1"
     job.output_directory = MagicMock()
     job.output_format = MagicMock()

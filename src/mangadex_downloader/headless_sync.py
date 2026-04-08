@@ -146,12 +146,16 @@ class HeadlessSync:
 
         jobs: list[FetchingResourcesJob] = []
         for manga_title, chapter in missing_chapters:
+            chapter_number = chapter.get("chapter")
+            chapter_title = chapter.get("title", "untitled")
+
             jobs.append(
                 FetchingResourcesJob(
                     id=chapter["id"],
                     manga_title=manga_title,
                     chapter_id=chapter["id"],
-                    chapter_title=chapter["title"],
+                    chapter_number=chapter_number,
+                    chapter_title=chapter_title,
                     output_directory=self._output_directory,
                     output_format=OutputFormat(self._output_format),
                 )

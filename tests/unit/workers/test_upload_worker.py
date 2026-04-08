@@ -22,6 +22,7 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
+            chapter_number="1",
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
@@ -57,6 +58,7 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
+            chapter_number="1",
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
@@ -88,6 +90,7 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
+            chapter_number="1",
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
@@ -120,6 +123,7 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
+            chapter_number="1",
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,

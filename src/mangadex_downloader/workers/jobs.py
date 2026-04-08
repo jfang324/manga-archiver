@@ -11,6 +11,7 @@ class Job:
     Attributes:
         id (str): The unique identifier for the job
         manga_title (str): The title of the manga
+        chapter_number (str): The chapter number (e.g., "1", "2.5")
         chapter_title (str): The title of the chapter
         output_directory (Path): The directory to save output files
         output_format (OutputFormat): The output format (PDF, CBZ, etc.)
@@ -18,6 +19,7 @@ class Job:
 
     id: str
     manga_title: str
+    chapter_number: str
     chapter_title: str
     output_directory: Path
     output_format: OutputFormat

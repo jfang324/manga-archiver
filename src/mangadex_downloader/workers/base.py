@@ -202,6 +202,7 @@ class Worker(ABC):
             NotificationJob(
                 id=job.id,
                 manga_title=job.manga_title,
+                chapter_number=job.chapter_number,
                 chapter_title=job.chapter_title,
                 output_directory=job.output_directory,
                 output_format=job.output_format,

@@ -50,7 +50,11 @@ class TestSelectionPanel:
 
             message = selection_records.pop()
             assert message.selected_pairs == [
-                (self._format_values(app.mock_options[0]), app.mock_options[0][1])
+                (
+                    self._format_values(app.mock_options[0]),
+                    app.mock_options[0][1],
+                    app.mock_options[0][2],
+                )
             ]
 
     async def test_selecting_multiple_options_sends_message(self) -> None:
@@ -71,8 +75,16 @@ class TestSelectionPanel:
 
             message = selection_records.pop()
             assert message.selected_pairs == [
-                (self._format_values(app.mock_options[0]), app.mock_options[0][1]),
-                (self._format_values(app.mock_options[1]), app.mock_options[1][1]),
+                (
+                    self._format_values(app.mock_options[0]),
+                    app.mock_options[0][1],
+                    app.mock_options[0][2],
+                ),
+                (
+                    self._format_values(app.mock_options[1]),
+                    app.mock_options[1][1],
+                    app.mock_options[1][2],
+                ),
             ]
 
     async def test_selection_options_displays_options(self) -> None:
