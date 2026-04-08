@@ -1,6 +1,6 @@
 import os
-import sqlite3
 from pathlib import Path
+from sqlite3 import Connection, connect
 
 
 def _get_db_path() -> Path:
@@ -11,9 +11,9 @@ def _get_db_path() -> Path:
     return config_dir / "mangadex.db"
 
 
-def get_connection() -> sqlite3.Connection:
+def get_connection() -> Connection:
     """Get a connection to the SQLite database."""
-    return sqlite3.connect(_get_db_path())
+    return connect(_get_db_path())
 
 
 def init_db() -> None:

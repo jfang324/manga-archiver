@@ -56,6 +56,7 @@ class GoogleDriveClient:
         Returns:
             str: The ID of the root folder
         """
+        # initialize is meant to be called before the app starts, so we use print for visual feedback
         print("Initializing Google Drive...")
 
         root_folders = self._get_root_folders(page_size=DEFAULT_ROOT_PAGE_SIZE)

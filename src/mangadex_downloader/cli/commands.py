@@ -1,4 +1,4 @@
-from argparse import ArgumentParser, ArgumentTypeError, Namespace
+from argparse import ArgumentParser, ArgumentTypeError, Namespace, RawTextHelpFormatter
 
 from ..constants.defaults import (
     DEFAULT_DOWNLOAD_RATE_LIMIT,
@@ -28,12 +28,15 @@ def create_parser() -> ArgumentParser:
     Returns:
         ArgumentParser: Configured ArgumentParser instance
     """
-    parser = ArgumentParser(description="MangaDex Downloader - Download manga from MangaDex")
-
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    parser = ArgumentParser(
+        description="MangaDex Downloader - Download manga from MangaDex",
+        formatter_class=lambda prog: RawTextHelpFormatter(prog, max_help_position=50),
+    )
+    subparsers = parser.add_subparsers(dest="command", title="commands", metavar="")
 
     auth_parser = subparsers.add_parser("auth", help="Google Drive authentication")
-    auth_subparsers = auth_parser.add_subparsers(dest="subcommand", help="Auth subcommands")
+    auth_subparsers = auth_parser.add_subparsers(dest="auth_command", required=True)
+
     auth_subparsers.add_parser("login", help="Log in to Google Drive")
     auth_subparsers.add_parser("logout", help="Log out of Google Drive")
 

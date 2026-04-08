@@ -132,7 +132,7 @@ class MangaDexApiClient(Provider):
                 title = (
                     self._get_nested(attributes, "title", "en")
                     or self._get_nested(attributes, "title")
-                    or "Unknown"
+                    or "unknown"
                 )
                 element_id = element["id"]
 
@@ -188,8 +188,12 @@ class MangaDexApiClient(Provider):
         for element in data:
             if "id" in element:
                 attributes = element.get("attributes", {})
-                title: str = attributes.get("title", "")
-                chapter: str = attributes.get("chapter", "0")
+                title: str = attributes.get("title") or "untitled"
+                chapter: str = attributes.get("chapter")
+
+                if not chapter:
+                    # chapters without a number will cause syncing issues with Google Drive
+                    continue
 
                 if chapter not in already_contains:
                     already_contains.add(chapter)
