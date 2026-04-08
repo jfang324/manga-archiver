@@ -9,11 +9,9 @@ from textual.screen import Screen
 from textual.widgets import Footer
 
 from ..integrations.content_providers.mangadex.client import (
-    ApiError,
     MangaDexApiClient,
-    NotFoundError,
-    RateLimitError,
 )
+from ..integrations.exceptions import ApiError, NotFoundError, RateLimitError
 from ..types import ProcessedChapter, ProcessedManga
 from ..widgets import SelectionPanel
 

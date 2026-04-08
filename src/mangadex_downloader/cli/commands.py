@@ -85,9 +85,9 @@ def create_parser() -> ArgumentParser:
     )
 
     parser.add_argument(
-        "--headless",
+        "--backlog",
         action="store_true",
-        help="Run in headless mode (sync favorites with Google Drive)",
+        help="Sync favorites with Google Drive and download missing chapters",
     )
 
     return parser

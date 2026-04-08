@@ -24,8 +24,8 @@ class Manga:
     google_drive_chapters: list[float]
 
 
-class HeadlessSync:
-    """Handles headless sync of favorites with Google Drive."""
+class BacklogSync:
+    """Handles backlog sync of favorites with Google Drive."""
 
     def __init__(
         self,
@@ -34,7 +34,7 @@ class HeadlessSync:
         output_directory: Path,
         output_format: str,
     ) -> None:
-        """Initialize headless sync.
+        """Initialize backlog sync.
 
         Args:
             favorite_repository: Repository for favorites
@@ -49,7 +49,7 @@ class HeadlessSync:
         self._mangas: list[Manga] = []
 
     async def run(self) -> list[FetchingResourcesJob]:
-        """Run the headless sync process.
+        """Run the backlog sync process.
 
         Note: We create the aiohttp ClientSession here instead of passing it in
         because this method runs in its own event loop (via asyncio.run()) in main.py.
