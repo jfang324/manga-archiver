@@ -136,3 +136,51 @@ class TestMergeWorkerDoWork:
         result = await worker._do_work(job)
         assert result.chapter_title == "Chapter 5"
         assert result.chapter_number == "5"
+
+    @pytest.mark.parametrize(
+        "invalid_fields, expected_error_message",
+        [
+            ({"chapter_number": None}, "chapter_number"),
+            ({"chapter_number": "not a number"}, "chapter_number"),
+            ({"image_data": None}, "image_data"),
+            ({"output_directory": None}, "output_directory"),
+            ({"output_format": None}, "output_format"),
+        ],
+        ids=[
+            "missing_chapter_number",
+            "invalid_chapter_number",
+            "missing_image_data",
+            "missing_output_directory",
+            "missing_output_format",
+        ],
+    )
+    async def test_do_work_raises_value_error_for_invalid_job(
+        self, tmp_path, invalid_fields, expected_error_message
+    ):
+        mock_multi_format_exporter = MagicMock()
+        mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
+
+        job = MergingJob(
+            id="job_123",
+            manga_title="Test Manga",
+            chapter_number="5",
+            chapter_title="Chapter 5",
+            output_directory=tmp_path,
+            output_format=OutputFormat.PDF,
+            image_data=[b"image1"],
+        )
+
+        for key, value in invalid_fields.items():
+            setattr(job, key, value)
+
+        worker = MergeWorker(
+            multi_format_exporter=mock_multi_format_exporter,
+            worker_id="merge_worker_0",
+            input_queue=MagicMock(),
+            output_queue=MagicMock(),
+            notification_queue=AsyncMock(),
+            config=MagicMock(),
+        )
+
+        with pytest.raises(ValueError, match=expected_error_message):
+            await worker._do_work(job)

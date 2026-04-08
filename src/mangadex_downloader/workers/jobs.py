@@ -34,7 +34,7 @@ class JobMetadata:
         chapter_id (str): The ID of the chapter
         chapter_number (str): The chapter number (e.g., "1", "2.5")
         chapter_title (str): The title of the chapter
-        completed_at (float): Unix timestamp when job completed (set only on terminal status)
+        completed_at (float): Unix timestamp when job completed (set only on terminal status). Set to -1 if in progress
     """
 
     manga_title: str

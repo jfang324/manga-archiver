@@ -143,6 +143,52 @@ class TestUploadWorkerDoWork:
         with pytest.raises(Exception, match="API error"):
             await worker._do_work(job)
 
+    @pytest.mark.parametrize(
+        "invalid_fields, expected_error_message",
+        [
+            ({"complete_file_data": None}, "complete_file_data"),
+            ({"chapter_number": "not a number"}, "chapter_number"),
+            ({"full_name": "Test Manga [1] - Chapter 1.pdf", "chapter_number": "2"}, "full_name"),
+        ],
+        ids=[
+            "missing_complete_file_data",
+            "invalid_chapter_number",
+            "invalid_full_name",
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_do_work_raises_value_error_for_invalid_job(
+        self, invalid_fields, expected_error_message
+    ):
+        mock_drive_client = MagicMock()
+        mock_drive_client.get_or_create_manga_folder.return_value = "folder_id"
+
+        job = UploadJob(
+            id="job_123",
+            manga_title="Test Manga",
+            chapter_number="1",
+            chapter_title="Chapter 1",
+            output_directory=MagicMock(),
+            output_format=OutputFormat.PDF,
+            complete_file_data=b"fake pdf data",
+            full_name="Test Manga [1] - Chapter 1.pdf",
+        )
+
+        for key, value in invalid_fields.items():
+            setattr(job, key, value)
+
+        worker = UploadWorker(
+            google_drive_client=mock_drive_client,
+            worker_id="upload_worker_0",
+            input_queue=MagicMock(),
+            output_queue=MagicMock(),
+            notification_queue=AsyncMock(),
+            config=MagicMock(),
+        )
+
+        with pytest.raises(ValueError, match=expected_error_message):
+            await worker._do_work(job)
+
 
 class TestUploadWorker:
     def test_stop_sets_running_false(self):

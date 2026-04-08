@@ -53,19 +53,28 @@ class MergeWorker(Worker):
             output_directory,
             output_format,
             image_data,
+            chapter_number,
+            chapter_title,
         ) = (
             job.id,
             job.manga_title,
             job.output_directory,
             job.output_format,
             job.image_data,
+            job.chapter_number,
+            job.chapter_title or "untitled",
         )
 
-        chapter_number = job.chapter_number
-        chapter_title = job.chapter_title or "untitled"
+        if not chapter_number:
+            raise ValueError("chapter_number must not be empty for merging")
 
-        chapter_number = chapter_number.rstrip("")
-        chapter_title = chapter_title.rstrip("")
+        try:
+            float(chapter_number)
+        except (ValueError, TypeError):
+            raise ValueError("chapter_number must be a valid number for merging")
+
+        chapter_number = chapter_number.rstrip()
+        chapter_title = chapter_title.rstrip()
 
         output_name: str = f"{manga_title} [{chapter_number}] - {chapter_title}"
 

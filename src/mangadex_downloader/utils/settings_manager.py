@@ -100,7 +100,7 @@ def load_settings() -> AppConfig:
         config_dir.mkdir(parents=True, exist_ok=True)
         default_settings: SettingsData = _get_default_settings()
         settings_path.write_text(json.dumps(default_settings, indent=2))
-        logger.debug("Settings file not found at %s, created with defaults", settings_path)
+        logger.info("Settings file not found at %s, created with defaults", settings_path)
 
     settings_data: SettingsData | None = _parse_settings_file(settings_path)
 
