@@ -211,6 +211,8 @@ class PipelineManager:
             raise ValueError(f"Job {job.id} is missing manga_title")
         if not job.chapter_number:
             raise ValueError(f"Job {job.id} is missing chapter_number")
+        if not job.chapter_title:
+            raise ValueError(f"Job {job.id} is missing chapter_title")
 
         try:
             float(job.chapter_number)

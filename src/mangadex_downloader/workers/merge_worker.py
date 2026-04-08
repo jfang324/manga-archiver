@@ -61,10 +61,13 @@ class MergeWorker(Worker):
             job.image_data,
         )
 
-        chapter_number = job.chapter_number.rstrip("")
-        stripped_title = job.chapter_title.rstrip("")
+        chapter_number = job.chapter_number
+        chapter_title = job.chapter_title or "untitled"
 
-        output_name: str = f"{manga_title} [{chapter_number}] - {stripped_title}"
+        chapter_number = chapter_number.rstrip("")
+        chapter_title = chapter_title.rstrip("")
+
+        output_name: str = f"{manga_title} [{chapter_number}] - {chapter_title}"
 
         if image_data is None:
             raise ValueError("image_data must not be None for merging")
@@ -91,7 +94,7 @@ class MergeWorker(Worker):
             id=job_id,
             manga_title=manga_title,
             chapter_number=chapter_number,
-            chapter_title=stripped_title,
+            chapter_title=chapter_title,
             output_directory=output_directory,
             output_format=output_format,
             complete_file_data=file_data,
