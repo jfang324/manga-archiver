@@ -31,8 +31,12 @@ class SelectionPanelApp(App):
 
 class TestSelectionPanel:
     def _format_values(self, values: tuple[str | None, str, str]) -> str:
-        """Format a tuple of values for comparison."""
+        """Format a tuple of values for comparison (with prefix for display)."""
         return f"{values[2]}. {values[0]}" if values[0] else values[2]
+
+    def _get_clean_title(self, values: tuple[str | None, str, str]) -> str:
+        """Get clean title without chapter prefix."""
+        return values[0] if values[0] else "untitled"
 
     async def test_selecting_option_sends_message(self) -> None:
         app = SelectionPanelApp()
@@ -51,7 +55,7 @@ class TestSelectionPanel:
             message = selection_records.pop()
             assert message.selected_pairs == [
                 (
-                    self._format_values(app.mock_options[0]),
+                    self._get_clean_title(app.mock_options[0]),
                     app.mock_options[0][1],
                     app.mock_options[0][2],
                 )
@@ -76,12 +80,12 @@ class TestSelectionPanel:
             message = selection_records.pop()
             assert message.selected_pairs == [
                 (
-                    self._format_values(app.mock_options[0]),
+                    self._get_clean_title(app.mock_options[0]),
                     app.mock_options[0][1],
                     app.mock_options[0][2],
                 ),
                 (
-                    self._format_values(app.mock_options[1]),
+                    self._get_clean_title(app.mock_options[1]),
                     app.mock_options[1][1],
                     app.mock_options[1][2],
                 ),

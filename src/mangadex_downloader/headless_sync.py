@@ -147,7 +147,9 @@ class HeadlessSync:
         jobs: list[FetchingResourcesJob] = []
         for manga_title, chapter in missing_chapters:
             chapter_number = chapter.get("chapter")
-            chapter_title = chapter.get("title", "untitled")
+            chapter_title = (
+                chapter.get("title") or "untitled"
+            )  # cannot use .get() default value because None counts as a valid value
 
             jobs.append(
                 FetchingResourcesJob(

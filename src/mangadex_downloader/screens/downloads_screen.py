@@ -53,7 +53,7 @@ class DownloadsScreen(Screen):
     def on_mount(self) -> None:
         """Set up polling for job status updates on mount."""
         table = self.query_one(DataTable)
-        table.add_columns("Job ID", "Manga", "Chapter", "Completed At", "Status")
+        table.add_columns("Job ID", "Manga", "Chapter #", "Chapter Title", "Completed At", "Status")
 
         self.set_interval(1, self._poll_jobs)
 
@@ -73,6 +73,7 @@ class DownloadsScreen(Screen):
             table.add_row(
                 job_id,
                 metadata.manga_title,
+                metadata.chapter_number,
                 metadata.chapter_title,
                 completed,
                 status.value,

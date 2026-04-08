@@ -84,7 +84,7 @@ class SelectionPanel(Widget):
             display_title = title if title else "untitled"
             name = f"{chapter}. {display_title}"
 
-            self._name_map[value] = (name, chapter)
+            self._name_map[value] = (display_title, chapter)
             selection_items.append(Selection(name, value))
 
         selection_list.clear_options()
