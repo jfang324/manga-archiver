@@ -61,13 +61,8 @@ class MergeWorker(Worker):
             job.image_data,
         )
 
-        chapter_number = job.chapter_number or ""
-        stripped_title = job.chapter_title
-
-        if chapter_number:
-            chapter_number = chapter_number.rstrip(".")
-        if stripped_title:
-            stripped_title = stripped_title.rstrip(".")
+        chapter_number = job.chapter_number.rstrip("")
+        stripped_title = job.chapter_title.rstrip("")
 
         output_name: str = f"{manga_title} [{chapter_number}] - {stripped_title}"
 

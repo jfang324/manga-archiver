@@ -60,6 +60,21 @@ class UploadWorker(Worker):
             job.full_name,
         )
 
+        if not complete_file_data:
+            raise ValueError(f"Job {job_id} complete_file_data is empty")
+
+        try:
+            float(job.chapter_number)
+        except (ValueError, TypeError):
+            raise ValueError(
+                f"Job {job_id} chapter_number '{job.chapter_number}' is not a valid number"
+            )
+
+        if job.chapter_number not in full_name:
+            raise ValueError(
+                f"Job {job_id} full_name '{full_name}' does not contain chapter_number '{job.chapter_number}'"
+            )
+
         upload_start = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.UPLOADING, upload_start)
 

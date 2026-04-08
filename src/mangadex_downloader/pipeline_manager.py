@@ -16,7 +16,7 @@ from .constants.defaults import (
     DEFAULT_RESOLVE_WORKERS,
     DEFAULT_UPLOAD_WORKERS,
 )
-from .enums import JobStatus
+from .enums import JobStatus, OutputFormat
 from .integrations.content_providers import MangaDexApiClient
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .utils import DownloadClient, MultiFormatExporter
@@ -196,9 +196,47 @@ class PipelineManager:
             ]
         )
 
+    def _validate_job(self, job: FetchingResourcesJob) -> None:
+        """Validate job has all required fields and valid values.
+
+        Args:
+            job: The job to validate
+
+        Raises:
+            ValueError: If any required field is missing or invalid
+        """
+        if not job.id:
+            raise ValueError("Job is missing id")
+        if not job.manga_title:
+            raise ValueError(f"Job {job.id} is missing manga_title")
+        if not job.chapter_number:
+            raise ValueError(f"Job {job.id} is missing chapter_number")
+
+        try:
+            float(job.chapter_number)
+        except (ValueError, TypeError):
+            raise ValueError(
+                f"Job {job.id} chapter_number '{job.chapter_number}' is not a valid number"
+            )
+
+        if not job.chapter_id:
+            raise ValueError(f"Job {job.id} is missing chapter_id")
+
+        if not isinstance(job.output_format, OutputFormat):
+            raise ValueError(f"Job {job.id} output_format must be OutputFormat enum")
+
+        if not job.output_directory or not job.output_directory.exists():
+            raise ValueError(f"Job {job.id} output_directory does not exist")
+
     async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]):
         # Sequential to maintain ordering; parallel would save negligible time
         for job in jobs:
+            try:
+                self._validate_job(job)
+            except ValueError as e:
+                logger.error("Skipping invalid job: %s", e)
+                continue
+
             notification_job = NotificationJob(
                 id=job.chapter_id,
                 manga_title=job.manga_title,
