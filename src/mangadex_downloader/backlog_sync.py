@@ -59,7 +59,7 @@ class BacklogSync:
         Returns:
             list[FetchingResourcesJob]: Jobs to enqueue (missing chapters)
         """
-        print("=== Headless Sync ===")
+        print("=== Backlog Sync ===")
 
         async with aiohttp.ClientSession() as session:
             mangadex_client = MangaDexApiClient(session)

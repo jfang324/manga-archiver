@@ -84,7 +84,7 @@ class SelectionScreen(Screen):
 
         new_results: list[ChapterResult] = [
             ChapterResult(
-                chapter.get("title", "untitled"),
+                chapter.get("title") or "untitled",
                 chapter["id"],
                 chapter["chapter"],
             )
