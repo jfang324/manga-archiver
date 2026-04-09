@@ -2,7 +2,7 @@ import asyncio
 import logging
 import sys
 
-from .app import MangaDexDownloaderApp
+from .app import MangaArchiverApp
 from .backlog_sync import BacklogSync
 from .cli import parse_args
 from .integrations.storage_providers.google_drive import GoogleDriveClient
@@ -44,7 +44,7 @@ def main() -> None:
         token = load_token()
 
         if token is None:
-            print("Archive mode requires authentication. Run: mangadex-downloader auth login")
+            print("Archive mode requires authentication. Run: manga-archiver auth login")
             sys.exit(1)
 
         try:
@@ -53,7 +53,7 @@ def main() -> None:
         except Exception as e:
             logger.error("Failed to initialize Google Drive: %s", e)
             print(
-                "Failed to initialize Google Drive. Run: mangadex-downloader auth logout && auth login"
+                "Failed to initialize Google Drive. Run: manga-archiver auth logout && auth login"
             )
             sys.exit(1)
 
@@ -88,7 +88,7 @@ def main() -> None:
         logger.error("Failed to initialize: %s", e)
         sys.exit(1)
 
-    app = MangaDexDownloaderApp(
+    app = MangaArchiverApp(
         pipeline_config=pipeline_config,
         app_config=app_config,
         favorite_repository=favorite_repository,

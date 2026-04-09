@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.mangadex_downloader.utils.downloader import DownloadClient, DownloadError
+from src.manga_archiver.utils.downloader import DownloadClient, DownloadError
 from tests.conftest import AsyncContextManagerMock
 
 

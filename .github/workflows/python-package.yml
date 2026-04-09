@@ -4,57 +4,57 @@
 name: Python package
 
 on:
-  push:
-    branches: ['main']
-  pull_request:
-    branches: ['main']
+    push:
+        branches: ['main']
+    pull_request:
+        branches: ['main']
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.9', '3.10', '3.11']
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: ['3.9', '3.10', '3.11']
 
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: 1.8.2
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-    
-    - name: Load cached Poetry dependencies
-      id: cached-poetry-dependencies
-      uses: actions/cache@v4
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-    
-    - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
-    
-    - name: Install package
-      run: poetry install --no-interaction
-    
-    - name: Lint with ruff
-      run: |
-        poetry run ruff check . || true
+        steps:
+            - uses: actions/checkout@v4
 
-    - name: Type check with pyright
-      run: |
-        poetry run pyright || true
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ matrix.python-version }}
 
-    - name: Test with pytest & coverage
-      run: |
-        poetry run coverage run -m pytest -v
-        poetry run coverage report -m
+            - name: Install Poetry
+              uses: snok/install-poetry@v1
+              with:
+                  version: 1.8.2
+                  virtualenvs-create: true
+                  virtualenvs-in-project: true
+
+            - name: Load cached Poetry dependencies
+              id: cached-poetry-dependencies
+              uses: actions/cache@v4
+              with:
+                  path: .venv
+                  key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+            - name: Install dependencies
+              if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+              run: poetry install --no-interaction --no-root
+
+            - name: Install package
+              run: poetry install --no-interaction
+
+            - name: Lint with ruff
+              run: |
+                  poetry run ruff check .
+
+            - name: Type check with pyright
+              run: |
+                  poetry run pyright
+
+            - name: Test with pytest & coverage
+              run: |
+                  poetry run coverage run -m pytest -v
+                  poetry run coverage report -m

@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class MangaDexDownloaderApp(App):
+class MangaArchiverApp(App):
     """The core Textual application class for top level event handling.
 
     Attributes:
@@ -49,7 +49,7 @@ class MangaDexDownloaderApp(App):
     """
 
     DEFAULT_CSS = """
-        MangaDexDownloaderApp {
+        MangaArchiverApp {
             height: 100%;
             width: 100%;
         }
@@ -69,7 +69,7 @@ class MangaDexDownloaderApp(App):
         backlog: list[FetchingResourcesJob] | None = None,
         **kwargs,
     ) -> None:
-        """Initialize the MangaDexDownloaderApp.
+        """Initialize the MangaArchiverApp.
 
         Args:
             pipeline_config: The pipeline configuration
@@ -97,8 +97,8 @@ class MangaDexDownloaderApp(App):
             self.notify("Failed to load favorites from database", severity="error")
             self._favorites = []
 
-        self.mutate_reactive(MangaDexDownloaderApp._app_config)
-        self.mutate_reactive(MangaDexDownloaderApp._favorites)
+        self.mutate_reactive(MangaArchiverApp._app_config)
+        self.mutate_reactive(MangaArchiverApp._favorites)
 
     @work
     async def _setup_pipeline_manager(self) -> None:
@@ -152,7 +152,7 @@ class MangaDexDownloaderApp(App):
         self.install_screen(MenuScreen(), name="menu_screen")
         self.install_screen(SearchScreen(self._mangadex_client), name="search_screen")
         self.install_screen(
-            SettingsScreen().data_bind(app_config=MangaDexDownloaderApp._app_config),
+            SettingsScreen().data_bind(app_config=MangaArchiverApp._app_config),
             name="settings_screen",
         )
         self.install_screen(
@@ -164,7 +164,7 @@ class MangaDexDownloaderApp(App):
             name="downloads_screen",
         )
         self.install_screen(
-            FavoritesScreen().data_bind(favorites=MangaDexDownloaderApp._favorites),
+            FavoritesScreen().data_bind(favorites=MangaArchiverApp._favorites),
             name="favorites_screen",
         )
 
@@ -235,7 +235,7 @@ class MangaDexDownloaderApp(App):
             return
 
         self._favorites = [f for f in self._favorites if f["manga_id"] != manga_id]
-        self.mutate_reactive(MangaDexDownloaderApp._favorites)
+        self.mutate_reactive(MangaArchiverApp._favorites)
         self.notify(f"Removed '{manga_title}' from favorites", severity="information")
 
     @on(FavoritesScreen.Selected)
@@ -260,7 +260,7 @@ class MangaDexDownloaderApp(App):
             return
 
         self._favorites.append(favorite_manga)
-        self.mutate_reactive(MangaDexDownloaderApp._favorites)
+        self.mutate_reactive(MangaArchiverApp._favorites)
         self.notify(
             f"Added '{favorite_manga['manga_title']}' to favorites",
             severity="information",

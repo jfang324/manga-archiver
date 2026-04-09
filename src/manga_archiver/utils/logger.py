@@ -3,7 +3,7 @@ import os
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
-LOG_DIR = Path(os.path.expanduser("~/.mangadex-downloader/logs"))
+LOG_DIR = Path(os.path.expanduser("~/.manga-archiver/logs"))
 
 
 def setup_logging() -> None:

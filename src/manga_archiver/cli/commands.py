@@ -29,7 +29,7 @@ def create_parser() -> ArgumentParser:
         ArgumentParser: Configured ArgumentParser instance
     """
     parser = ArgumentParser(
-        description="MangaDex Downloader - Download manga from MangaDex",
+        description="Manga Archiver - Download manga from sources like MangaDex directly to your Google Drive",
         formatter_class=lambda prog: RawTextHelpFormatter(prog, max_help_position=50),
     )
     subparsers = parser.add_subparsers(dest="command", title="commands", metavar="")

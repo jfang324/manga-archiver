@@ -3,7 +3,7 @@ from textual.app import App, ComposeResult
 from textual.reactive import reactive
 from textual.widgets import Label, ListView
 
-from src.mangadex_downloader.widgets.favorites_panel import FavoritesPanel
+from src.manga_archiver.widgets.favorites_panel import FavoritesPanel
 
 
 class FavoritesPanelApp(App):

@@ -2,9 +2,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.mangadex_downloader.utils.downloader import DownloadClient
-from src.mangadex_downloader.workers.download_worker import DownloadWorker
-from src.mangadex_downloader.workers.jobs import DownloadingJob, MergingJob
+from src.manga_archiver.utils.downloader import DownloadClient
+from src.manga_archiver.workers.download_worker import DownloadWorker
+from src.manga_archiver.workers.jobs import DownloadingJob, MergingJob
 
 
 class TestDownloadWorkerDoWork:

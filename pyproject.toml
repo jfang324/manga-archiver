@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "mangadex-downloader"
+name = "manga-archiver"
 version = "1.0.0"
-description = "A Python package for downloading manga from MangaDex"
+description = "A terminal-based manga downloader and archiver"
 authors = ["Jeffery Fang <Jefferyfang324@gmail.com>"]
 readme = "README.md"
-repository = "https://github.com/jfang324/mangadex-downloader"
+repository = "https://github.com/jfang324/manga-archiver"
 
 [tool.poetry.dependencies]
 python = ">=3.10 ,<4.0"
@@ -18,7 +18,7 @@ requests = "^2.33.1"
 ebooklib = "^0.20"
 
 [tool.poetry.scripts]
-mangadex-downloader = "mangadex_downloader.main:main"
+manga-archiver = "manga_archiver.main:main"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
@@ -109,7 +109,7 @@ convention = "google"
 "tests/**" = ["S101"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["mangadex_downloader"]
+known-first-party = ["manga_archiver"]
 
 [tool.ruff.format]
 indent-style = "space"

@@ -3,9 +3,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.mangadex_downloader.enums import JobStatus, OutputFormat
-from src.mangadex_downloader.workers.jobs import JobMetadata, NotificationJob
-from src.mangadex_downloader.workers.notification_worker import NotificationWorker
+from src.manga_archiver.enums import JobStatus, OutputFormat
+from src.manga_archiver.workers.jobs import JobMetadata, NotificationJob
+from src.manga_archiver.workers.notification_worker import NotificationWorker
 
 
 class TestNotificationWorkerDoWork:

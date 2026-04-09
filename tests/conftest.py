@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.mangadex_downloader.workers.jobs import Job
+from src.manga_archiver.workers.jobs import Job
 
 
 class AsyncContextManagerMock:

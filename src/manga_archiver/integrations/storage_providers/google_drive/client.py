@@ -50,7 +50,7 @@ class GoogleDriveClient:
     def initialize(self) -> str:
         """Initialize and cache folders from Google Drive.
 
-        Searches for the root MangaDex-Downloader folder, creates it if not
+        Searches for the root Manga-Archiver folder, creates it if not
         found, then caches all existing manga subfolders.
 
         Returns:
@@ -67,7 +67,7 @@ class GoogleDriveClient:
                 break
 
         if not self._root_folder_id:
-            print("Creating root folder: MangaDex-Downloader")
+            print(f"Creating root folder: {ROOT_FOLDER_NAME}")
             self._root_folder_id = self._create_folder_sync(ROOT_FOLDER_NAME)
         else:
             print(f"Found existing root folder: {self._root_folder_id}")

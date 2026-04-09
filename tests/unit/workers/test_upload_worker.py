@@ -2,9 +2,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.mangadex_downloader.enums import JobStatus, OutputFormat
-from src.mangadex_downloader.workers.jobs import UploadJob
-from src.mangadex_downloader.workers.upload_worker import UploadWorker
+from src.manga_archiver.enums import JobStatus, OutputFormat
+from src.manga_archiver.workers.jobs import UploadJob
+from src.manga_archiver.workers.upload_worker import UploadWorker
 
 
 class TestUploadWorkerDoWork:
