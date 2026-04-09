@@ -94,6 +94,7 @@ def main() -> None:
         favorite_repository=favorite_repository,
         google_drive_client=google_drive_client,
         backlog=backlog,
+        auto_exit=args.auto_exit,
     )
     app.run()
 

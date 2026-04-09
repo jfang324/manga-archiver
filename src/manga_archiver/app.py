@@ -28,6 +28,13 @@ if TYPE_CHECKING:
     from .screens.selection_screen import PartialJob
     from .types import ProcessedManga
 
+import asyncio
+
+from .constants.defaults import (
+    DEFAULT_AUTO_EXIT_CONFIRM_COUNT,
+    DEFAULT_AUTO_EXIT_POLL_INTERVAL,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,6 +49,8 @@ class MangaArchiverApp(App):
         _session (aiohttp.ClientSession): The aiohttp session
         _mangadex_client (MangaDexApiClient): The MangaDex API client
         _download_client (DownloadClient): The download client
+        _backlog (list[FetchingResourcesJob] | None): The backlog of missing chapters
+        _auto_exit (bool): Whether to automatically exit when all jobs are complete
 
     Reactive Attributes:
         _app_config (AppConfig): The application configuration
@@ -67,6 +76,7 @@ class MangaArchiverApp(App):
         favorite_repository: FavoriteRepository,
         google_drive_client: GoogleDriveClient | None,
         backlog: list[FetchingResourcesJob] | None = None,
+        auto_exit: bool = False,
         **kwargs,
     ) -> None:
         """Initialize the MangaArchiverApp.
@@ -83,6 +93,7 @@ class MangaArchiverApp(App):
         self._pipeline_config = pipeline_config
         self._app_config = app_config
         self._backlog = backlog
+        self._auto_exit = auto_exit
 
         self._pipeline_manager: PipelineManager | None = None
         self._favorite_repository = favorite_repository
@@ -101,6 +112,29 @@ class MangaArchiverApp(App):
         self.mutate_reactive(MangaArchiverApp._favorites)
 
     @work
+    async def _poll_pipeline_manager_is_done(self) -> None:
+        """Poll pipeline manager until all jobs are done."""
+        confirm_count = 0
+
+        while True:
+            await asyncio.sleep(DEFAULT_AUTO_EXIT_POLL_INTERVAL)
+
+            if not self._pipeline_manager:
+                continue
+
+            if self._pipeline_manager.is_done():
+                self.notify(
+                    f"auto exit confirm count: {confirm_count + 1}",
+                    severity="information",
+                )
+                confirm_count += 1
+
+            if confirm_count >= DEFAULT_AUTO_EXIT_CONFIRM_COUNT:
+                break
+
+        await self._on_quit(True)
+
+    @work
     async def _setup_pipeline_manager(self) -> None:
         """Set up the pipeline manager, process backlog, and start it."""
         self._pipeline_manager = PipelineManager(
@@ -115,6 +149,9 @@ class MangaArchiverApp(App):
                 f"Enqueueing {len(self._backlog)} jobs from backlog, this may take a while...",
                 severity="information",
             )
+
+        if self._auto_exit:
+            self._poll_pipeline_manager_is_done()
 
         await self._pipeline_manager.start(self._backlog)
 

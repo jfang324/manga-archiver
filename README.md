@@ -156,6 +156,7 @@ The following command-line arguments are available:
 | `--archive`             | flag | false   | Enable archive mode (upload to Google Drive instead of local save) |
 | `--backlog`             | flag | false   | Sync favorites with Google Drive and download missing chapters     |
 | `--benchmark`           | flag | false   | Enable benchmark metrics collection                                |
+| `--auto-exit`           | flag | false   | Automatically exit when all jobs are complete                      |
 
 ### Usage Examples
 
