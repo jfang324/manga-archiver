@@ -32,7 +32,7 @@ pip install manga-archiver
 or clone the repository and install the package locally:
 
 ```sh
-git clone https://github.com/jfang-ad/manga-archiver.git
+git clone https://github.com/jfang324/manga-archiver.git
 cd manga-archiver
 pip install .
 ```
