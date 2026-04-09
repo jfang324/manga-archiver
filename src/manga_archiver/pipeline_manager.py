@@ -116,6 +116,12 @@ class PipelineManager:
 
         self._benchmark_enabled = config.benchmark_enabled
 
+    def is_done(self) -> bool:
+        """Return whether all jobs are in a terminal state."""
+        all_jobs = self._job_statuses.values()
+
+        return all(status in (JobStatus.COMPLETED, JobStatus.FAILED) for status, _ in all_jobs)
+
     def _on_status_update(self, job_id: str, status: JobStatus, metadata: JobMetadata) -> None:
         """Update job status in internal dict with automatic expiry.
 

@@ -93,6 +93,12 @@ def create_parser() -> ArgumentParser:
         help="Sync favorites with Google Drive and download missing chapters",
     )
 
+    parser.add_argument(
+        "--auto-exit",
+        action="store_true",
+        help="Automatically exit when all jobs are complete",
+    )
+
     return parser
 
 
