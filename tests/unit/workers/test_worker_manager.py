@@ -112,3 +112,163 @@ class TestWorkerManagerInit:
         )
 
         assert manager.notification_worker._benchmark is not None
+
+
+class TestWorkerManagerWiring:
+    def test_resolve_workers_wired_correctly(self):
+        resolve_q = Queue()
+        download_q = Queue()
+        notify_q = Queue()
+        resolve_sem = Semaphore(5)
+        mock_api_client = MagicMock()
+        mock_download_client = MagicMock()
+        mock_callback = MagicMock()
+
+        manager = WorkerManager(
+            resolve_queue=resolve_q,
+            download_queue=download_q,
+            merge_queue=Queue(),
+            upload_queue=Queue(),
+            notification_queue=notify_q,
+            resolve_semaphore=resolve_sem,
+            download_semaphore=Semaphore(10),
+            num_resolve_workers=2,
+            num_download_workers=1,
+            num_merge_workers=1,
+            num_upload_workers=0,
+            benchmark_enabled=False,
+            mangadex_api_client=mock_api_client,
+            download_client=mock_download_client,
+            google_drive_client=None,
+            on_status_update=mock_callback,
+        )
+
+        for worker in manager.resolve_pool:
+            assert worker._input_queue is resolve_q
+            assert worker._output_queue is download_q
+            assert worker._notification_queue is notify_q
+            assert worker._semaphore is resolve_sem
+            assert worker._api_client is mock_api_client
+
+    def test_download_workers_wired_correctly(self):
+        download_q = Queue()
+        merge_q = Queue()
+        notify_q = Queue()
+        download_sem = Semaphore(10)
+        mock_download_client = MagicMock()
+        mock_callback = MagicMock()
+
+        manager = WorkerManager(
+            resolve_queue=Queue(),
+            download_queue=download_q,
+            merge_queue=merge_q,
+            upload_queue=Queue(),
+            notification_queue=notify_q,
+            resolve_semaphore=Semaphore(5),
+            download_semaphore=download_sem,
+            num_resolve_workers=1,
+            num_download_workers=2,
+            num_merge_workers=1,
+            num_upload_workers=0,
+            benchmark_enabled=False,
+            mangadex_api_client=MagicMock(),
+            download_client=mock_download_client,
+            google_drive_client=None,
+            on_status_update=mock_callback,
+        )
+
+        for worker in manager.download_pool:
+            assert worker._input_queue is download_q
+            assert worker._output_queue is merge_q
+            assert worker._notification_queue is notify_q
+            assert worker._semaphore is download_sem
+            assert worker._download_client is mock_download_client
+
+    def test_merge_workers_wired_correctly(self):
+        merge_q = Queue()
+        upload_q = Queue()
+        notify_q = Queue()
+        mock_callback = MagicMock()
+
+        manager = WorkerManager(
+            resolve_queue=Queue(),
+            download_queue=Queue(),
+            merge_queue=merge_q,
+            upload_queue=upload_q,
+            notification_queue=notify_q,
+            resolve_semaphore=Semaphore(5),
+            download_semaphore=Semaphore(10),
+            num_resolve_workers=1,
+            num_download_workers=1,
+            num_merge_workers=2,
+            num_upload_workers=0,
+            benchmark_enabled=False,
+            mangadex_api_client=MagicMock(),
+            download_client=MagicMock(),
+            google_drive_client=None,
+            on_status_update=mock_callback,
+        )
+
+        for worker in manager.merge_pool:
+            assert worker._input_queue is merge_q
+            assert worker._output_queue is None
+            assert worker._notification_queue is notify_q
+
+    def test_upload_workers_wired_correctly_when_google_drive_enabled(self):
+        upload_q = Queue()
+        notify_q = Queue()
+        mock_gdrive = MagicMock()
+        mock_callback = MagicMock()
+
+        manager = WorkerManager(
+            resolve_queue=Queue(),
+            download_queue=Queue(),
+            merge_queue=Queue(),
+            upload_queue=upload_q,
+            notification_queue=notify_q,
+            resolve_semaphore=Semaphore(5),
+            download_semaphore=Semaphore(10),
+            num_resolve_workers=1,
+            num_download_workers=1,
+            num_merge_workers=1,
+            num_upload_workers=2,
+            benchmark_enabled=False,
+            mangadex_api_client=MagicMock(),
+            download_client=MagicMock(),
+            google_drive_client=mock_gdrive,
+            on_status_update=mock_callback,
+        )
+
+        for worker in manager.upload_pool:
+            assert worker._input_queue is upload_q
+            assert worker._output_queue is None
+            assert worker._notification_queue is notify_q
+            assert worker._google_drive_client is mock_gdrive
+
+    def test_notification_worker_receives_all_notifications(self):
+        resolve_q = Queue()
+        download_q = Queue()
+        merge_q = Queue()
+        notify_q = Queue()
+        mock_callback = MagicMock()
+
+        manager = WorkerManager(
+            resolve_queue=resolve_q,
+            download_queue=download_q,
+            merge_queue=merge_q,
+            upload_queue=Queue(),
+            notification_queue=notify_q,
+            resolve_semaphore=Semaphore(5),
+            download_semaphore=Semaphore(10),
+            num_resolve_workers=1,
+            num_download_workers=1,
+            num_merge_workers=1,
+            num_upload_workers=0,
+            benchmark_enabled=False,
+            mangadex_api_client=MagicMock(),
+            download_client=MagicMock(),
+            google_drive_client=None,
+            on_status_update=mock_callback,
+        )
+
+        assert manager.notification_worker._input_queue is notify_q
