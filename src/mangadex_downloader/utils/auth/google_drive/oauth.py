@@ -252,6 +252,8 @@ def handle_auth_logout() -> int:
 
         if response.status_code == 200:
             delete_token()
+            print("Successfully logged out.")
+
             return 0
         else:
             print(f"Failed to revoke token: {response.text}")

@@ -45,7 +45,7 @@ class MergeWorker(Worker):
             job: The merging job containing image data to process
 
         Returns:
-            UploadJob for archive mode, or None if no output queue configured
+            UploadJob: The output job containing the related data, complete_file_data will be empty if output_queue is None
         """
         (
             job_id,

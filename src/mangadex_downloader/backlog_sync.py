@@ -115,17 +115,17 @@ class BacklogSync:
             google_drive_set = set(manga.google_drive_chapters)
 
             for chapter in manga.api_chapters:
-                chapter_str = chapter.get("chapter")
-                if not chapter_str:
+                chapter_number = chapter.get("chapter")
+                if not chapter_number:
                     logger.error("Skipping chapter %s - no chapter number", chapter.get("id"))
                     continue
 
                 try:
-                    chapter_num = float(chapter_str)
+                    chapter_num = float(chapter_number)
                 except (ValueError, TypeError) as e:
                     logger.error(
                         "Failed to parse chapter number '%s' for %s: %s",
-                        chapter_str,
+                        chapter_number,
                         chapter.get("id"),
                         e,
                     )
@@ -185,7 +185,7 @@ class BacklogSync:
             return await client.get_chapters(manga_id)
         except Exception as e:
             logger.error("Failed to get chapters for %s: %s", manga_title, e)
-            print(f"  ERROR: Failed to get chapters for '{manga_title}'")
+            print(f"ERROR: Failed to get chapters for '{manga_title}'")
             return None
 
     def _fetch_google_drive_chapters(self, manga_title: str) -> list[float]:

@@ -28,10 +28,10 @@ def main() -> None:
         raise
 
     if hasattr(args, "command") and args.command == "auth":
-        if args.subcommand == "login":
+        if args.auth_command == "login":
             sys.exit(handle_auth_login())
 
-        elif args.subcommand == "logout":
+        elif args.auth_command == "logout":
             sys.exit(handle_auth_logout())
 
         else:
