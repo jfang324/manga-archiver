@@ -32,16 +32,27 @@ jobs:
                   virtualenvs-create: true
                   virtualenvs-in-project: true
 
+            - name: Load cached Poetry dependencies
+              id: cached-poetry-dependencies
+              uses: actions/cache@v4
+              with:
+                  path: .venv
+                  key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
             - name: Install dependencies
-              run: poetry install --no-interaction --with dev
+              if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+              run: poetry install --no-interaction --no-root
+
+            - name: Install package
+              run: poetry install --no-interaction
 
             - name: Lint with ruff
               run: |
-                  poetry run ruff check . || true
+                  poetry run ruff check .
 
             - name: Type check with pyright
               run: |
-                  poetry run pyright || true
+                  poetry run pyright
 
             - name: Test with pytest & coverage
               run: |
