@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.1] - 2025-04-09
 
 - Added CHANGELOG.md
-- Minor internal refactor (extracted WorkerManager from PipelineManager)
+- Minor internal refactor
 
 ## [1.0.0] - 2025-04-09
 
