@@ -19,19 +19,13 @@ from .constants.defaults import (
 from .enums import JobStatus, OutputFormat
 from .integrations.content_providers import MangaDexApiClient
 from .integrations.storage_providers.google_drive import GoogleDriveClient
-from .utils import DownloadClient, MultiFormatExporter
+from .utils import DownloadClient
 from .workers import (
-    BenchmarkManager,
-    DownloadWorker,
     FetchingResourcesJob,
     Job,
     JobMetadata,
-    MergeWorker,
     NotificationJob,
-    NotificationWorker,
-    ResolveWorker,
-    UploadWorker,
-    WorkerConfig,
+    WorkerManager,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,62 +95,23 @@ class PipelineManager:
         self._resolve_semaphore: Semaphore = Semaphore(config.resolve_rate_limit)
         self._download_semaphore: Semaphore = Semaphore(config.download_rate_limit)
 
-        self._resolve_pool: list[ResolveWorker] = [
-            ResolveWorker(
-                worker_id=f"resolve_worker_{index}",
-                input_queue=self._resolve_queue,
-                output_queue=self._download_queue,
-                notification_queue=self._notification_queue,
-                config=WorkerConfig(),
-                api_client=mangadex_api_client,
-                semaphore=self._resolve_semaphore,
-            )
-            for index in range(config.num_resolve_workers)
-        ]
-        self._download_pool: list[DownloadWorker] = [
-            DownloadWorker(
-                worker_id=f"download_worker_{index}",
-                input_queue=self._download_queue,
-                output_queue=self._merge_queue,
-                notification_queue=self._notification_queue,
-                config=WorkerConfig(),
-                download_client=download_client,
-                semaphore=self._download_semaphore,
-            )
-            for index in range(config.num_download_workers)
-        ]
-        self._merge_pool: list[MergeWorker] = [
-            MergeWorker(
-                worker_id=f"merge_worker_{index}",
-                input_queue=self._merge_queue,
-                output_queue=self._upload_queue if google_drive_client else None,
-                notification_queue=self._notification_queue,
-                config=WorkerConfig(),
-                multi_format_exporter=MultiFormatExporter(),
-            )
-            for index in range(config.num_merge_workers)
-        ]
-
-        self._upload_pool: list[UploadWorker] = []
-
-        if google_drive_client:
-            self._upload_pool = [
-                UploadWorker(
-                    worker_id=f"upload_worker_{index}",
-                    input_queue=self._upload_queue,
-                    output_queue=None,
-                    notification_queue=self._notification_queue,
-                    config=WorkerConfig(),
-                    google_drive_client=google_drive_client,
-                )
-                for index in range(config.num_upload_workers)
-            ]
-
-        self._notification_worker = NotificationWorker(
-            worker_id="notification_worker",
-            input_queue=self._notification_queue,
+        self._worker_manager = WorkerManager(
+            resolve_queue=self._resolve_queue,
+            download_queue=self._download_queue,
+            merge_queue=self._merge_queue,
+            upload_queue=self._upload_queue,
+            notification_queue=self._notification_queue,
+            resolve_semaphore=self._resolve_semaphore,
+            download_semaphore=self._download_semaphore,
+            num_resolve_workers=config.num_resolve_workers,
+            num_download_workers=config.num_download_workers,
+            num_merge_workers=config.num_merge_workers,
+            num_upload_workers=config.num_upload_workers,
+            benchmark_enabled=config.benchmark_enabled,
+            mangadex_api_client=mangadex_api_client,
+            download_client=download_client,
+            google_drive_client=google_drive_client,
             on_status_update=self._on_status_update,
-            benchmark=BenchmarkManager() if config.benchmark_enabled else None,
         )
 
         self._benchmark_enabled = config.benchmark_enabled
@@ -270,29 +225,14 @@ class PipelineManager:
         if self._benchmark_enabled:
             tracemalloc.start()
 
-        all_workers = (
-            [self._notification_worker]
-            + self._resolve_pool
-            + self._download_pool
-            + self._merge_pool
-            + self._upload_pool
-        )
-
-        await asyncio.gather(*[w.run() for w in all_workers])
+        await self._worker_manager.start()
 
     def stop(self) -> None:
         """Stop all workers in the pipeline.
 
         Signals all workers to stop processing.
         """
-        for worker in (
-            [self._notification_worker]
-            + self._resolve_pool
-            + self._download_pool
-            + self._merge_pool
-            + self._upload_pool
-        ):
-            worker.stop()
+        self._worker_manager.stop()
 
     def get_benchmark_results(self) -> dict | None:
         """Get benchmark results if benchmarking is enabled.
@@ -303,7 +243,7 @@ class PipelineManager:
         if not self._benchmark_enabled:
             return None
 
-        benchmark = self._notification_worker._benchmark
+        benchmark = self._worker_manager.notification_worker._benchmark
         if benchmark is None:
             return None
 
