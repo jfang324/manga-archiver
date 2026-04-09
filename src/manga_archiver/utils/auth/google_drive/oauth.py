@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 def _get_credentials_path() -> str:
     """Get the absolute path to the OAuth client credentials file."""
-    config_dir = os.path.expanduser("~/.mangadex-downloader")
+    config_dir = os.path.expanduser("~/.manga-archiver")
 
     return os.path.join(config_dir, CREDENTIALS_FILENAME)
 

@@ -15,7 +15,7 @@ class MenuScreen(Screen):
         with Vertical():
             yield MenuSelector(
                 menu_options=MENU_OPTIONS,
-                title="MangaDex Downloader",
+                title="Manga Archiver",
                 description_title="Description",
             )
             yield Footer()

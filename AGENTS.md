@@ -1,6 +1,6 @@
 # Agents Development Guide
 
-This document provides guidelines and instructions for agents working on the mangadex-downloader project.
+This document provides guidelines and instructions for agents working on the manga-archiver project.
 
 ## Build, Lint, and Test Commands
 
@@ -8,7 +8,7 @@ This document provides guidelines and instructions for agents working on the man
 This project uses Poetry for dependency management:
 - Install dependencies: `poetry install`
 - Install dev dependencies: `poetry install --with dev`
-- Run the application: `poetry run mangadex-downloader`
+- Run the application: `poetry run manga-archiver`
 - Run commands in virtual env: `poetry run <command>`
 
 ### Running Tests
@@ -26,7 +26,7 @@ This project uses Poetry for dependency management:
 #### Ruff (Linting & Formatting)
 The project uses Ruff for linting and formatting:
 - Lint all files: `ruff check .`
-- Lint specific file: `ruff check src/mangadex_downloader/main.py`
+- Lint specific file: `ruff check src/manga_archiver/main.py`
 - Lint with auto-fix: `ruff check --fix .`
 - Format code: `ruff format .`
 
@@ -44,8 +44,8 @@ The project uses Ruff for linting and formatting:
 
 ## Project Structure
 ```
-mangadex-downloader/
-├── src/mangadex_downloader/
+manga-archiver/
+├── src/manga_archiver/
 │   ├── __init__.py
 │   ├── main.py                 # Entry point
 │   ├── app.py                  # Main Textual application

@@ -5,7 +5,7 @@ import pytest
 from textual import on
 from textual.app import App, ComposeResult
 
-from src.mangadex_downloader.widgets.directory_explorer import (
+from src.manga_archiver.widgets.directory_explorer import (
     DirectoryExplorer,
     FilteredDirectoryTree,
 )

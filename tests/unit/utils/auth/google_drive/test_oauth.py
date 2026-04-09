@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from src.mangadex_downloader.utils.auth.google_drive.oauth import (
+from src.manga_archiver.utils.auth.google_drive.oauth import (
     handle_auth_login,
     handle_auth_logout,
 )
@@ -28,21 +28,15 @@ def mock_auth_pipeline():
     """Set up the full auth pipeline for login tests."""
     with (
         patch(
-            "src.mangadex_downloader.utils.auth.google_drive.oauth._get_credentials_path"
+            "src.manga_archiver.utils.auth.google_drive.oauth._get_credentials_path"
         ) as mock_get_path,
+        patch("src.manga_archiver.utils.auth.google_drive.oauth.os.path.exists") as mock_exists,
+        patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token") as mock_load_token,
         patch(
-            "src.mangadex_downloader.utils.auth.google_drive.oauth.os.path.exists"
-        ) as mock_exists,
-        patch(
-            "src.mangadex_downloader.utils.auth.google_drive.oauth.load_token"
-        ) as mock_load_token,
-        patch(
-            "src.mangadex_downloader.utils.auth.google_drive.oauth._load_client_credentials"
+            "src.manga_archiver.utils.auth.google_drive.oauth._load_client_credentials"
         ) as mock_load_creds,
-        patch(
-            "src.mangadex_downloader.utils.auth.google_drive.oauth._fetch_device_code"
-        ) as mock_fetch,
-        patch("src.mangadex_downloader.utils.auth.google_drive.oauth._poll_for_token") as mock_poll,
+        patch("src.manga_archiver.utils.auth.google_drive.oauth._fetch_device_code") as mock_fetch,
+        patch("src.manga_archiver.utils.auth.google_drive.oauth._poll_for_token") as mock_poll,
     ):
         mock_get_path.return_value = "/valid/path"
         mock_exists.return_value = True
@@ -59,7 +53,7 @@ class TestHandleAuthLogin:
         mock_poll.return_value = "test_refresh_token"
 
         with patch(
-            "src.mangadex_downloader.utils.auth.google_drive.oauth.save_token"
+            "src.manga_archiver.utils.auth.google_drive.oauth.save_token"
         ) as mock_save_token:
             result = handle_auth_login()
 
@@ -92,14 +86,10 @@ class TestHandleAuthLogin:
 class TestHandleAuthLogout:
     def test_logout_deletes_token_and_returns_0_on_success(self):
         with (
+            patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token") as mock_load_token,
+            patch("src.manga_archiver.utils.auth.google_drive.oauth.requests.post") as mock_post,
             patch(
-                "src.mangadex_downloader.utils.auth.google_drive.oauth.load_token"
-            ) as mock_load_token,
-            patch(
-                "src.mangadex_downloader.utils.auth.google_drive.oauth.requests.post"
-            ) as mock_post,
-            patch(
-                "src.mangadex_downloader.utils.auth.google_drive.oauth.delete_token"
+                "src.manga_archiver.utils.auth.google_drive.oauth.delete_token"
             ) as mock_delete_token,
         ):
             mock_load_token.return_value = {"refresh_token": "test_refresh_token"}
@@ -114,12 +104,8 @@ class TestHandleAuthLogout:
 
     def test_logout_returns_1_on_network_error(self, capsys):
         with (
-            patch(
-                "src.mangadex_downloader.utils.auth.google_drive.oauth.load_token"
-            ) as mock_load_token,
-            patch(
-                "src.mangadex_downloader.utils.auth.google_drive.oauth.requests.post"
-            ) as mock_post,
+            patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token") as mock_load_token,
+            patch("src.manga_archiver.utils.auth.google_drive.oauth.requests.post") as mock_post,
         ):
             mock_load_token.return_value = {"refresh_token": "test_refresh_token"}
             mock_post.side_effect = requests.Timeout("Connection timed out")

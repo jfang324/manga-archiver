@@ -4,17 +4,17 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.mangadex_downloader.constants.defaults import (
+from src.manga_archiver.constants.defaults import (
     DEFAULT_DATA_SAVER,
     DEFAULT_OPTIMIZE,
     DEFAULT_OUTPUT_FORMAT,
     DEFAULT_OUTPUT_PATH,
     DEFAULT_QUALITY,
 )
-from src.mangadex_downloader.enums import OutputFormat
-from src.mangadex_downloader.models.app_config import AppConfig
-from src.mangadex_downloader.utils import settings_manager
-from src.mangadex_downloader.utils.settings_manager import SettingsData
+from src.manga_archiver.enums import OutputFormat
+from src.manga_archiver.models.app_config import AppConfig
+from src.manga_archiver.utils import settings_manager
+from src.manga_archiver.utils.settings_manager import SettingsData
 
 
 class TestCreateAppConfig:
@@ -202,7 +202,7 @@ class TestSaveSettings:
                 settings_manager.save_settings(config)
 
     def test_save_settings_raises_on_invalid_config(self):
-        with patch("src.mangadex_downloader.utils.settings_manager.AppConfig") as mock_config:
+        with patch("src.manga_archiver.utils.settings_manager.AppConfig") as mock_config:
             mock_config.side_effect = ValueError("quality must be between 1 and 100")
 
             with pytest.raises(ValueError, match="Invalid settings"):

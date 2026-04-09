@@ -2,11 +2,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.mangadex_downloader.workers.jobs import (
+from src.manga_archiver.workers.jobs import (
     DownloadingJob,
     FetchingResourcesJob,
 )
-from src.mangadex_downloader.workers.resolve_worker import ResolveWorker
+from src.manga_archiver.workers.resolve_worker import ResolveWorker
 
 
 class TestResolveWorkerDoWork:

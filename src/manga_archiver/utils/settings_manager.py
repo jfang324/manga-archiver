@@ -31,7 +31,7 @@ class SettingsData(TypedDict):
 
 def _get_settings_path() -> Path:
     """Get the absolute path to the settings file."""
-    config_dir = Path(os.path.expanduser("~/.mangadex-downloader"))
+    config_dir = Path(os.path.expanduser("~/.manga-archiver"))
 
     return config_dir / SETTINGS_FILENAME
 

@@ -5,7 +5,7 @@ from textual.app import App, ComposeResult
 from textual.reactive import reactive
 from textual.widgets import Input, ListView
 
-from src.mangadex_downloader.widgets.search_panel import SearchItem, SearchPanel
+from src.manga_archiver.widgets.search_panel import SearchItem, SearchPanel
 
 DEBOUNCE_DURATION = 50
 

@@ -2,13 +2,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.mangadex_downloader.enums import JobStatus
-from src.mangadex_downloader.integrations.exceptions import (
+from src.manga_archiver.enums import JobStatus
+from src.manga_archiver.integrations.exceptions import (
     NotFoundError,
     RateLimitError,
 )
-from src.mangadex_downloader.workers.base import Worker, WorkerConfig
-from src.mangadex_downloader.workers.jobs import Job
+from src.manga_archiver.workers.base import Worker, WorkerConfig
+from src.manga_archiver.workers.jobs import Job
 
 
 class ConcreteWorker(Worker):
@@ -152,7 +152,7 @@ class TestRetryLogic:
         mock_calculate_backoff = MagicMock(return_value=0.1)
 
         with patch(
-            "src.mangadex_downloader.workers.base.Worker._calculate_backoff",
+            "src.manga_archiver.workers.base.Worker._calculate_backoff",
             mock_calculate_backoff,
         ):
             await worker._process_job(mock_job)

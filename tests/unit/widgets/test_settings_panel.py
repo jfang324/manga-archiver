@@ -6,8 +6,8 @@ from textual.app import App, ComposeResult
 from textual.validation import ValidationResult
 from textual.widgets import Input, Select, Switch
 
-from src.mangadex_downloader.enums import OutputFormat
-from src.mangadex_downloader.widgets.settings_panel import SettingsPanel
+from src.manga_archiver.enums import OutputFormat
+from src.manga_archiver.widgets.settings_panel import SettingsPanel
 
 
 @dataclass

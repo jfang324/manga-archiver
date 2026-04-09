@@ -1,10 +1,10 @@
-# MangaDex Downloader
+# Manga Archiver
 
 A terminal-based manga downloader and archiver.
 
 ## About The Project
 
-A terminal-based tool that makes it easy to search for and download manga from MangaDex.
+A terminal-based tool that makes it easy to search for and download manga from sources like MangaDex.
 
 ## Features
 
@@ -30,7 +30,7 @@ pip install .
 ### Running the Application
 
 ```sh
-mangadex-downloader
+manga-archiver
 ```
 
 ## Google Drive Integration
@@ -47,12 +47,12 @@ The application supports uploading downloaded manga directly to Google Drive for
 2. **Create OAuth Credentials**
     - Go to "APIs & Services" > "Credentials"
     - Create "OAuth client ID" credentials
-    - Application type: Desktop app
+    - Application type: TVs and Limited Input Devices
     - Download the credentials JSON file
 
 3. **Configure the Application**
     - Download your OAuth credentials JSON file from Google Cloud Console
-    - Rename it to `client_secret.json` and place it in `~/.mangadex-downloader/`
+    - Rename it to `client_secret.json` and place it in `~/.manga-archiver/`
 
     The file should have this structure (from Google's download):
 
@@ -69,7 +69,7 @@ The application supports uploading downloaded manga directly to Google Drive for
 
 4. **Authenticate**
     ```sh
-    mangadex-downloader auth login
+    manga-archiver auth login
     ```
     This will initiate the OAuth device flow, follow the instructions in the terminal.
 
@@ -80,30 +80,30 @@ Once authenticated, you can:
 - **Use archive mode** to upload downloads directly to Google Drive:
 
     ```sh
-    mangadex-downloader --archive
+    manga-archiver --archive
     ```
 
 - **Logout** when you want to disconnect your account:
     ```sh
-    mangadex-downloader auth logout
+    manga-archiver auth logout
     ```
 
 ### How It Works
 
-1. A root folder "MangaDex-Downloader" is created in your Google Drive
+1. A root folder "Manga-Archiver" is created in your Google Drive
 2. Each manga gets its own subfolder (created automatically or reused if existing)
 3. Downloaded files are uploaded to the corresponding manga folder
 4. File name collisions are handled by appending (1), (2), etc.
 
 ### Backlog Sync
 
-The backlog sync feature automatically finds missing chapters from your favorites by comparing your local downloads (stored in Google Drive) against the available chapters on MangaDex.
+The backlog sync feature automatically finds missing chapters from your favorites by comparing your local downloads (stored in Google Drive) against the available chapters.
 
 **Usage:**
 
 ```sh
 # Sync missing chapters from favorites (requires --archive for Google Drive access)
-mangadex-downloader --archive --backlog
+manga-archiver --archive --backlog
 ```
 
 This will:
@@ -115,7 +115,7 @@ This will:
 
 **Note:** You must have:
 
-- Authenticated with Google Drive (`mangadex-downloader auth login`)
+- Authenticated with Google Drive (`manga-archiver auth login`)
 - Favorites saved in the app (add manga to favorites in the TUI)
 - Run with `--archive` to access Google Drive
 
@@ -130,7 +130,7 @@ Configurable options:
 - **Quality**: 1-100 (higher = better quality, larger files)
 - **Optimize**: Optimize PDF file size (slower generation)
 
-Settings are stored in `~/.mangadex-downloader/settings.json`
+Settings are stored in `~/.manga-archiver/settings.json`
 
 ## CLI Arguments
 
@@ -151,19 +151,19 @@ The following command-line arguments are available:
 
 ```sh
 # Download with more workers for faster processing
-mangadex-downloader --resolve-workers 10 --download-workers 10
+manga-archiver --resolve-workers 10 --download-workers 10
 
 # Upload directly to Google Drive
-mangadex-downloader --archive
+manga-archiver --archive
 
 # Sync missing chapters from favorites
-mangadex-downloader --archive --backlog
+manga-archiver --archive --backlog
 
 # Enable benchmark mode to collect performance metrics
-mangadex-downloader --benchmark
+manga-archiver --benchmark
 ```
 
-For more options, run `mangadex-downloader --help`.
+For more options, run `manga-archiver --help`.
 
 ## Gallery
 

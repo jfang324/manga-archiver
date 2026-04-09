@@ -3,8 +3,8 @@ from textual import on
 from textual.app import App, ComposeResult
 from textual.widgets import Label, ListView
 
-from src.mangadex_downloader.constants.menu_options import MENU_OPTIONS
-from src.mangadex_downloader.widgets.menu_selector import MenuSelector
+from src.manga_archiver.constants.menu_options import MENU_OPTIONS
+from src.manga_archiver.widgets.menu_selector import MenuSelector
 
 
 class MenuSelectorApp(App):

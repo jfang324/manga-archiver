@@ -13,7 +13,7 @@ TOKEN_FILENAME = "google_drive_token.json"  # noqa: S105 - local filename, not a
 def get_token_path() -> Path:
     """Get the path to the token file."""
 
-    config_dir = Path(os.path.expanduser("~/.mangadex-downloader"))
+    config_dir = Path(os.path.expanduser("~/.manga-archiver"))
     return config_dir / TOKEN_FILENAME
 
 
