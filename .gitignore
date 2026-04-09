@@ -5,6 +5,6 @@ htmlcov
 *.egg-info
 build
 poetry.lock
-src/mangadex_downloader/__pycache__/*
+src/manga_archiver/__pycache__/*
 .env
 .venv
