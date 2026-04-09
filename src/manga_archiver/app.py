@@ -49,6 +49,8 @@ class MangaArchiverApp(App):
         _session (aiohttp.ClientSession): The aiohttp session
         _mangadex_client (MangaDexApiClient): The MangaDex API client
         _download_client (DownloadClient): The download client
+        _backlog (list[FetchingResourcesJob] | None): The backlog of missing chapters
+        _auto_exit (bool): Whether to automatically exit when all jobs are complete
 
     Reactive Attributes:
         _app_config (AppConfig): The application configuration
