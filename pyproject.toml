@@ -39,7 +39,6 @@ omit = [
     "*/screens/*",
     "*/db/*",
     "*/repositories/*",
-    "*/pipeline_manager.py",
 ]
 source = ["src"]
 
@@ -49,7 +48,6 @@ omit = [
     "*/screens/*",
     "*/db/*",
     "*/repositories/*",
-    "*/pipeline_manager.py",
     "*/app.py",
 ]
 exclude_lines = [
