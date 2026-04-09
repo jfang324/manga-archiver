@@ -109,11 +109,6 @@ mock_chapter_data: dict = {
 
 mock_processed_chapter_data: list[dict] = [
     {
-        "title": "Chapter 4",
-        "id": "4",
-        "chapter": "0",
-    },
-    {
         "title": "Chapter 1",
         "id": "1",
         "chapter": "1",
@@ -124,7 +119,7 @@ mock_processed_chapter_data: list[dict] = [
         "chapter": "2",
     },
     {
-        "title": "",
+        "title": "untitled",
         "id": "3",
         "chapter": "3",
     },

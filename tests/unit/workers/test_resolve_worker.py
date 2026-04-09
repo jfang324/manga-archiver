@@ -28,6 +28,7 @@ class TestResolveWorkerDoWork:
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",
+            chapter_number="1",
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
             output_directory=MagicMock(),
@@ -59,6 +60,7 @@ class TestResolveWorkerDoWork:
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",
+            chapter_number="1",
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
             output_directory=MagicMock(),
@@ -88,6 +90,7 @@ class TestResolveWorkerDoWork:
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",
+            chapter_number="1",
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
             output_directory=MagicMock(),
@@ -115,6 +118,7 @@ class TestResolveWorkerDoWork:
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",
+            chapter_number="1",
             chapter_title="Chapter 1",
             chapter_id="",
             output_directory=MagicMock(),
@@ -141,6 +145,7 @@ class TestResolveWorkerDoWork:
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",
+            chapter_number="1",
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
             output_directory=MagicMock(),

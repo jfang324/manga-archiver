@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class MultiFormatExporter:
-    """Merges images into CBZ or PDF format, either in memory or to disk."""
+    """Merges images into a merged format, either in memory or to disk."""
 
     def _sanitize(self, path: str) -> str:
         """Sanitize a path to be used as a filename.
@@ -62,6 +62,7 @@ class MultiFormatExporter:
 
             if isinstance(write_location, BytesIO):
                 return write_location.getvalue()
+
             return b""
         except Exception as e:
             logger.error("Error generating CBZ file: %s", e)
@@ -269,12 +270,14 @@ class MultiFormatExporter:
             if output_format == OutputFormat.CBZ:
                 write_location = BytesIO() if return_bytes else full_output_path
                 file_data = self._generate_cbz(images, write_location)
+
             elif output_format == OutputFormat.EPUB:
                 write_location = BytesIO() if return_bytes else full_output_path
                 self._generate_epub(images, write_location)
 
                 if isinstance(write_location, BytesIO):
                     file_data = write_location.getvalue()
+
             else:
                 write_location = BytesIO() if return_bytes else full_output_path
                 self._generate_pdf(images, write_location, quality, optimize)

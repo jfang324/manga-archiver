@@ -69,5 +69,4 @@ class DownloadClient:
                 task.cancel()
 
             await asyncio.gather(*tasks, return_exceptions=True)
-
             raise

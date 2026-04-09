@@ -13,6 +13,7 @@ A terminal-based tool that makes it easy to search for and download manga from M
 - Configurable output settings via in-app Settings screen
 - Asynchronous download pipeline with configurable workers
 - Local file output or Google Drive upload modes
+- Backlog sync - automatically find and download missing chapters from your favorites
 
 ## Getting Started
 
@@ -50,20 +51,21 @@ The application supports uploading downloaded manga directly to Google Drive for
     - Download the credentials JSON file
 
 3. **Configure the Application**
-   - Download your OAuth credentials JSON file from Google Cloud Console
-   - Rename it to `client_secret.json` and place it in `~/.mangadex-downloader/`
+    - Download your OAuth credentials JSON file from Google Cloud Console
+    - Rename it to `client_secret.json` and place it in `~/.mangadex-downloader/`
 
-   The file should have this structure (from Google's download):
-   ```json
-   {
-       "installed": {
-           "client_id": "...",
-           "client_secret": "...",
-           "redirect_uris": [...],
-           "token_uri": "..."
-       }
-   }
-   ```
+    The file should have this structure (from Google's download):
+
+    ```json
+    {
+        "installed": {
+            "client_id": "...",
+            "client_secret": "...",
+            "redirect_uris": [...],
+            "token_uri": "..."
+        }
+    }
+    ```
 
 4. **Authenticate**
     ```sh
@@ -93,6 +95,30 @@ Once authenticated, you can:
 3. Downloaded files are uploaded to the corresponding manga folder
 4. File name collisions are handled by appending (1), (2), etc.
 
+### Backlog Sync
+
+The backlog sync feature automatically finds missing chapters from your favorites by comparing your local downloads (stored in Google Drive) against the available chapters on MangaDex.
+
+**Usage:**
+
+```sh
+# Sync missing chapters from favorites (requires --archive for Google Drive access)
+mangadex-downloader --archive --backlog
+```
+
+This will:
+
+1. Fetch all your favorited manga from the database
+2. Scan each manga's folder in Google Drive to see which chapters you have
+3. Download any chapters you don't have yet
+4. Upload them to Google Drive automatically
+
+**Note:** You must have:
+
+- Authenticated with Google Drive (`mangadex-downloader auth login`)
+- Favorites saved in the app (add manga to favorites in the TUI)
+- Run with `--archive` to access Google Drive
+
 ### Settings
 
 Press `Ctrl+S` on the Settings screen to save your preferences.
@@ -118,6 +144,7 @@ The following command-line arguments are available:
 | `--resolve-rate-limit`  | int  | 5       | Global rate limit for resolve workers (requests/sec)               |
 | `--download-rate-limit` | int  | 5       | Global rate limit for download workers (requests/sec)              |
 | `--archive`             | flag | false   | Enable archive mode (upload to Google Drive instead of local save) |
+| `--backlog`             | flag | false   | Sync favorites with Google Drive and download missing chapters     |
 | `--benchmark`           | flag | false   | Enable benchmark metrics collection                                |
 
 ### Usage Examples
@@ -128,6 +155,9 @@ mangadex-downloader --resolve-workers 10 --download-workers 10
 
 # Upload directly to Google Drive
 mangadex-downloader --archive
+
+# Sync missing chapters from favorites
+mangadex-downloader --archive --backlog
 
 # Enable benchmark mode to collect performance metrics
 mangadex-downloader --benchmark

@@ -45,35 +45,45 @@ class MergeWorker(Worker):
             job: The merging job containing image data to process
 
         Returns:
-            UploadJob for archive mode, or None if no output queue configured
+            UploadJob: The output job containing the related data, complete_file_data will be empty if output_queue is None
         """
         (
             job_id,
             manga_title,
-            chapter_title,
             output_directory,
             output_format,
             image_data,
+            chapter_number,
+            chapter_title,
         ) = (
             job.id,
             job.manga_title,
-            job.chapter_title,
             job.output_directory,
             job.output_format,
             job.image_data,
+            job.chapter_number,
+            job.chapter_title or "untitled",
         )
 
+        if not chapter_number:
+            raise ValueError("chapter_number must not be empty for merging")
+
         try:
-            chapter_number, stripped_title = chapter_title.split(" ", 1)
-        except ValueError as e:
-            raise ValueError(
-                f"Malformed chapter_title format (expected '<num> <title>'): '{chapter_title}'"
-            ) from e
+            float(chapter_number)
+        except (ValueError, TypeError):
+            raise ValueError("chapter_number must be a valid number for merging")
 
-        chapter_number = chapter_number.rstrip(".")
-        stripped_title = stripped_title.rstrip(".")
+        chapter_number = chapter_number.rstrip()
+        chapter_title = chapter_title.rstrip()
 
-        output_name: str = f"{manga_title} [{chapter_number}] - {stripped_title}"
+        output_name: str = f"{manga_title} [{chapter_number}] - {chapter_title}"
+
+        if image_data is None:
+            raise ValueError("image_data must not be None for merging")
+        if output_directory is None:
+            raise ValueError("output_directory must not be None for merging")
+        if output_format is None:
+            raise ValueError("output_format must not be None for merging")
 
         merge_start = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.MERGING, merge_start)
@@ -92,7 +102,8 @@ class MergeWorker(Worker):
         return UploadJob(
             id=job_id,
             manga_title=manga_title,
-            chapter_title=stripped_title,
+            chapter_number=chapter_number,
+            chapter_title=chapter_title,
             output_directory=output_directory,
             output_format=output_format,
             complete_file_data=file_data,

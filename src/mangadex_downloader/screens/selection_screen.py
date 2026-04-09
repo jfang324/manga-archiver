@@ -9,11 +9,9 @@ from textual.screen import Screen
 from textual.widgets import Footer
 
 from ..integrations.content_providers.mangadex.client import (
-    ApiError,
     MangaDexApiClient,
-    NotFoundError,
-    RateLimitError,
 )
+from ..integrations.exceptions import ApiError, NotFoundError, RateLimitError
 from ..types import ProcessedChapter, ProcessedManga
 from ..widgets import SelectionPanel
 
@@ -31,6 +29,7 @@ class PartialJob(TypedDict):
 
     manga_title: str
     chapter_id: str
+    chapter_number: str
     chapter_title: str
 
 
@@ -84,7 +83,11 @@ class SelectionScreen(Screen):
             return
 
         new_results: list[ChapterResult] = [
-            ChapterResult(chapter["title"], chapter["id"], chapter["chapter"])
+            ChapterResult(
+                chapter.get("title") or "untitled",
+                chapter["id"],
+                chapter["chapter"],
+            )
             for chapter in chapters
         ]
 
@@ -95,14 +98,15 @@ class SelectionScreen(Screen):
             yield SelectionPanel(self._manga_title).data_bind(options=SelectionScreen.results)
             yield Footer()
 
-    def _queue_downloads(self, selected_chapters: list[tuple[str, str]]) -> None:
+    def _queue_downloads(self, selected_chapters: list[tuple[str, str, str]]) -> None:
         partial_jobs: list[PartialJob] = [
             PartialJob(
                 manga_title=self._manga_title,
                 chapter_id=chapter_id,
+                chapter_number=chapter_number,
                 chapter_title=chapter_title,
             )
-            for chapter_title, chapter_id in selected_chapters
+            for chapter_title, chapter_id, chapter_number in selected_chapters
         ]
 
         self.post_message(self.EnqueueJobs(partial_jobs))
@@ -110,7 +114,7 @@ class SelectionScreen(Screen):
 
     @on(SelectionPanel.Selected)
     def _navigate_to_menu_screen(self, event: SelectionPanel.Selected) -> None:
-        selected_chapters: list[tuple[str, str]] = event.selected_pairs
+        selected_chapters: list[tuple[str, str, str]] = event.selected_pairs
 
         self._queue_downloads(selected_chapters)
 

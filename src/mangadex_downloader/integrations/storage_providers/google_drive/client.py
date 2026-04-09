@@ -56,6 +56,7 @@ class GoogleDriveClient:
         Returns:
             str: The ID of the root folder
         """
+        # initialize is meant to be called before the app starts, so we use print for visual feedback
         print("Initializing Google Drive...")
 
         root_folders = self._get_root_folders(page_size=DEFAULT_ROOT_PAGE_SIZE)
@@ -120,6 +121,30 @@ class GoogleDriveClient:
             list[GoogleDriveDirectory]: List of folder dictionaries with 'id' and 'name' keys
         """
         query = f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+
+        results = (
+            self._service.files()
+            .list(
+                q=query,
+                fields="files(id, name)",
+                pageSize=page_size,
+            )
+            .execute()
+        )
+
+        return results.get("files", [])
+
+    def get_files_in_folder(self, folder_id: str, page_size: int | None = None) -> list[dict]:
+        """List all files in a specific folder.
+
+        Args:
+            folder_id: The ID of the folder to list files from
+            page_size: Maximum number of results to return (default: None)
+
+        Returns:
+            list[dict]: List of file dictionaries with 'id' and 'name' keys
+        """
+        query = f"'{folder_id}' in parents and trashed=false"
 
         results = (
             self._service.files()

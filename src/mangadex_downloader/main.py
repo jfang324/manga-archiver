@@ -1,7 +1,9 @@
+import asyncio
 import logging
 import sys
 
 from .app import MangaDexDownloaderApp
+from .backlog_sync import BacklogSync
 from .cli import parse_args
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .pipeline_manager import PipelineConfig
@@ -26,10 +28,10 @@ def main() -> None:
         raise
 
     if hasattr(args, "command") and args.command == "auth":
-        if args.subcommand == "login":
+        if args.auth_command == "login":
             sys.exit(handle_auth_login())
 
-        elif args.subcommand == "logout":
+        elif args.auth_command == "logout":
             sys.exit(handle_auth_logout())
 
         else:
@@ -66,17 +68,32 @@ def main() -> None:
         )
 
         app_config = load_settings()
-    except Exception as e:
-        logger.error("Failed to load configs: %s", e)
-        sys.exit(1)
+        favorite_repository = FavoriteRepository()
 
-    favorite_repository = FavoriteRepository()
+        backlog = None
+        if args.backlog:
+            if not google_drive_client:
+                print("--backlog requires a Google Drive client, try running with --archive")
+                sys.exit(1)
+
+            backlog_sync = BacklogSync(
+                favorite_repository=favorite_repository,
+                google_drive_client=google_drive_client,
+                output_directory=app_config.output_path,
+                output_format=str(app_config.output_format),
+            )
+            backlog = asyncio.run(backlog_sync.run())
+
+    except Exception as e:
+        logger.error("Failed to initialize: %s", e)
+        sys.exit(1)
 
     app = MangaDexDownloaderApp(
         pipeline_config=pipeline_config,
         app_config=app_config,
         favorite_repository=favorite_repository,
         google_drive_client=google_drive_client,
+        backlog=backlog,
     )
     app.run()
 

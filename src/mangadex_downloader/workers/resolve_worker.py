@@ -63,6 +63,7 @@ class ResolveWorker(Worker):
             chapter_id,
             manga_title,
             chapter_title,
+            chapter_number,
             output_directory,
             output_format,
         ) = (
@@ -70,6 +71,7 @@ class ResolveWorker(Worker):
             job.chapter_id,
             job.manga_title,
             job.chapter_title,
+            job.chapter_number,
             job.output_directory,
             job.output_format,
         )
@@ -91,6 +93,7 @@ class ResolveWorker(Worker):
         return DownloadingJob(
             id=job_id,
             manga_title=manga_title,
+            chapter_number=chapter_number,
             chapter_title=chapter_title,
             output_directory=output_directory,
             output_format=output_format,

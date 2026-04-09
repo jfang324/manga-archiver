@@ -11,6 +11,7 @@ class Job:
     Attributes:
         id (str): The unique identifier for the job
         manga_title (str): The title of the manga
+        chapter_number (str): The chapter number (e.g., "1", "2.5")
         chapter_title (str): The title of the chapter
         output_directory (Path): The directory to save output files
         output_format (OutputFormat): The output format (PDF, CBZ, etc.)
@@ -18,6 +19,7 @@ class Job:
 
     id: str
     manga_title: str
+    chapter_number: str
     chapter_title: str
     output_directory: Path
     output_format: OutputFormat
@@ -30,12 +32,14 @@ class JobMetadata:
     Attributes:
         manga_title (str): The title of the manga
         chapter_id (str): The ID of the chapter
+        chapter_number (str): The chapter number (e.g., "1", "2.5")
         chapter_title (str): The title of the chapter
-        completed_at (float): Unix timestamp when job completed (set only on terminal status)
+        completed_at (float): Unix timestamp when job completed (set only on terminal status). Set to -1 if in progress
     """
 
     manga_title: str
     chapter_id: str
+    chapter_number: str
     chapter_title: str
     completed_at: float = -1
 

@@ -66,6 +66,7 @@ class NotificationWorker:
         metadata = JobMetadata(
             chapter_id=job.id,
             manga_title=job.manga_title,
+            chapter_number=job.chapter_number,
             chapter_title=job.chapter_title,
         )
 
