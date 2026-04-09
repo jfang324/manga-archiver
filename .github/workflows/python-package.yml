@@ -18,7 +18,7 @@ jobs:
                 python-version: ['3.9', '3.10', '3.11']
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
 
             - name: Set up Python ${{ matrix.python-version }}
               uses: actions/setup-python@v5
@@ -46,9 +46,11 @@ jobs:
               run: |
                   poetry run ruff check .
 
-            - name: Type check with pyright
-              run: |
-                  poetry run pyright
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: '20'
+
+            - run: npx pyright
 
             - name: Test with pytest & coverage
               run: |
