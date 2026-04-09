@@ -11,6 +11,7 @@ from .merge_worker import MergeWorker
 from .notification_worker import NotificationWorker
 from .resolve_worker import ResolveWorker
 from .upload_worker import UploadWorker
+from .worker_manager import WorkerManager
 
 __all__ = [
     "BenchmarkAggregates",
@@ -25,4 +26,5 @@ __all__ = [
     "UploadWorker",
     "NotificationWorker",
     "WorkerConfig",
+    "WorkerManager",
 ]
