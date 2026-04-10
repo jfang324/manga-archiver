@@ -215,6 +215,17 @@ class GoogleDriveClient:
 
         return folder_id
 
+    def get_manga_folder_id(self, manga_title: str) -> str | None:
+        """Get the folder ID for a manga title from the cache.
+
+        Args:
+            manga_title: The manga title to look up
+
+        Returns:
+            str | None: The folder ID if found in cache, None otherwise
+        """
+        return self._folder_cache.get(manga_title)
+
     def _search_folder_by_name(self, name: str, parent_id: str) -> str | None:
         """Search for a folder by name within a parent folder.
 

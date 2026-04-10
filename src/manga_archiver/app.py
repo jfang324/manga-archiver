@@ -87,6 +87,7 @@ class MangaArchiverApp(App):
             favorite_repository: The favorite repository
             google_drive_client: The Google Drive client
             backlog: Pre-fetched jobs to enqueue when pipeline starts
+            auto_exit: Whether to automatically exit the application
         """
         super().__init__(**kwargs)
 
@@ -182,7 +183,10 @@ class MangaArchiverApp(App):
 
     async def on_mount(self) -> None:
         """On mount, initialize api and download clients before injecting into screens."""
-        self._session = aiohttp.ClientSession()
+        # This config is necessary to handle aiohttp auto use of aiodns, without it we get 443 errors
+        self._session = aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
+        )
         self._mangadex_client = MangaDexApiClient(self._session)
         self._download_client = DownloadClient(self._session)
 
