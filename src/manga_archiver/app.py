@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiohttp
@@ -229,6 +230,21 @@ class MangaArchiverApp(App):
             benchmark_results = self._pipeline_manager.get_benchmark_results()
 
         if benchmark_results:
+            benchmark_dir = Path.cwd() / "benchmark"
+            benchmark_dir.mkdir(parents=True, exist_ok=True)
+            metrics_file = benchmark_dir / "metrics.txt"
+
+            with open(metrics_file, "w") as f:
+                f.write("Benchmark Results\n")
+                f.write("=" * 40 + "\n")
+                for key, value in benchmark_results.items():
+                    if "ms" in key:
+                        f.write(f"{key}: {value:.2f} ms\n")
+                    elif "memory" in key:
+                        f.write(f"{key}: {value:.2f} MB\n")
+                    else:
+                        f.write(f"{key}: {value}\n")
+
             logger.info("Aggregate Benchmark Results:")
             for aggregate in benchmark_results:
                 logger.info("[%s]: %s", aggregate, benchmark_results[aggregate])

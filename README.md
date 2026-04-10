@@ -146,17 +146,17 @@ Settings are stored in `~/.manga-archiver/settings.json`
 
 The following command-line arguments are available:
 
-| Flag                    | Type | Default | Description                                                        |
-| ----------------------- | ---- | ------- | ------------------------------------------------------------------ |
-| `--resolve-workers`     | int  | 2       | Number of workers retrieving download resources                    |
-| `--download-workers`    | int  | 2       | Number of workers downloading images                               |
-| `--merge-workers`       | int  | 2       | Number of workers merging images into output format                |
-| `--resolve-rate-limit`  | int  | 5       | Global rate limit for resolve workers (requests/sec)               |
-| `--download-rate-limit` | int  | 5       | Global rate limit for download workers (requests/sec)              |
-| `--archive`             | flag | false   | Enable archive mode (upload to Google Drive instead of local save) |
-| `--backlog`             | flag | false   | Sync favorites with Google Drive and download missing chapters     |
-| `--benchmark`           | flag | false   | Enable benchmark metrics collection                                |
-| `--auto-exit`           | flag | false   | Automatically exit when all jobs are complete                      |
+| Flag                    | Type | Default | Description                                                             |
+| ----------------------- | ---- | ------- | ----------------------------------------------------------------------- |
+| `--resolve-workers`     | int  | 2       | Number of workers retrieving download resources                         |
+| `--download-workers`    | int  | 2       | Number of workers downloading images                                    |
+| `--merge-workers`       | int  | 2       | Number of workers merging images into output format                     |
+| `--resolve-rate-limit`  | int  | 5       | Global rate limit for resolve workers (requests/sec)                    |
+| `--download-rate-limit` | int  | 5       | Global rate limit for download workers (requests/sec)                   |
+| `--archive`             | flag | false   | Enable archive mode (upload to Google Drive instead of local save)      |
+| `--backlog`             | flag | false   | Sync favorites with Google Drive and download missing chapters          |
+| `--benchmark`           | flag | false   | Enable benchmark metrics collection, written to `benchmark/metrics.txt` |
+| `--auto-exit`           | flag | false   | Automatically exit when all jobs are complete                           |
 
 ### Usage Examples
 
