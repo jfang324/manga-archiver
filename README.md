@@ -1,3 +1,9 @@
+[![PyPI Version](https://img.shields.io/pypi/v/manga-archiver)](https://pypi.org/project/manga-archiver/)
+![Python Versions](https://img.shields.io/pypi/pyversions/manga-archiver)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/manga-archiver?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/manga-archiver)
+[![License](https://img.shields.io/github/license/jfang324/manga-archiver)](https://github.com/jfang324/manga-archiver/blob/main/LICENSE)
+[![CI](https://github.com/jfang324/manga-archiver/actions/workflows/python-package.yml/badge.svg)](https://github.com/jfang324/manga-archiver/actions/workflows/python-package.yml)
+
 # Manga Archiver
 
 A terminal-based manga downloader and archiver.

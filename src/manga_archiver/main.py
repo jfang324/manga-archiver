@@ -21,11 +21,7 @@ def main() -> None:
     if in archive mode, and launches the Textual UI application.
     """
     setup_logging()
-
-    try:
-        args = parse_args()
-    except SystemExit:
-        raise
+    args = parse_args()
 
     if hasattr(args, "command") and args.command == "auth":
         if args.auth_command == "login":
