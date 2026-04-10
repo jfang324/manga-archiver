@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiohttp
@@ -87,6 +88,7 @@ class MangaArchiverApp(App):
             favorite_repository: The favorite repository
             google_drive_client: The Google Drive client
             backlog: Pre-fetched jobs to enqueue when pipeline starts
+            auto_exit: Whether to automatically exit the application
         """
         super().__init__(**kwargs)
 
@@ -182,7 +184,10 @@ class MangaArchiverApp(App):
 
     async def on_mount(self) -> None:
         """On mount, initialize api and download clients before injecting into screens."""
-        self._session = aiohttp.ClientSession()
+        # This config is necessary to handle aiohttp auto use of aiodns, without it we get 443 errors
+        self._session = aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
+        )
         self._mangadex_client = MangaDexApiClient(self._session)
         self._download_client = DownloadClient(self._session)
 
@@ -225,6 +230,24 @@ class MangaArchiverApp(App):
             benchmark_results = self._pipeline_manager.get_benchmark_results()
 
         if benchmark_results:
+            try:
+                benchmark_dir = Path("~/.manga-archiver/benchmark").expanduser()
+                benchmark_dir.mkdir(parents=True, exist_ok=True)
+                metrics_file = benchmark_dir / "metrics.txt"
+
+                with open(metrics_file, "w") as f:
+                    f.write("Benchmark Results\n")
+                    f.write("=" * 40 + "\n")
+                    for key, value in benchmark_results.items():
+                        if "ms" in key:
+                            f.write(f"{key}: {value:.2f} ms\n")
+                        elif "memory" in key:
+                            f.write(f"{key}: {value:.2f} MB\n")
+                        else:
+                            f.write(f"{key}: {value}\n")
+            except Exception as e:
+                logger.error("Failed to write benchmark file: %s", e)
+
             logger.info("Aggregate Benchmark Results:")
             for aggregate in benchmark_results:
                 logger.info("[%s]: %s", aggregate, benchmark_results[aggregate])

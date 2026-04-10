@@ -61,7 +61,10 @@ class BacklogSync:
         """
         print("=== Backlog Sync ===")
 
-        async with aiohttp.ClientSession() as session:
+        # This config is necessary to handle aiohttp auto use of aiodns, without it we get 443 errors
+        async with aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
+        ) as session:
             mangadex_client = MangaDexApiClient(session)
 
             favorites = self._favorite_repository.get_all()
@@ -197,7 +200,7 @@ class BacklogSync:
         Returns:
             list[float]: List of chapter numbers found in Google Drive
         """
-        folder_id = self._google_drive_client._folder_cache.get(manga_title)
+        folder_id = self._google_drive_client.get_manga_folder_id(manga_title)
         if folder_id:
             files = self._google_drive_client.get_files_in_folder(folder_id)
             return self._parse_chapter_numbers(files)
