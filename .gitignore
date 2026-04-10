@@ -9,4 +9,3 @@ src/manga_archiver/__pycache__/*
 .env
 .venv
 /dist
-benchmark/

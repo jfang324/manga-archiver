@@ -7,8 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.3] - 2025-04-09
 
-- Move benchmark metrics from logs to `benchmark/metrics.txt`
-- Resolved issue on windows where the aiodns package would cause SSL errors on API requests
+- Move benchmark metrics from logs to `~/.manga-archiver/benchmark/metrics.txt`
+- Resolved issue on Windows where the aiodns package would cause SSL errors on API requests
 
 ## [1.0.2] - 2025-04-09
 
