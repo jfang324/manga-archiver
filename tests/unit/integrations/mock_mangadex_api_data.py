@@ -1,5 +1,7 @@
 """Mock data for unit tests."""
 
+from src.manga_archiver.types import Chapter, ContentSource, DownloadResource, Manga
+
 # Manga search response data
 mock_manga_data: dict = {
     "data": [
@@ -38,23 +40,11 @@ mock_manga_data: dict = {
     ]
 }
 
-mock_processed_manga_data: list[dict] = [
-    {
-        "title": "Attack on Titan",
-        "id": "1",
-    },
-    {
-        "title": "One Piece",
-        "id": "2",
-    },
-    {
-        "title": "Naruto",
-        "id": "3",
-    },
-    {
-        "title": "Uno Piece",
-        "id": "4",
-    },
+mock_processed_manga_data: list[Manga] = [
+    Manga(id="1", title="Attack on Titan", source=ContentSource.MANGADEX),
+    Manga(id="2", title="One Piece", source=ContentSource.MANGADEX),
+    Manga(id="3", title="Naruto", source=ContentSource.MANGADEX),
+    Manga(id="4", title="Uno Piece", source=ContentSource.MANGADEX),
 ]
 
 # Chapter data response
@@ -107,22 +97,10 @@ mock_chapter_data: dict = {
     ]
 }
 
-mock_processed_chapter_data: list[dict] = [
-    {
-        "title": "Chapter 1",
-        "id": "1",
-        "chapter": "1",
-    },
-    {
-        "title": "Chapter 2",
-        "id": "2",
-        "chapter": "2",
-    },
-    {
-        "title": "untitled",
-        "id": "3",
-        "chapter": "3",
-    },
+mock_processed_chapter_data: list[Chapter] = [
+    Chapter(id="1", title="Chapter 1", chapter_num=1.0, source=ContentSource.MANGADEX),
+    Chapter(id="2", title="Chapter 2", chapter_num=2.0, source=ContentSource.MANGADEX),
+    Chapter(id="3", title="untitled", chapter_num=3.0, source=ContentSource.MANGADEX),
 ]
 
 # # Download resource response
@@ -154,22 +132,22 @@ mock_download_resource_data: dict = {
 }
 
 # processed resource with no data-saver
-mock_processed_download_resource_data: dict = {
-    "urls": [
+mock_processed_download_resource_data: DownloadResource = DownloadResource(
+    urls=[
         "https://mangaCDN.com/data/hash/chapter1.png",
         "https://mangaCDN.com/data/hash/chapter2.png",
     ],
-    "hash": "hash",
-}
+    source=ContentSource.MANGADEX,
+)
 
 # processed resource with data-saver
-mock_processed_download_resource_data_saver: dict = {
-    "urls": [
+mock_processed_download_resource_data_saver: DownloadResource = DownloadResource(
+    urls=[
         "https://mangaCDN.com/data-saver/hash/chapter1-saver.jpg",
         "https://mangaCDN.com/data-saver/hash/chapter2-saver.jpg",
     ],
-    "hash": "hash",
-}
+    source=ContentSource.MANGADEX,
+)
 
 # Nested test data for _get_nested helper
 mock_nested_data: dict = {

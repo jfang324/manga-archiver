@@ -22,7 +22,7 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
@@ -58,7 +58,7 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
@@ -90,7 +90,7 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
@@ -123,7 +123,7 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
@@ -147,8 +147,8 @@ class TestUploadWorkerDoWork:
         "invalid_fields, expected_error_message",
         [
             ({"complete_file_data": None}, "complete_file_data"),
-            ({"chapter_number": "not a number"}, "chapter_number"),
-            ({"full_name": "Test Manga [1] - Chapter 1.pdf", "chapter_number": "2"}, "full_name"),
+            ({"chapter_number": "not a number"}, "must be a float"),
+            ({"full_name": "Test Manga [1] - Chapter 1.pdf", "chapter_number": 2.0}, "full_name"),
         ],
         ids=[
             "missing_complete_file_data",
@@ -166,7 +166,7 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,

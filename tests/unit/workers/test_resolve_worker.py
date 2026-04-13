@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.manga_archiver.types import ContentSource, DownloadResource
 from src.manga_archiver.workers.jobs import (
     DownloadingJob,
     FetchingResourcesJob,
@@ -10,16 +11,19 @@ from src.manga_archiver.workers.resolve_worker import ResolveWorker
 
 
 class TestResolveWorkerDoWork:
-    def _create_mock_api_client(self, urls: list[str] | None = None):
-        client = MagicMock()
-        client.get_download_resource = AsyncMock(
-            return_value={"urls": urls or ["http://example.com/1.jpg"]}
+    def _create_mock_provider_manager(self, urls: list[str] | None = None):
+        manager = MagicMock()
+        manager.get_download_resource = AsyncMock(
+            return_value=DownloadResource(
+                urls=urls or ["http://example.com/1.jpg"],
+                source=ContentSource.MANGADEX,
+            )
         )
-        return client
+        return manager
 
     @pytest.mark.asyncio
     async def test_do_work_returns_downloading_job(self, mock_semaphore):
-        mock_api_client = self._create_mock_api_client(
+        mock_provider_manager = self._create_mock_provider_manager(
             ["http://example.com/1.jpg", "http://example.com/2.jpg"]
         )
 
@@ -28,15 +32,16 @@ class TestResolveWorkerDoWork:
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
             output_directory=MagicMock(),
             output_format=MagicMock(),
+            source=ContentSource.MANGADEX,
         )
 
         worker = ResolveWorker(
-            api_client=mock_api_client,
+            provider_manager=mock_provider_manager,
             semaphore=mock_semaphore,
             worker_id="resolve_worker_0",
             input_queue=MagicMock(),
@@ -54,21 +59,22 @@ class TestResolveWorkerDoWork:
         assert result.urls == ["http://example.com/1.jpg", "http://example.com/2.jpg"]
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_api_client_with_chapter_id(self, mock_semaphore):
-        mock_api_client = self._create_mock_api_client()
+    async def test_do_work_calls_provider_manager_with_source_and_chapter_id(self, mock_semaphore):
+        mock_provider_manager = self._create_mock_provider_manager()
 
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
             output_directory=MagicMock(),
             output_format=MagicMock(),
+            source=ContentSource.MANGADEX,
         )
 
         worker = ResolveWorker(
-            api_client=mock_api_client,
+            provider_manager=mock_provider_manager,
             semaphore=mock_semaphore,
             worker_id="resolve_worker_0",
             input_queue=MagicMock(),
@@ -79,26 +85,29 @@ class TestResolveWorkerDoWork:
 
         await worker._do_work(job)
 
-        mock_api_client.get_download_resource.assert_called_once_with("chapter_456")
+        mock_provider_manager.get_download_resource.assert_called_once_with(
+            ContentSource.MANGADEX, "chapter_456"
+        )
 
     @pytest.mark.asyncio
     async def test_do_work_sends_notification(self, mock_semaphore):
-        mock_api_client = self._create_mock_api_client()
+        mock_provider_manager = self._create_mock_provider_manager()
 
         mock_notification_queue = AsyncMock()
 
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
             output_directory=MagicMock(),
             output_format=MagicMock(),
+            source=ContentSource.MANGADEX,
         )
 
         worker = ResolveWorker(
-            api_client=mock_api_client,
+            provider_manager=mock_provider_manager,
             semaphore=mock_semaphore,
             worker_id="resolve_worker_0",
             input_queue=MagicMock(),
@@ -113,20 +122,21 @@ class TestResolveWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_raises_error_for_missing_chapter_id(self, mock_semaphore):
-        mock_api_client = AsyncMock()
+        mock_provider_manager = AsyncMock()
 
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="",
             output_directory=MagicMock(),
             output_format=MagicMock(),
+            source=ContentSource.MANGADEX,
         )
 
         worker = ResolveWorker(
-            api_client=mock_api_client,
+            provider_manager=mock_provider_manager,
             semaphore=mock_semaphore,
             worker_id="resolve_worker_0",
             input_queue=MagicMock(),
@@ -140,20 +150,21 @@ class TestResolveWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_uses_semaphore(self, mock_semaphore):
-        mock_api_client = self._create_mock_api_client()
+        mock_provider_manager = self._create_mock_provider_manager()
 
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
             output_directory=MagicMock(),
             output_format=MagicMock(),
+            source=ContentSource.MANGADEX,
         )
 
         worker = ResolveWorker(
-            api_client=mock_api_client,
+            provider_manager=mock_provider_manager,
             semaphore=mock_semaphore,
             worker_id="resolve_worker_0",
             input_queue=MagicMock(),

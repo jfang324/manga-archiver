@@ -63,14 +63,11 @@ class UploadWorker(Worker):
         if not complete_file_data:
             raise ValueError(f"Job {job_id} complete_file_data is empty")
 
-        try:
-            float(job.chapter_number)
-        except (ValueError, TypeError):
-            raise ValueError(
-                f"Job {job_id} chapter_number '{job.chapter_number}' is not a valid number"
-            )
+        if not isinstance(job.chapter_number, float):
+            raise ValueError(f"Job {job_id} chapter_number must be a float")
 
-        if job.chapter_number not in full_name:
+        chapter_str = f"{job.chapter_number:g}"
+        if chapter_str not in full_name:
             raise ValueError(
                 f"Job {job_id} full_name '{full_name}' does not contain chapter_number '{job.chapter_number}'"
             )

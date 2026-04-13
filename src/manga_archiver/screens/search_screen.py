@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import NamedTuple
 
 from textual import on, work
 from textual.app import ComposeResult
@@ -8,19 +8,11 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Footer
 
-from ..integrations.content_providers import (
-    MangaDexApiClient,
-)
+from ..integrations.content_providers import ContentProviderManager
 from ..integrations.exceptions import ApiError, NotFoundError, RateLimitError
+from ..repositories import FavoriteManga
 from ..widgets import SearchPanel
 from .selection_screen import SelectionScreen
-
-if TYPE_CHECKING:
-    from ..types import ProcessedManga
-
-from typing import NamedTuple
-
-from ..repositories import FavoriteManga
 
 
 class SearchResult(NamedTuple):
@@ -51,15 +43,15 @@ class SearchScreen(Screen):
             super().__init__(**kwargs)
             self.favorited_manga = favorited_manga
 
-    def __init__(self, mangadex_client: MangaDexApiClient, **kwargs) -> None:
+    def __init__(self, provider_manager: ContentProviderManager, **kwargs) -> None:
         """Initialize the SearchScreen.
 
         Args:
-            mangadex_client: The API client for MangaDex searches
+            provider_manager: The content provider manager for searches
         """
         super().__init__(**kwargs)
 
-        self._mangadex_client = mangadex_client
+        self._provider_manager = provider_manager
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -72,7 +64,7 @@ class SearchScreen(Screen):
         query: str = event.query
 
         try:
-            search_results: list[ProcessedManga] = await self._mangadex_client.search_manga(query)
+            search_results, errors = await self._provider_manager.search_manga(query)
 
         except RateLimitError:
             self.notify("Too many requests. Please wait a moment.", severity="error")
@@ -81,15 +73,20 @@ class SearchScreen(Screen):
             self.notify("Error searching for manga", severity="error")
             return
 
-        new_results = [SearchResult(item["title"], item["id"]) for item in search_results]
+        if errors:
+            self.notify(
+                f"{len(errors)} provider(s) failed.",
+                severity="warning",
+            )
+
+        new_results = [SearchResult(item.title, item.id) for item in search_results]
         self.results = new_results
 
     @on(SearchPanel.Selected)
     def _navigate_to_chapter_screen(self, event: SearchPanel.Selected) -> None:
         title, manga_id = event.title, event.value
-        manga: ProcessedManga = {"title": title, "id": manga_id}
 
-        self.app.push_screen(SelectionScreen(manga, self._mangadex_client))
+        self.app.push_screen(SelectionScreen(manga_id, title, self._provider_manager))
 
     @on(SearchPanel.Favorite)
     def _favorite_manga(self, event: SearchPanel.Favorite) -> None:

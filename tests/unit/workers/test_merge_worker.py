@@ -18,7 +18,7 @@ class TestMergeWorkerDoWork:
         job = MergingJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Introduction",
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
@@ -53,7 +53,7 @@ class TestMergeWorkerDoWork:
         job = MergingJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Introduction",
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
@@ -89,7 +89,7 @@ class TestMergeWorkerDoWork:
         job = MergingJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Introduction",
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
@@ -117,7 +117,7 @@ class TestMergeWorkerDoWork:
         job = MergingJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="5",
+            chapter_number=5.0,
             chapter_title="Chapter 5",
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
@@ -135,7 +135,7 @@ class TestMergeWorkerDoWork:
 
         result = await worker._do_work(job)
         assert result.chapter_title == "Chapter 5"
-        assert result.chapter_number == "5"
+        assert result.chapter_number == 5.0
 
     @pytest.mark.parametrize(
         "invalid_fields, expected_error_message",
@@ -163,7 +163,7 @@ class TestMergeWorkerDoWork:
         job = MergingJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="5",
+            chapter_number=5.0,
             chapter_title="Chapter 5",
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,

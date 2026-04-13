@@ -2,8 +2,8 @@ import time
 from asyncio import Queue, Semaphore
 
 from ..enums import JobStatus
-from ..integrations.content_providers import MangaDexApiClient
-from ..types import ProcessedDownloadResource
+from ..integrations.content_providers import ContentProviderManager
+from ..types import DownloadResource
 from .base import Worker, WorkerConfig
 from .jobs import (
     DownloadingJob,
@@ -14,10 +14,10 @@ from .jobs import (
 
 
 class ResolveWorker(Worker):
-    """Fetches chapter resource data from MangaDex API and creates download jobs.
+    """Fetches chapter resources from content providers and creates download jobs.
 
-    Processes FetchingResourcesJob inputs by querying the MangaDex API for chapter
-    download URLs and metadata, then outputs DownloadingJob objects.
+    Processes FetchingResourcesJob inputs by querying the provider manager for
+    chapter download URLs and metadata, then outputs DownloadingJob objects.
     """
 
     def __init__(
@@ -27,7 +27,7 @@ class ResolveWorker(Worker):
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
         config: WorkerConfig,
-        api_client: MangaDexApiClient,
+        provider_manager: ContentProviderManager,
         semaphore: Semaphore,
     ):
         """Initialize the worker.
@@ -38,12 +38,12 @@ class ResolveWorker(Worker):
             output_queue: The output queue for the worker
             notification_queue: The queue for notification jobs
             config: The configuration for the worker
-            api_client: The API client for MangaDex
+            provider_manager: The content provider manager
             semaphore: The semaphore to use for global rate limiting
         """
         super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
 
-        self._api_client = api_client
+        self._provider_manager = provider_manager
         self._semaphore = semaphore
 
     async def _do_work(self, job: FetchingResourcesJob) -> DownloadingJob:
@@ -83,8 +83,8 @@ class ResolveWorker(Worker):
         await self._send_notification(job, JobStatus.FETCHING_RESOURCES, resolve_start)
 
         async with self._semaphore:
-            resources: ProcessedDownloadResource = await self._api_client.get_download_resource(
-                job.chapter_id
+            resources: DownloadResource = await self._provider_manager.get_download_resource(
+                job.source, job.chapter_id
             )
 
         resolve_end = time.perf_counter_ns()
@@ -97,5 +97,5 @@ class ResolveWorker(Worker):
             chapter_title=chapter_title,
             output_directory=output_directory,
             output_format=output_format,
-            urls=resources["urls"],
+            urls=resources.urls,
         )

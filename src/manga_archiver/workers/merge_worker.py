@@ -65,18 +65,12 @@ class MergeWorker(Worker):
             job.chapter_title or "untitled",
         )
 
-        if not chapter_number:
-            raise ValueError("chapter_number must not be empty for merging")
+        if not isinstance(chapter_number, float):
+            raise ValueError("chapter_number must be a float")
 
-        try:
-            float(chapter_number)
-        except (ValueError, TypeError):
-            raise ValueError("chapter_number must be a valid number for merging")
-
-        chapter_number = chapter_number.rstrip()
         chapter_title = chapter_title.rstrip()
 
-        output_name: str = f"{manga_title} [{chapter_number}] - {chapter_title}"
+        output_name: str = f"{manga_title} [{chapter_number:g}] - {chapter_title}"
 
         if image_data is None:
             raise ValueError("image_data must not be None for merging")

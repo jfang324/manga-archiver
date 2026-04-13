@@ -42,10 +42,10 @@ class SelectionPanel(Widget):
         """Message to indicate that a selection has been made.
 
         Attributes:
-            selected_pairs (list[tuple[str, str, str]]): A list of selected (name, id, chapter_number) tuples
+            selected_pairs (list[tuple[str, str, float]]): A list of selected (name, id, chapter_number) tuples
         """
 
-        def __init__(self, selected_pairs: list[tuple[str, str, str]], **kwargs) -> None:
+        def __init__(self, selected_pairs: list[tuple[str, str, float]], **kwargs) -> None:
             """Initialize the Selected message.
 
             Args:
@@ -55,7 +55,7 @@ class SelectionPanel(Widget):
 
             self.selected_pairs = selected_pairs
 
-    options: reactive[list[tuple[str, str, str]]] = reactive([])
+    options: reactive[list[tuple[str, str, float]]] = reactive([])
 
     def __init__(self, title: str, **kwargs) -> None:
         """Initialize the SelectionPanel widget.
@@ -69,20 +69,20 @@ class SelectionPanel(Widget):
         self._selected_values: list[str] = []
 
         # SelectionList only returns a list of values, so we need to map the values to their names
-        self._name_map: dict[str, tuple[str, str]] = {}
+        self._name_map: dict[str, tuple[str, float]] = {}
 
     def compose(self) -> ComposeResult:
         with Vertical():
             yield Label(id="selection-label")
             yield SelectionList(id="selection-list")
 
-    def _build_selection_options(self, options: list[tuple[str | None, str, str]]) -> None:
+    def _build_selection_options(self, options: list[tuple[str | None, str, float]]) -> None:
         selection_list: SelectionList = self.query_one("#selection-list", SelectionList)
         selection_items: list[Selection] = []
 
         for title, value, chapter in options:
             display_title = title if title else "untitled"
-            name = f"{chapter}. {display_title}"
+            name = f"{chapter:g}. {display_title}"
 
             self._name_map[value] = (display_title, chapter)
             selection_items.append(Selection(name, value))
@@ -90,7 +90,7 @@ class SelectionPanel(Widget):
         selection_list.clear_options()
         selection_list.add_options(selection_items)
 
-    def watch_options(self, new_options: list[tuple[str | None, str, str]]) -> None:
+    def watch_options(self, new_options: list[tuple[str | None, str, float]]) -> None:
         self.query_one("#selection-label", Label).update(f"{self._title} ({len(new_options)})")
         self._build_selection_options(new_options)
 
@@ -99,7 +99,7 @@ class SelectionPanel(Widget):
         self._selected_values = event.selection_list.selected
 
     def action_request_download(self) -> None:
-        name_and_id_pairs: list[tuple[str, str, str]] = []
+        name_and_id_pairs: list[tuple[str, str, float]] = []
         for value in self._selected_values:
             info = self._name_map.get(value)
 

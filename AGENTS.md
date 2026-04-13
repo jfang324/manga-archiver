@@ -97,6 +97,72 @@ manga-archiver/
 - Order: standard library → third-party → local imports
 - All imports on separate lines, never grouped
 
+### Import Patterns and Type Hints
+
+**Top-level imports are mandatory:**
+```python
+# ✅ GOOD - clear, explicit dependencies
+from aiohttp import ClientSession
+from .mangadex.client import MangaDexApiClient
+
+class ContentProviderManager:
+    def __init__(self, session: ClientSession):
+        self._providers = {
+            ContentSource.MANGADEX: MangaDexApiClient(session),
+        }
+```
+
+**In-function imports are prohibited except for documented reasons:**
+```python
+# ❌ BAD - hides dependencies, poor testability
+class ContentProviderManager:
+    def __init__(self, session):
+        from .mangadex.client import MangaDexApiClient  # Anti-pattern
+
+# ✅ Only acceptable: documented architectural reason
+# from .expensive_module import HeavyDependency  # Startup optimization
+```
+
+#### TYPE_CHECKING Guidelines
+
+Use `TYPE_CHECKING` only when testing proves circular imports cannot be resolved:
+
+```python
+# ✅ GOOD - Prevents documented circular import A→B→A
+if TYPE_CHECKING:
+    from .module_b import SomeClass
+
+# ❌ BAD - Symbol imported at module level anyway
+from aiohttp import ClientSession
+
+if TYPE_CHECKING:
+    from aiohttp import ClientSession  # Redundant
+```
+
+#### __future__.annotations Guidelines
+
+Use `from __future__ import annotations` only when forward references exist:
+
+```python
+# ✅ GOOD - Forward reference to class defined later
+class A:
+    def method(self) -> "B":  # Forward reference - needs __future__
+        pass
+
+class B:
+    pass
+
+# ❌ BAD - No forward references, unnecessary complexity
+class ContentProviderManager:
+    def __init__(self, session: ClientSession):  # No forward reference needed
+        pass
+```
+
+**Verification steps before committing:**
+1. Run `python -c "import your_module"` - No ImportError
+2. Run `ruff check .` - Passes linting
+3. Run test suite - All tests pass
+
 ### Naming Conventions
 - Variables/functions: snake_case (`user_input`, `manga_data`)
 - Classes: PascalCase (`SessionManager`, `UserInterface`)

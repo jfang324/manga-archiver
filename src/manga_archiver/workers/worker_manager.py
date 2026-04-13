@@ -4,7 +4,7 @@ from asyncio import Queue, Semaphore
 from collections.abc import Callable
 
 from ..enums import JobStatus
-from ..integrations.content_providers import MangaDexApiClient
+from ..integrations.content_providers import ContentProviderManager
 from ..integrations.storage_providers.google_drive import GoogleDriveClient
 from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
@@ -22,7 +22,7 @@ class WorkerManager:
     """Manages worker pools and their lifecycle.
 
     Responsible for creating and orchestrating all worker pools:
-    - Resolve workers (fetch chapter resources from API)
+    - Resolve workers (fetch chapter resources from provider manager)
     - Download workers (download images)
     - Merge workers (create PDF/CBZ/EPUB)
     - Upload workers (upload to cloud storage)
@@ -43,7 +43,7 @@ class WorkerManager:
         num_merge_workers: int,
         num_upload_workers: int,
         benchmark_enabled: bool,
-        mangadex_api_client: MangaDexApiClient,
+        provider_manager: ContentProviderManager,
         download_client: DownloadClient,
         google_drive_client: GoogleDriveClient | None,
         on_status_update: Callable[[str, JobStatus, JobMetadata], None],
@@ -63,7 +63,7 @@ class WorkerManager:
             num_merge_workers: Number of merge workers to create
             num_upload_workers: Number of upload workers to create
             benchmark_enabled: Whether to enable benchmarking
-            mangadex_api_client: API client for MangaDex
+            provider_manager: Content provider manager
             download_client: Client for downloading images
             google_drive_client: Client for Google Drive uploads
             on_status_update: Callback for status updates
@@ -75,7 +75,7 @@ class WorkerManager:
                 output_queue=download_queue,
                 notification_queue=notification_queue,
                 config=WorkerConfig(),
-                api_client=mangadex_api_client,
+                provider_manager=provider_manager,
                 semaphore=resolve_semaphore,
             )
             for index in range(num_resolve_workers)

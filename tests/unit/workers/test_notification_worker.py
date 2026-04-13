@@ -21,7 +21,7 @@ class TestNotificationWorkerDoWork:
         job = NotificationJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             output_directory=Path("/output"),
             output_format=OutputFormat.PDF,
@@ -62,7 +62,7 @@ async def test_do_work_completed_at_based_on_status(status, should_set_completed
     job = NotificationJob(
         id="job_123",
         manga_title="Test Manga",
-        chapter_number="1",
+        chapter_number=1.0,
         chapter_title="Chapter 1",
         output_directory=Path("/output"),
         output_format=OutputFormat.PDF,
@@ -99,7 +99,7 @@ async def test_do_work_records_benchmark_timing(status):
     job = NotificationJob(
         id="job_123",
         manga_title="Test Manga",
-        chapter_number="1",
+        chapter_number=1.0,
         chapter_title="Chapter 1",
         output_directory=Path("/output"),
         output_format=OutputFormat.PDF,
