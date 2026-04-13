@@ -7,6 +7,8 @@ from textual.widget import Widget
 from textual.widgets import Label, SelectionList
 from textual.widgets.selection_list import Selection
 
+from ..types import ContentSource
+
 
 class SelectionPanel(Widget):
     """A selection panel widget for selecting a value from a list.
@@ -57,15 +59,16 @@ class SelectionPanel(Widget):
 
     options: reactive[list[tuple[str, str, float]]] = reactive([])
 
-    def __init__(self, title: str, **kwargs) -> None:
+    def __init__(self, title: str, source: ContentSource, **kwargs) -> None:
         """Initialize the SelectionPanel widget.
 
         Args:
             title: The title of the widget
+            source: The content source for display in the title
         """
         super().__init__(**kwargs)
 
-        self._title = title
+        self._title = f"\\[{source}] {title}"
         self._selected_values: list[str] = []
 
         # SelectionList only returns a list of values, so we need to map the values to their names

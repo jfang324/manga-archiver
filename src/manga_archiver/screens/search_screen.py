@@ -11,15 +11,17 @@ from textual.widgets import Footer
 from ..integrations.content_providers import ContentProviderManager
 from ..integrations.exceptions import ApiError, NotFoundError, RateLimitError
 from ..repositories import FavoriteManga
+from ..types import ContentSource
 from ..widgets import SearchPanel
 from .selection_screen import SelectionScreen
 
 
 class SearchResult(NamedTuple):
-    """A tuple containing the title and ID of a search result."""
+    """A tuple containing the title, ID, and source of a search result."""
 
     title: str
     id: str
+    source: ContentSource
 
 
 class SearchScreen(Screen):
@@ -79,14 +81,14 @@ class SearchScreen(Screen):
                 severity="warning",
             )
 
-        new_results = [SearchResult(item.title, item.id) for item in search_results]
+        new_results = [SearchResult(item.title, item.id, item.source) for item in search_results]
         self.results = new_results
 
     @on(SearchPanel.Selected)
     def _navigate_to_chapter_screen(self, event: SearchPanel.Selected) -> None:
-        title, manga_id = event.title, event.value
+        title, manga_id, source = event.title, event.value, event.source
 
-        self.app.push_screen(SelectionScreen(manga_id, title, self._provider_manager))
+        self.app.push_screen(SelectionScreen(manga_id, title, self._provider_manager, source))
 
     @on(SearchPanel.Favorite)
     def _favorite_manga(self, event: SearchPanel.Favorite) -> None:
@@ -94,7 +96,7 @@ class SearchScreen(Screen):
         if index < 0 or index >= len(self.results):
             return
 
-        title, manga_id = self.results[index]
+        title, manga_id, source = self.results[index]
         favorited_manga: FavoriteManga = {"manga_id": manga_id, "manga_title": title}
 
         self.post_message(self.FavoriteAdded(favorited_manga))

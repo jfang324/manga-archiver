@@ -8,6 +8,9 @@ class ContentSource(Enum):
 
     MANGADEX = "mangadex"
 
+    def __str__(self) -> str:
+        return self.value
+
 
 # Old types (for backwards compatibility)
 class ProcessedManga(TypedDict):

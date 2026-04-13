@@ -73,7 +73,7 @@ class DownloadsScreen(Screen):
             table.add_row(
                 job_id,
                 metadata.manga_title,
-                metadata.chapter_number,
+                f"{metadata.chapter_number:g}",
                 metadata.chapter_title,
                 completed,
                 status.value,

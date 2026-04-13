@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
+from typing import TypeAlias
 
 from aiohttp import ClientSession
 
@@ -9,6 +10,8 @@ from .base import Provider
 from .mangadex.client import MangaDexApiClient
 
 logger = logging.getLogger(__name__)
+
+SearchResults: TypeAlias = tuple[list[Manga], list[tuple[ContentSource, Exception]]]
 
 
 @dataclass
@@ -47,9 +50,7 @@ class ContentProviderManager:
             ContentSource.MANGADEX: MangaDexApiClient(session),
         }
 
-    async def search_manga(
-        self, query: str, timeout_per_provider: float = 10.0
-    ) -> tuple[list[Manga], list[tuple[ContentSource, Exception]]]:
+    async def search_manga(self, query: str, timeout_per_provider: float = 10.0) -> SearchResults:
         """Search all providers simultaneously and return aggregated results.
 
         Args:

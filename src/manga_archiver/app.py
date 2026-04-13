@@ -22,7 +22,6 @@ from .screens import (
     SelectionScreen,
     SettingsScreen,
 )
-from .types import ContentSource
 from .utils import DownloadClient, save_settings
 from .workers.jobs import FetchingResourcesJob
 
@@ -176,7 +175,7 @@ class MangaArchiverApp(App):
                 chapter_title=partial_job["chapter_title"],
                 output_directory=self._app_config.output_path,
                 output_format=self._app_config.output_format,
-                source=ContentSource.MANGADEX,
+                source=partial_job["source"],
             )
             for partial_job in partial_jobs
         ]

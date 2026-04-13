@@ -29,6 +29,7 @@ class PartialJob(TypedDict):
     chapter_id: str
     chapter_number: float
     chapter_title: str
+    source: ContentSource
 
 
 class SelectionScreen(Screen):
@@ -102,7 +103,9 @@ class SelectionScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield SelectionPanel(self._manga_title).data_bind(options=SelectionScreen.results)
+            yield SelectionPanel(self._manga_title, self._source).data_bind(
+                options=SelectionScreen.results
+            )
             yield Footer()
 
     def _queue_downloads(self, selected_chapters: list[tuple[str, str, float]]) -> None:
@@ -112,6 +115,7 @@ class SelectionScreen(Screen):
                 chapter_id=chapter_id,
                 chapter_number=chapter_number,
                 chapter_title=chapter_title,
+                source=self._source,
             )
             for chapter_title, chapter_id, chapter_number in selected_chapters
         ]

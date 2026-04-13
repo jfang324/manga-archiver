@@ -4,6 +4,7 @@ from textual.reactive import reactive
 from textual.widgets import SelectionList
 from textual.widgets.selection_list import Selection
 
+from src.manga_archiver.types import ContentSource
 from src.manga_archiver.widgets.selection_panel import SelectionPanel
 
 
@@ -22,7 +23,9 @@ class SelectionPanelApp(App):
         self.selection_records: list[SelectionPanel.Selected] = []
 
     def compose(self) -> ComposeResult:
-        yield SelectionPanel(title="Test").data_bind(options=SelectionPanelApp.mock_options)
+        yield SelectionPanel(title="Test", source=ContentSource.MANGADEX).data_bind(
+            options=SelectionPanelApp.mock_options
+        )
 
     @on(SelectionPanel.Selected)
     def _record_selection_message(self, message: SelectionPanel.Selected) -> None:
