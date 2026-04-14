@@ -33,7 +33,7 @@ class FavoriteRepository:
                 cursor = conn.cursor()
                 cursor.execute(
                     "INSERT OR IGNORE INTO favorite_manga (id, title, source) VALUES (?, ?, ?)",
-                    (favorite_manga["id"], favorite_manga["title"], str(favorite_manga["source"])),
+                    (favorite_manga.id, favorite_manga.title, str(favorite_manga.source)),
                 )
 
                 conn.commit()

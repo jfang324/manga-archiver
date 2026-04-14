@@ -281,8 +281,8 @@ class MangaArchiverApp(App):
     def _on_favorite_deleted(self, event: FavoritesScreen.Deleted) -> None:
         """Delete a favorite manga from the database then update in-memory copy."""
         manga_id, manga_title = (
-            event.deleted_manga["id"],
-            event.deleted_manga["title"],
+            event.deleted_manga.id,
+            event.deleted_manga.title,
         )
 
         try:
@@ -291,16 +291,16 @@ class MangaArchiverApp(App):
             self.notify("Failed to remove favorite", severity="error")
             return
 
-        self._favorites = [f for f in self._favorites if f["id"] != manga_id]
+        self._favorites = [f for f in self._favorites if f.id != manga_id]
         self.mutate_reactive(MangaArchiverApp._favorites)
         self.notify(f"Removed '{manga_title}' from favorites", severity="information")
 
     @on(FavoritesScreen.Selected)
     def _on_favorite_selected(self, event: FavoritesScreen.Selected) -> None:
         """Navigate to the selection screen with the selected manga."""
-        manga_id = event.selected_manga["id"]
-        manga_title = event.selected_manga["title"]
-        source = event.selected_manga["source"]
+        manga_id = event.selected_manga.id
+        manga_title = event.selected_manga.title
+        source = event.selected_manga.source
 
         self.push_screen(SelectionScreen(manga_id, manga_title, self._provider_manager, source))
 
@@ -318,6 +318,6 @@ class MangaArchiverApp(App):
         self._favorites.append(favorite_manga)
         self.mutate_reactive(MangaArchiverApp._favorites)
         self.notify(
-            f"Added '{favorite_manga['title']}' to favorites",
+            f"Added '{favorite_manga.title}' to favorites",
             severity="information",
         )

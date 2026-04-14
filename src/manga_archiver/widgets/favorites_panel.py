@@ -96,7 +96,7 @@ class FavoritesPanel(Widget):
             return
 
         for fav in favorites:
-            list_view.append(ListItem(Label(f"\\[{fav['source']}] {fav['title']}")))
+            list_view.append(ListItem(Label(f"\\[{fav.source}] {fav.title}")))
 
     def watch_favorites(self, new_favorites: list[FavoriteManga]) -> None:
         self._build_favorites(new_favorites)

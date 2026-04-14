@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from sqlite3 import Connection, connect
 
-from .migrations import DEFAULT_VERSION, MIN_DATABASE_VERSION
+from .migrations import DEFAULT_DATABASE_VERSION, MIN_DATABASE_VERSION
 
 
 def init_schema_version_table(conn: Connection) -> None:
@@ -26,7 +26,7 @@ def init_schema_version_table(conn: Connection) -> None:
     table_exists = cursor.fetchone() is not None
 
     if table_exists:
-        version = DEFAULT_VERSION
+        version = DEFAULT_DATABASE_VERSION
     else:
         version = MIN_DATABASE_VERSION
 

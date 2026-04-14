@@ -6,7 +6,7 @@ from sqlite3 import Connection, Cursor
 
 from .database import get_connection, init_db
 from .migrations import (
-    DEFAULT_VERSION,
+    DEFAULT_DATABASE_VERSION,
     MIN_DATABASE_VERSION,
     MIN_GOOGLE_DRIVE_VERSION,
 )
@@ -77,7 +77,7 @@ class SchemaManager:
             return row[0]
         except Exception as e:
             logger.error("Failed to get system version: %s", e)
-            return DEFAULT_VERSION
+            return DEFAULT_DATABASE_VERSION
 
     def get_pending_migrations(self, system: str) -> list[MigrationStep]:
         """Get all migration functions greater than current version."""

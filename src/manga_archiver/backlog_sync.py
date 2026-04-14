@@ -76,9 +76,9 @@ class BacklogSync:
                 return []
 
             for favorite in favorites:
-                manga_id = favorite["id"]
-                manga_title = favorite["title"]
-                source = favorite["source"]
+                manga_id = favorite.id
+                manga_title = favorite.title
+                source = favorite.source
 
                 print(f"Fetching chapters for '{manga_title}'...")
 
