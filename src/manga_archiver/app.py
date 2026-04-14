@@ -7,7 +7,6 @@ from textual import on, work
 from textual.app import App
 from textual.reactive import reactive
 
-from .db import init_db
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .models import AppConfig
@@ -99,8 +98,6 @@ class MangaArchiverApp(App):
         self._pipeline_manager: PipelineManager | None = None
         self._favorite_repository = favorite_repository
         self._google_drive_client = google_drive_client
-
-        init_db()
 
         try:
             self._favorites = self._favorite_repository.get_all()
@@ -284,8 +281,8 @@ class MangaArchiverApp(App):
     def _on_favorite_deleted(self, event: FavoritesScreen.Deleted) -> None:
         """Delete a favorite manga from the database then update in-memory copy."""
         manga_id, manga_title = (
-            event.deleted_manga["manga_id"],
-            event.deleted_manga["manga_title"],
+            event.deleted_manga["id"],
+            event.deleted_manga["title"],
         )
 
         try:
@@ -294,17 +291,18 @@ class MangaArchiverApp(App):
             self.notify("Failed to remove favorite", severity="error")
             return
 
-        self._favorites = [f for f in self._favorites if f["manga_id"] != manga_id]
+        self._favorites = [f for f in self._favorites if f["id"] != manga_id]
         self.mutate_reactive(MangaArchiverApp._favorites)
         self.notify(f"Removed '{manga_title}' from favorites", severity="information")
 
     @on(FavoritesScreen.Selected)
     def _on_favorite_selected(self, event: FavoritesScreen.Selected) -> None:
         """Navigate to the selection screen with the selected manga."""
-        manga_id = event.selected_manga["manga_id"]
-        manga_title = event.selected_manga["manga_title"]
+        manga_id = event.selected_manga["id"]
+        manga_title = event.selected_manga["title"]
+        source = event.selected_manga["source"]
 
-        self.push_screen(SelectionScreen(manga_id, manga_title, self._provider_manager))
+        self.push_screen(SelectionScreen(manga_id, manga_title, self._provider_manager, source))
 
     @on(SearchScreen.FavoriteAdded)
     def _on_favorite_added(self, event: SearchScreen.FavoriteAdded) -> None:
@@ -320,6 +318,6 @@ class MangaArchiverApp(App):
         self._favorites.append(favorite_manga)
         self.mutate_reactive(MangaArchiverApp._favorites)
         self.notify(
-            f"Added '{favorite_manga['manga_title']}' to favorites",
+            f"Added '{favorite_manga['title']}' to favorites",
             severity="information",
         )

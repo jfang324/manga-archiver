@@ -5,6 +5,11 @@ import time
 
 import requests
 
+from ....constants import (
+    EXIT_AUTH_LOGIN_FAILED,
+    EXIT_AUTH_LOGOUT_FAILED,
+    EXIT_SUCCESS,
+)
 from .constants import (
     CREDENTIALS_FILENAME,
     DEFAULT_AUTH_TIMEOUT_SECONDS,
@@ -138,7 +143,7 @@ def handle_auth_login() -> int:
     Prompts user to visit a URL and enter a code, then polls for completion.
 
     Returns:
-        int: 0 on success, 1 on failure
+        int: EXIT_SUCCESS on success, EXIT_AUTH_LOGIN_FAILED on failure
     """
     credentials_path = _get_credentials_path()
 
@@ -148,11 +153,11 @@ def handle_auth_login() -> int:
             "Please download your OAuth client credentials from Google Cloud Console "
             "and save them to this location."
         )
-        return 1
+        return EXIT_AUTH_LOGIN_FAILED
 
     if load_token() is not None:
         print("Already authenticated. Run 'auth logout' first to re-authenticate.")
-        return 0
+        return EXIT_SUCCESS
 
     try:
         client_credentials = _load_client_credentials(credentials_path)
@@ -184,15 +189,15 @@ def handle_auth_login() -> int:
 
         if result == GoogleAuthDeviceFlowResult.ACCESS_DENIED:
             print("Access denied. Please try again.")
-            return 1
+            return EXIT_AUTH_LOGIN_FAILED
 
         if result == GoogleAuthDeviceFlowResult.EXPIRED_TOKEN:
             print("Authentication timed out. Please try again.")
-            return 1
+            return EXIT_AUTH_LOGIN_FAILED
 
         if result == GoogleAuthDeviceFlowResult.TIMEOUT:
             print("Authentication timed out. Please try again.")
-            return 1
+            return EXIT_AUTH_LOGIN_FAILED
 
         if result:
             save_token(
@@ -204,23 +209,23 @@ def handle_auth_login() -> int:
                 )
             )
             print("Authentication successful!")
-            return 0
+            return EXIT_SUCCESS
 
         print("Authentication failed. Please try again.")
-        return 1
+        return EXIT_AUTH_LOGIN_FAILED
 
     except (requests.Timeout, requests.ConnectionError) as e:
         logger.error("Network error during authentication: %s", e)
         print(f"Network error: {e}")
-        return 1
+        return EXIT_AUTH_LOGIN_FAILED
     except requests.HTTPError as e:
         logger.error("HTTP error during authentication: %s", e)
         print(f"Server error: {e}")
-        return 1
+        return EXIT_AUTH_LOGIN_FAILED
     except Exception as e:
         logger.error("Failed to complete authentication: %s", e)
         print(f"Error: {e}")
-        return 1
+        return EXIT_AUTH_LOGIN_FAILED
 
 
 def handle_auth_logout() -> int:
@@ -229,18 +234,17 @@ def handle_auth_logout() -> int:
     Revokes the OAuth refresh token and deletes local credentials.
 
     Returns:
-        int: 0 on success, 1 on failure
-
+        int: EXIT_SUCCESS on success, EXIT_AUTH_LOGOUT_FAILED on failure
     """
     token = load_token()
 
     if not token:
         print("Not authenticated. Run 'auth login' first.")
-        return 0
+        return EXIT_SUCCESS
 
     if not token.get("refresh_token"):
         print("Not authenticated. Run 'auth login' first.")
-        return 0
+        return EXIT_SUCCESS
 
     try:
         response = requests.post(
@@ -253,14 +257,13 @@ def handle_auth_logout() -> int:
         if response.status_code == 200:
             delete_token()
             print("Successfully logged out.")
-
-            return 0
+            return EXIT_SUCCESS
         else:
             print(f"Failed to revoke token: {response.text}")
-            return 1
+            return EXIT_AUTH_LOGOUT_FAILED
     except requests.HTTPError as e:
         print(f"Failed to send revocation request: {e}")
-        return 1
+        return EXIT_AUTH_LOGOUT_FAILED
     except (requests.Timeout, requests.ConnectionError) as e:
         print(f"Network error: {e}")
-        return 1
+        return EXIT_AUTH_LOGOUT_FAILED

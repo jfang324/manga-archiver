@@ -11,8 +11,8 @@ class FavoritesPanelApp(App):
 
     mock_favorites: reactive[list[dict[str, str]]] = reactive(
         [
-            {"manga_id": "1", "manga_title": "Title 1"},
-            {"manga_id": "2", "manga_title": "Title 2"},
+            {"id": "1", "title": "Title 1", "source": "mangadex"},
+            {"id": "2", "title": "Title 2", "source": "mangadex"},
         ]
     )
 
@@ -43,9 +43,11 @@ class TestFavoritesPanel:
             assert len(favorites_list.children) == len(app.mock_favorites)
 
             for i in range(len(app.mock_favorites)):
-                title = app.mock_favorites[i]["manga_title"]
+                title = app.mock_favorites[i]["title"]
+                source = app.mock_favorites[i]["source"]
 
-                assert favorites_list.children[i].query_one(Label).content == title
+                label = favorites_list.children[i].query_one(Label).content
+                assert f"\\[{source}] {title}" == label
 
     async def test_delete_action_sends_message(self) -> None:
         app = FavoritesPanelApp()

@@ -6,12 +6,14 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Label, ListItem, ListView
 
+from ..repositories import FavoriteManga
+
 
 class FavoritesPanel(Widget):
     """A panel widget for displaying and interacting with favorited manga.
 
     Reactive Attributes:
-        favorites (list[dict[str, str]]): List of favorited manga with manga_id and manga_title
+        favorites (list[FavoriteManga]): List of favorited manga with id, title, and source
     """
 
     DEFAULT_CSS = """
@@ -38,7 +40,7 @@ class FavoritesPanel(Widget):
     }
     """
 
-    favorites: reactive[list[dict[str, str]]] = reactive([])
+    favorites: reactive[list[FavoriteManga]] = reactive([])
 
     BINDINGS = [
         ("ctrl+d", "delete", "Delete favorite"),
@@ -81,7 +83,7 @@ class FavoritesPanel(Widget):
             yield Label("Favorites", id="favorites-panel-header")
             yield ListView(id="favorites-panel-list")
 
-    def _build_favorites(self, favorites: list[dict[str, str]]) -> None:
+    def _build_favorites(self, favorites: list[FavoriteManga]) -> None:
         list_view: ListView = self.query_one("#favorites-panel-list", ListView)
         list_view.clear()
 
@@ -94,9 +96,9 @@ class FavoritesPanel(Widget):
             return
 
         for fav in favorites:
-            list_view.append(ListItem(Label(fav["manga_title"])))
+            list_view.append(ListItem(Label(f"\\[{fav['source']}] {fav['title']}")))
 
-    def watch_favorites(self, new_favorites: list[dict[str, str]]) -> None:
+    def watch_favorites(self, new_favorites: list[FavoriteManga]) -> None:
         self._build_favorites(new_favorites)
 
     def action_delete(self) -> None:

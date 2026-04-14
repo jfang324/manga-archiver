@@ -3,6 +3,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
+from src.manga_archiver.constants.exit_codes import (
+    EXIT_AUTH_LOGIN_FAILED,
+    EXIT_AUTH_LOGOUT_FAILED,
+    EXIT_SUCCESS,
+)
 from src.manga_archiver.utils.auth.google_drive.oauth import (
     handle_auth_login,
     handle_auth_logout,
@@ -57,7 +62,7 @@ class TestHandleAuthLogin:
         ) as mock_save_token:
             result = handle_auth_login()
 
-        assert result == 0
+        assert result == EXIT_SUCCESS
         assert "Authentication successful!" in capsys.readouterr().out
         mock_save_token.assert_called_once()
         saved_token = mock_save_token.call_args[0][0]
@@ -70,7 +75,7 @@ class TestHandleAuthLogin:
 
         result = handle_auth_login()
 
-        assert result == 1
+        assert result == EXIT_AUTH_LOGIN_FAILED
         assert "Network error" in capsys.readouterr().out
 
     def test_login_returns_1_on_http_error(self, mock_auth_pipeline, capsys):
@@ -79,7 +84,7 @@ class TestHandleAuthLogin:
 
         result = handle_auth_login()
 
-        assert result == 1
+        assert result == EXIT_AUTH_LOGIN_FAILED
         assert "Server error" in capsys.readouterr().out
 
 
@@ -99,7 +104,7 @@ class TestHandleAuthLogout:
 
             result = handle_auth_logout()
 
-        assert result == 0
+        assert result == EXIT_SUCCESS
         mock_delete_token.assert_called_once()
 
     def test_logout_returns_1_on_network_error(self, capsys):
@@ -112,5 +117,5 @@ class TestHandleAuthLogout:
 
             result = handle_auth_logout()
 
-        assert result == 1
+        assert result == EXIT_AUTH_LOGOUT_FAILED
         assert "Network error" in capsys.readouterr().out

@@ -97,6 +97,6 @@ class SearchScreen(Screen):
             return
 
         title, manga_id, source = self.results[index]
-        favorited_manga: FavoriteManga = {"manga_id": manga_id, "manga_title": title}
+        favorited_manga = FavoriteManga(id=manga_id, title=title, source=source)
 
         self.post_message(self.FavoriteAdded(favorited_manga))

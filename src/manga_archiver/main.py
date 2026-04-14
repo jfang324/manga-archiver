@@ -1,10 +1,19 @@
 import asyncio
 import logging
 import sys
+from argparse import Namespace
 
 from .app import MangaArchiverApp
 from .backlog_sync import BacklogSync
 from .cli import parse_args
+from .constants import (
+    EXIT_AUTH_ERROR,
+    EXIT_INIT_ERROR,
+    EXIT_MIGRATION_ERROR,
+    EXIT_SUCCESS,
+    EXIT_VALIDATION_ERROR,
+)
+from .db.schema_manager import SchemaManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .pipeline_manager import PipelineConfig
 from .repositories import FavoriteRepository
@@ -12,6 +21,57 @@ from .utils import load_settings, setup_logging
 from .utils.auth.google_drive import handle_auth_login, handle_auth_logout, load_token
 
 logger = logging.getLogger(__name__)
+
+
+def _handle_auth(args: Namespace) -> tuple[bool, int]:
+    """Handle authentication commands.
+
+    Returns:
+        tuple[bool, int]: Tuple of (handled, exit_code). If handled is False, caller should continue.
+    """
+    if not hasattr(args, "command") or args.command != "auth":
+        return False, EXIT_SUCCESS
+
+    if not hasattr(args, "auth_command") or args.auth_command is None:
+        print("Error: Please specify 'login' or 'logout'", file=sys.stderr)
+        print("Usage: manga-archiver auth login", file=sys.stderr)
+        return True, EXIT_AUTH_ERROR
+
+    if args.auth_command == "login":
+        return True, handle_auth_login()
+
+    if args.auth_command == "logout":
+        return True, handle_auth_logout()
+
+    logger.error("Please specify 'auth login' or 'auth logout'")
+    return True, EXIT_AUTH_ERROR
+
+
+def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[bool, int]:
+    """Handle migration commands.
+
+    Returns:
+        tuple[bool, int]: Tuple of (handled, exit_code). If handled is False, caller should continue.
+    """
+    if not hasattr(args, "command") or args.command != "migrate":
+        return False, EXIT_SUCCESS
+
+    if not hasattr(args, "migrate_system") or args.migrate_system is None:
+        print("Error: Please specify 'database' or 'google-drive'", file=sys.stderr)
+        print("Usage: manga-archiver migrate database", file=sys.stderr)
+        return True, EXIT_MIGRATION_ERROR
+
+    print("Running database migrations...")
+
+    try:
+        system = "database" if args.migrate_system == "database" else "google_drive"
+        result = schema_manager.run_migrations(system)
+        print(f"  {result}")
+
+        return True, EXIT_SUCCESS
+    except Exception as e:
+        print(f"Migration failed: {e}", file=sys.stderr)
+        return True, EXIT_MIGRATION_ERROR
 
 
 def main() -> None:
@@ -22,26 +82,30 @@ def main() -> None:
     """
     setup_logging()
     args = parse_args()
+    schema_manager = SchemaManager()
 
-    if hasattr(args, "command") and args.command == "auth":
-        if args.auth_command == "login":
-            sys.exit(handle_auth_login())
+    handled, exit_code = _handle_auth(args)
+    if handled:
+        sys.exit(exit_code)
 
-        elif args.auth_command == "logout":
-            sys.exit(handle_auth_logout())
+    handled, exit_code = _handle_migrations(args, schema_manager)
+    if handled:
+        sys.exit(exit_code)
 
-        else:
-            logger.error("Please specify 'auth login' or 'auth logout'")
-            sys.exit(1)
+    google_drive_enabled = args.archive
+    is_valid, error_msg = schema_manager.check_versions(google_drive_enabled)
+    if not is_valid:
+        print(error_msg)
+        sys.exit(EXIT_VALIDATION_ERROR)
 
     google_drive_client = None
 
-    if args.archive:
+    if google_drive_enabled:
         token = load_token()
 
         if token is None:
             print("Archive mode requires authentication. Run: manga-archiver auth login")
-            sys.exit(1)
+            sys.exit(EXIT_AUTH_ERROR)
 
         try:
             google_drive_client = GoogleDriveClient(token)
@@ -51,7 +115,7 @@ def main() -> None:
             print(
                 "Failed to initialize Google Drive. Run: manga-archiver auth logout && auth login"
             )
-            sys.exit(1)
+            sys.exit(EXIT_INIT_ERROR)
 
     try:
         pipeline_config = PipelineConfig(
@@ -70,7 +134,7 @@ def main() -> None:
         if args.backlog:
             if not google_drive_client:
                 print("--backlog requires a Google Drive client, try running with --archive")
-                sys.exit(1)
+                sys.exit(EXIT_INIT_ERROR)
 
             backlog_sync = BacklogSync(
                 favorite_repository=favorite_repository,
@@ -82,7 +146,7 @@ def main() -> None:
 
     except Exception as e:
         logger.error("Failed to initialize: %s", e)
-        sys.exit(1)
+        sys.exit(EXIT_INIT_ERROR)
 
     app = MangaArchiverApp(
         pipeline_config=pipeline_config,

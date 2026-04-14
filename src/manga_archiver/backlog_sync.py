@@ -20,6 +20,7 @@ class Manga:
     """Represents a manga with its chapters from API and Google Drive."""
 
     manga_title: str
+    source: ContentSource
     api_chapters: list[Chapter]
     google_drive_chapters: list[float]
 
@@ -75,13 +76,14 @@ class BacklogSync:
                 return []
 
             for favorite in favorites:
-                manga_id = favorite["manga_id"]
-                manga_title = favorite["manga_title"]
+                manga_id = favorite["id"]
+                manga_title = favorite["title"]
+                source = favorite["source"]
 
                 print(f"Fetching chapters for '{manga_title}'...")
 
                 api_chapters = await self._fetch_api_chapters(
-                    provider_manager, manga_id, manga_title
+                    provider_manager, source, manga_id, manga_title
                 )
                 if api_chapters is None:
                     continue
@@ -96,6 +98,7 @@ class BacklogSync:
                 self._mangas.append(
                     Manga(
                         manga_title=manga_title,
+                        source=source,
                         api_chapters=api_chapters,
                         google_drive_chapters=google_drive_chapters,
                     )
@@ -105,14 +108,14 @@ class BacklogSync:
 
         return self._create_jobs()
 
-    def _calculate_diff(self) -> list[tuple[str, Chapter]]:
+    def _calculate_diff(self) -> list[tuple[str, ContentSource, Chapter]]:
         """Calculate missing chapters by comparing API chapters vs Google Drive.
 
         Returns:
-            list[tuple[str, Chapter]]: List of tuples containing (manga_title, chapter)
-                for chapters missing in Google Drive
+            list[tuple[str, ContentSource, Chapter]]: List of tuples containing
+                (manga_title, source, chapter) for chapters missing in Google Drive
         """
-        missing_chapters: list[tuple[str, Chapter]] = []
+        missing_chapters: list[tuple[str, ContentSource, Chapter]] = []
 
         for manga in self._mangas:
             google_drive_set = set(manga.google_drive_chapters)
@@ -124,7 +127,7 @@ class BacklogSync:
                     continue
 
                 if chapter_number not in google_drive_set:
-                    missing_chapters.append((manga.manga_title, chapter))
+                    missing_chapters.append((manga.manga_title, manga.source, chapter))
 
         return missing_chapters
 
@@ -137,7 +140,7 @@ class BacklogSync:
         missing_chapters = self._calculate_diff()
 
         jobs: list[FetchingResourcesJob] = []
-        for manga_title, chapter in missing_chapters:
+        for manga_title, source, chapter in missing_chapters:
             chapter_number = chapter.chapter_num
             chapter_title = chapter.title or "untitled"
 
@@ -150,7 +153,7 @@ class BacklogSync:
                     chapter_title=chapter_title,
                     output_directory=self._output_directory,
                     output_format=OutputFormat(self._output_format),
-                    source=ContentSource.MANGADEX,
+                    source=source,
                 )
             )
 
@@ -159,6 +162,7 @@ class BacklogSync:
     async def _fetch_api_chapters(
         self,
         provider_manager: ContentProviderManager,
+        source: ContentSource,
         manga_id: str,
         manga_title: str,
     ) -> list[Chapter] | None:
@@ -166,6 +170,7 @@ class BacklogSync:
 
         Args:
             provider_manager: Content provider manager
+            source: The content source
             manga_id: The manga ID
             manga_title: The manga title (for logging)
 
@@ -173,7 +178,7 @@ class BacklogSync:
             list[Chapter] | None: List of chapters, or None if fetch failed
         """
         try:
-            return await provider_manager.get_chapters(ContentSource.MANGADEX, manga_id)
+            return await provider_manager.get_chapters(source, manga_id)
         except Exception as e:
             logger.error("Failed to get chapters for %s: %s", manga_title, e)
             print(f"ERROR: Failed to get chapters for '{manga_title}'")
