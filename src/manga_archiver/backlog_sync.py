@@ -15,9 +15,9 @@ from .workers.jobs import FetchingResourcesJob
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Manga:
-    """Represents a manga with its chapters from API and Google Drive."""
+    """Immutable data container representing a manga with chapters."""
 
     manga_title: str
     source: ContentSource

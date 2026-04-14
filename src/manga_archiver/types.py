@@ -11,18 +11,18 @@ class ContentSource(Enum):
         return self.value
 
 
-@dataclass
+@dataclass(frozen=True)
 class Manga:
-    """Data container representing a source-agnostic manga."""
+    """Immutable data container representing a source-agnostic manga."""
 
     id: str
     title: str
     source: ContentSource
 
 
-@dataclass
+@dataclass(frozen=True)
 class Chapter:
-    """Data container representing a source-agnostic chapter."""
+    """Immutable data container representing a source-agnostic chapter."""
 
     id: str
     title: str
@@ -30,9 +30,9 @@ class Chapter:
     source: ContentSource
 
 
-@dataclass
+@dataclass(frozen=True)
 class DownloadResource:
-    """Data container representing a source-agnostic download resource."""
+    """Immutable data container representing a source-agnostic download resource."""
 
     urls: list[str]
     source: ContentSource

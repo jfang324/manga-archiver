@@ -17,9 +17,9 @@ from .jobs import Job, NotificationJob
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class WorkerConfig:
-    """A data container for the configuration of a worker.
+    """Immutable data container for the configuration of a worker.
 
     Attributes:
         max_retries (int): The maximum number of retries for failed downloads

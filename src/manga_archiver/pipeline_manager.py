@@ -31,9 +31,9 @@ from .workers import (
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class PipelineConfig:
-    """A data container for the configuration of a pipeline.
+    """Immutable data container for the configuration of a pipeline.
 
     Attributes:
         num_resolve_workers (int): The number of resolve workers to use
