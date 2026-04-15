@@ -28,6 +28,18 @@ from .types import (
 logger = logging.getLogger(__name__)
 
 
+def _escape_query_string(value: str) -> str:
+    """Escape special characters for Google Drive API query strings.
+
+    Args:
+        value: The string to escape
+
+    Returns:
+        str: The escaped string safe for use in queries
+    """
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
 @dataclass(frozen=True)
 class _MangaFolderKey:
     source: str
@@ -103,18 +115,6 @@ class GoogleDriveClient:
             cache_key = _MangaFolderKey(source, folder["name"])
             self._folder_cache[cache_key] = folder["id"]
             cached_count += 1
-
-        # Log files without metadata for debugging
-        for folder in sub_folders:
-            files = self.get_files_in_folder(folder["id"])
-            for f in files:
-                file_props = f.get("appProperties")
-                if not file_props or not file_props.get("source"):
-                    logger.debug(
-                        "File '%s' in folder '%s' has no source metadata",
-                        f["name"],
-                        folder["name"],
-                    )
 
         print(f"Cached {cached_count} manga folders")
 
@@ -287,9 +287,9 @@ class GoogleDriveClient:
             str | None: Folder ID if found, None otherwise
         """
         query = (
-            f"name='{name}' and '{parent_id}' in parents and "
+            f"name='{_escape_query_string(name)}' and '{parent_id}' in parents and "
             f"mimeType='application/vnd.google-apps.folder' and trashed=false and "
-            f"appProperties has {{ key='source' and value='{source}' }}"
+            f"appProperties has {{ key='source' and value='{_escape_query_string(source)}' }}"
         )
 
         results = (

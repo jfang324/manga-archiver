@@ -42,7 +42,7 @@ def _parse_filename(filename: str) -> tuple[str, str]:
     """
     name = Path(filename).stem
 
-    num_match = re.search(r"\[(\d+)\]", name)
+    num_match = re.search(r"\[(\d+(?:\.\d+)?)\]", name)
     chapter_num = num_match.group(1) if num_match else DEFAULT_CHAPTER_NUM
 
     title_match = re.search(r"-\s*(.+)", name)
@@ -107,6 +107,7 @@ def _migrate_folder(
             migrated_folders += 1
         except Exception as e:
             logger.error("Failed to migrate folder %s: %s", folder_name, e)
+            raise
 
     files = client.get_files_in_folder(folder_id)
     files_needing_migration = [f for f in files if not (f.get("appProperties") or {}).get("source")]
@@ -133,6 +134,7 @@ def _migrate_folder(
 
             except Exception as e:
                 logger.error("Failed to migrate file %s: %s", file_name, e)
+                raise
 
     if print_progress and files:
         print(f"  Migrated {folder_name} ({len(files_needing_migration)} files)")
@@ -184,7 +186,7 @@ def migrate(current: str, cursor: Cursor) -> str:
 
     token = load_token()
     if token is None:
-        logger.warning("No Google Drive token found, skipping file migration")
+        logger.error("No Google Drive token found, skipping file migration")
         cursor.execute(
             "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
             (MIGRATION_VERSION, "google_drive"),

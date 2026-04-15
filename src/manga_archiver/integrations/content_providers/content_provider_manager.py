@@ -133,11 +133,16 @@ class ContentProviderManager:
             list[Chapter] from the specified provider
 
         Raises:
+            ValueError: If source is not supported
             ApiError: On API errors
             NotFoundError: If manga not found
             RateLimitError: On rate limit
         """
-        provider = self._providers[source]
+        provider = self._providers.get(source)
+
+        if provider is None:
+            raise ValueError(f"Unsupported content source: {source}")
+
         try:
             return await provider.get_chapters(manga_id)
         except Exception as e:

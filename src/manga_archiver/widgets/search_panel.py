@@ -54,7 +54,7 @@ class SearchPanel(Widget):
         debounce_duration (int): The duration in milliseconds to debounce the search query
 
     Reactive Attributes:
-        results (list[tuple[str, str]]): A list of results for the current query. Each result is a tuple of (title, value)
+        results (list[tuple[str, str, ContentSource]]): A list of results for the current query. Each result is a tuple of (title, value, source)
     """
 
     DEFAULT_CSS = """

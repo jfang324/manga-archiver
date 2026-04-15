@@ -92,7 +92,8 @@ manga-archiver/
 ## Code Style Guidelines
 
 ### Imports
-- Use absolute imports from `src.mangadex_downloader` package
+- Source files: use relative imports (e.g., `from .mangadex.client import ...`)
+- Test files: use absolute imports (e.g., `from src.manga_archiver...`)
 - Service modules use `from module import *` pattern (as in main.py)
 - Order: standard library → third-party → local imports
 - All imports on separate lines, never grouped
