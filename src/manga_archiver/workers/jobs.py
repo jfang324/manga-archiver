@@ -79,9 +79,11 @@ class DownloadingJob(Job):
 
     Attributes:
         urls (list[str]): List of image URLs to download
+        source (ContentSource): The content source (provider)
     """
 
     urls: list[str]
+    source: ContentSource
 
 
 @dataclass
@@ -90,9 +92,11 @@ class MergingJob(Job):
 
     Attributes:
         image_data (list[bytes]): List of image bytes to merge
+        source (ContentSource): The content source (provider)
     """
 
     image_data: list[bytes]
+    source: ContentSource
 
 
 @dataclass
@@ -102,7 +106,9 @@ class UploadJob(Job):
     Attributes:
         complete_file_data (bytes): The file bytes to upload
         full_name (str): The full name of the file to upload
+        source (ContentSource): The content source (provider)
     """
 
     complete_file_data: bytes
     full_name: str
+    source: ContentSource

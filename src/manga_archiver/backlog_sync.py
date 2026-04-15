@@ -88,7 +88,7 @@ class BacklogSync:
                 if api_chapters is None:
                     continue
 
-                google_drive_chapters = self._fetch_google_drive_chapters(manga_title)
+                google_drive_chapters = self._fetch_google_drive_chapters(manga_title, source.value)
 
                 print(
                     f"  {manga_title}: {len(api_chapters)} from API, "
@@ -184,16 +184,17 @@ class BacklogSync:
             print(f"ERROR: Failed to get chapters for '{manga_title}'")
             return None
 
-    def _fetch_google_drive_chapters(self, manga_title: str) -> list[float]:
+    def _fetch_google_drive_chapters(self, manga_title: str, source: str) -> list[float]:
         """Fetch chapter numbers from Google Drive folder.
 
         Args:
             manga_title: The manga title to look up in folder cache
+            source: The content source (e.g., "mangadex")
 
         Returns:
             list[float]: List of chapter numbers found in Google Drive
         """
-        folder_id = self._google_drive_client.get_manga_folder_id(manga_title)
+        folder_id = self._google_drive_client.get_manga_folder_id(manga_title, source)
         if folder_id:
             files = self._google_drive_client.get_files_in_folder(folder_id)
             return self._parse_chapter_numbers(files)

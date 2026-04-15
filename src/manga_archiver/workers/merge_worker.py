@@ -102,4 +102,5 @@ class MergeWorker(Worker):
             output_format=output_format,
             complete_file_data=file_data,
             full_name=full_name,
+            source=job.source,
         )

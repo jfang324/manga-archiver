@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.manga_archiver.enums import OutputFormat
+from src.manga_archiver.types import ContentSource
 from src.manga_archiver.workers.jobs import MergingJob, UploadJob
 from src.manga_archiver.workers.merge_worker import MergeWorker
 
@@ -23,6 +24,7 @@ class TestMergeWorkerDoWork:
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1", b"image2"],
+            source=ContentSource.MANGADEX,
         )
 
         mock_config = MagicMock()
@@ -58,6 +60,7 @@ class TestMergeWorkerDoWork:
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1", b"image2"],
+            source=ContentSource.MANGADEX,
         )
 
         worker = MergeWorker(
@@ -94,6 +97,7 @@ class TestMergeWorkerDoWork:
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1", b"image2"],
+            source=ContentSource.MANGADEX,
         )
 
         worker = MergeWorker(
@@ -122,6 +126,7 @@ class TestMergeWorkerDoWork:
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1"],
+            source=ContentSource.MANGADEX,
         )
 
         worker = MergeWorker(
@@ -168,6 +173,7 @@ class TestMergeWorkerDoWork:
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1"],
+            source=ContentSource.MANGADEX,
         )
 
         for key, value in invalid_fields.items():

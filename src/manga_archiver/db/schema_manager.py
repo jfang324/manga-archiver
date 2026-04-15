@@ -26,16 +26,15 @@ def _version_compare(a: str, b: str | None) -> int:
     key_a = _version_key(a)
     key_b = _version_key(b)
 
+    max_len = max(len(key_a), len(key_b))
+    key_a = key_a + (0,) * (max_len - len(key_a))
+    key_b = key_b + (0,) * (max_len - len(key_b))
+
     for a_part, b_part in zip(key_a, key_b, strict=False):
         if a_part > b_part:
             return 1
         if a_part < b_part:
             return -1
-
-    if len(key_a) > len(key_b):
-        return 1
-    if len(key_a) < len(key_b):
-        return -1
 
     return 0
 

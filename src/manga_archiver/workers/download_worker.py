@@ -90,4 +90,5 @@ class DownloadWorker(Worker):
             output_directory=output_directory,
             output_format=output_format,
             image_data=image_data,
+            source=job.source,
         )

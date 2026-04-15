@@ -98,4 +98,5 @@ class ResolveWorker(Worker):
             output_directory=output_directory,
             output_format=output_format,
             urls=resources.urls,
+            source=job.source,
         )

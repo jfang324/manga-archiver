@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.manga_archiver.types import ContentSource
 from src.manga_archiver.utils.downloader import DownloadClient
 from src.manga_archiver.workers.download_worker import DownloadWorker
 from src.manga_archiver.workers.jobs import DownloadingJob, MergingJob
@@ -23,6 +24,7 @@ class TestDownloadWorkerDoWork:
             output_directory=MagicMock(),
             output_format=MagicMock(),
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
+            source=ContentSource.MANGADEX,
         )
 
         worker = DownloadWorker(
@@ -56,6 +58,7 @@ class TestDownloadWorkerDoWork:
             output_directory=MagicMock(),
             output_format=MagicMock(),
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
+            source=ContentSource.MANGADEX,
         )
 
         worker = DownloadWorker(
@@ -89,6 +92,7 @@ class TestDownloadWorkerDoWork:
             output_directory=MagicMock(),
             output_format=MagicMock(),
             urls=["http://example.com/1.jpg"],
+            source=ContentSource.MANGADEX,
         )
 
         worker = DownloadWorker(
@@ -119,6 +123,7 @@ class TestDownloadWorkerDoWork:
             output_directory=MagicMock(),
             output_format=MagicMock(),
             urls=[],
+            source=ContentSource.MANGADEX,
         )
 
         worker = DownloadWorker(
@@ -147,6 +152,7 @@ class TestDownloadWorkerDoWork:
             output_directory=MagicMock(),
             output_format=MagicMock(),
             urls=["http://example.com/1.jpg"],
+            source=ContentSource.MANGADEX,
         )
 
         worker = DownloadWorker(
