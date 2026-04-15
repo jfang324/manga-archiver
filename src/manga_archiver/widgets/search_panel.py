@@ -147,6 +147,21 @@ class SearchPanel(Widget):
             self.value = value
             self.source = source
 
+    class Paginate(Message):
+        """Message to indicate that the search results should be paginated."""
+
+        def __init__(self, page: int, query: str, **kwargs) -> None:
+            """Initialize the Paginate message.
+
+            Args:
+                page: The page number to fetch
+                query: The current search query
+            """
+            super().__init__(**kwargs)
+
+            self.page = page
+            self.query = query
+
     class Favorite(Message):
         """Message to indicate that a search result should be favorited.
 
@@ -172,7 +187,8 @@ class SearchPanel(Widget):
         super().__init__(**kwargs)
 
         self._debounce_duration = debounce_duration
-        self._debounce_task: Task | None = None  # Task to debounce the search query
+        self._debounce_task: Task | None = None
+        self._current_page: int = 1
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -199,6 +215,8 @@ class SearchPanel(Widget):
         """Delay posting the query message to the parent."""
         await asyncio.sleep(self._debounce_duration / 1000)
 
+        # when query changes, the page number is reset to 1
+        self._current_page = 1
         self.post_message(self.Search(search_query))
 
     def _build_results(self, results: list[tuple[str, str, ContentSource]]) -> None:
@@ -229,3 +247,19 @@ class SearchPanel(Widget):
         index = list_view.index
         if index is not None and index >= 0:
             self.post_message(self.Favorite(index))
+
+    @on(ListView.Highlighted, "#search-results")
+    def _paginate(self) -> None:
+        """Paginate the search results."""
+        list_view = self.query_one("#search-results", ListView)
+        index = list_view.index
+
+        if index is not None and index == len(self.results) - 1:
+            self._current_page += 1
+            query = self.query_one("#search-input", Input).value
+            self.post_message(self.Paginate(self._current_page, query))
+
+    def select_index(self, index: int) -> None:
+        """Select a result by index."""
+        list_view = self.query_one("#search-results", ListView)
+        list_view.index = index

@@ -26,6 +26,7 @@ class SearchPanelApp(App):
         self.search_records: list[SearchPanel.Search] = []
         self.selected_records: list[SearchPanel.Selected] = []
         self.favorite_records: list[SearchPanel.Favorite] = []
+        self.paginate_records: list[SearchPanel.Paginate] = []
 
     def compose(self) -> ComposeResult:
         # smaller debounce duration to avoid sync issues
@@ -44,6 +45,10 @@ class SearchPanelApp(App):
     @on(SearchPanel.Favorite)
     def _record_favorite_message(self, message: SearchPanel.Favorite) -> None:
         self.favorite_records.append(message)
+
+    @on(SearchPanel.Paginate)
+    def _record_paginate_message(self, message: SearchPanel.Paginate) -> None:
+        self.paginate_records.append(message)
 
 
 class TestSearchPanel:
@@ -128,3 +133,37 @@ class TestSearchPanel:
 
             assert len(app.favorite_records) == 1
             assert app.favorite_records[0].index == 0
+
+    async def test_paginate_sends_message(self) -> None:
+        app = SearchPanelApp()
+
+        async with app.run_test() as pilot:
+            panel = app.query_one(SearchPanel)
+            assert panel._current_page == 1
+
+            search_input = panel.query_one("#search-input", Input)
+            search_input.value = "test"
+            list_view = panel.query_one("#search-results", ListView)
+            list_view.index = len(list_view.children) - 1
+            await pilot.press("down")
+
+            paginate_records = app.paginate_records
+            assert len(paginate_records) == 1
+
+            message = paginate_records.pop()
+            assert message.page == 2
+            assert message.query == "test"
+
+    async def test_new_search_resets_page_to_one(self) -> None:
+        app = SearchPanelApp()
+
+        async with app.run_test():
+            panel = app.query_one(SearchPanel)
+
+            panel._current_page = 2
+
+            input_field = app.query_one("#search-input", Input)
+            input_field.value = "new query"
+            await asyncio.sleep(0.05)
+
+            assert panel._current_page == 1

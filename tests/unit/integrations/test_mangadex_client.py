@@ -107,7 +107,7 @@ class TestMangaDexApiClientSearchManga:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = MangaDexApiClient(mock_session)
-        result = await client.search_manga("test")
+        result = await client.search_manga("test", 1, 10)
 
         assert result == expected_result
 
@@ -128,7 +128,7 @@ class TestMangaDexApiClientSearchManga:
         client = MangaDexApiClient(mock_session)
 
         with pytest.raises(expected_error):
-            await client.search_manga("test")
+            await client.search_manga("test", 1, 10)
 
 
 class TestMangaDexApiClientGetChapters:

@@ -88,12 +88,14 @@ class MangaDexApiClient(Provider):
 
         return default
 
-    async def search_manga(self, query: str) -> list[Manga]:
+    async def search_manga(self, query: str, page: int, page_size: int) -> list[Manga]:
         """
         Search for manga matching the query.
 
         Args:
             query: The search query string
+            page: The page number to fetch
+            page_size: Number of results per page
 
         Returns:
             list[Manga]: List of matching manga objects
@@ -104,11 +106,11 @@ class MangaDexApiClient(Provider):
             ApiError: If the API returns any other error
         """
         url: str = f"{MANGADEX_ROOT_URL}?title={query}"
-        params: dict = {"limit": 100}
+        offset: int = (page - 1) * page_size
+        params: dict = {"limit": page_size, "offset": offset}
 
         try:
             response: dict = await self._request(url, params)
-
             return self._process_manga_data(response)
         except (NotFoundError, RateLimitError, ApiError) as e:
             logger.error("Error searching manga: %s", e)

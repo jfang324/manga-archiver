@@ -23,11 +23,13 @@ class Provider(ABC):
         return self._source
 
     @abstractmethod
-    async def search_manga(self, query: str) -> list[Manga]:
+    async def search_manga(self, query: str, page: int, page_size: int) -> list[Manga]:
         """Search for manga matching the query.
 
         Args:
             query: The search query string
+            page: The page number to fetch
+            page_size: Number of results per page
 
         Returns:
             list[Manga]: List of matching manga objects

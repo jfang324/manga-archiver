@@ -50,12 +50,16 @@ class ContentProviderManager:
             ContentSource.MANGADEX: MangaDexApiClient(session),
         }
 
-    async def search_manga(self, query: str, timeout_per_provider: float = 10.0) -> SearchResults:
+    async def search_manga(
+        self, query: str, page: int, page_size: int, timeout_per_provider: float = 10
+    ) -> SearchResults:
         """Search all providers simultaneously and return aggregated results.
 
         Args:
             query: Search query string
-            timeout_per_provider: Maximum seconds to wait per provider (default: 10.0)
+            page: The page number to fetch
+            page_size: Number of results per page
+            timeout_per_provider: Maximum seconds to wait per provider (default: 10)
 
         Returns:
             Tuple of (successful results, error list). Results from successful
@@ -63,7 +67,7 @@ class ContentProviderManager:
             the error list for consumer visibility.
         """
         tasks = [
-            self._safe_search(source, client, query, timeout=timeout_per_provider)
+            self._safe_search(source, client, query, page, page_size, timeout=timeout_per_provider)
             for source, client in self._providers.items()
         ]
 
@@ -92,6 +96,8 @@ class ContentProviderManager:
         source: ContentSource,
         client: Provider,
         query: str,
+        page: int,
+        page_size: int,
         timeout: float,
     ) -> ProviderSearchResult:
         """Execute search with timeout and error handling.
@@ -100,13 +106,17 @@ class ContentProviderManager:
             source: Provider source identifier
             client: Provider instance to search
             query: Search query string
+            page: Page number to fetch
+            page_size: Number of results per page
             timeout: Timeout in seconds
 
         Returns:
             ProviderSearchResult with results or error information
         """
         try:
-            results = await asyncio.wait_for(client.search_manga(query), timeout=timeout)
+            results = await asyncio.wait_for(
+                client.search_manga(query, page, page_size), timeout=timeout
+            )
             return ProviderSearchResult(provider=source, results=results)
         except asyncio.TimeoutError:
             logger.error(
