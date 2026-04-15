@@ -24,6 +24,10 @@ class SearchResult(NamedTuple):
     source: ContentSource
 
 
+# The page size is 20 because this is the max value allowed by AllManga
+PAGE_SIZE = 20
+
+
 class SearchScreen(Screen):
     """
     The search screen of the application.
@@ -66,7 +70,7 @@ class SearchScreen(Screen):
         query: str = event.query
 
         try:
-            search_results, errors = await self._provider_manager.search_manga(query)
+            search_results, errors = await self._provider_manager.search_manga(query, 1, PAGE_SIZE)
 
         except RateLimitError:
             self.notify("Too many requests. Please wait a moment.", severity="error")
@@ -100,3 +104,39 @@ class SearchScreen(Screen):
         favorited_manga = FavoriteManga(id=manga_id, title=title, source=source)
 
         self.post_message(self.FavoriteAdded(favorited_manga))
+
+    @on(SearchPanel.Paginate)
+    async def _retrieve_next_page(self, event: SearchPanel.Paginate) -> None:
+        """Retrieve the next page of search results."""
+        page = event.page
+
+        try:
+            search_results, errors = await self._provider_manager.search_manga(
+                event.query, page, PAGE_SIZE
+            )
+
+        except RateLimitError:
+            self.notify("Too many requests. Please wait a moment.", severity="error")
+            return
+        except (NotFoundError, ApiError):
+            self.notify("Error searching for manga", severity="error")
+            return
+
+        if errors:
+            self.notify(
+                f"{len(errors)} provider(s) failed.",
+                severity="warning",
+            )
+
+        new_page = [SearchResult(item.title, item.id, item.source) for item in search_results]
+
+        if not new_page:
+            return
+
+        old_results = self.results
+        new_results = old_results + new_page
+        self.results = new_results
+
+        # ListView rebuilds on results change, resetting index to 0.
+        # Restore user's position to where they were before the rebuild.
+        self.query_one(SearchPanel).select_index(len(old_results) - 1)
