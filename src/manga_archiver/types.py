@@ -1,23 +1,38 @@
-from typing import TypedDict
+from dataclasses import dataclass
+from enum import Enum
 
 
-class ProcessedManga(TypedDict):
-    """Dictionary containing metadata for a manga."""
+class ContentSource(Enum):
+    """Provider source identifier for all content."""
+
+    MANGADEX = "mangadex"
+
+    def __str__(self) -> str:
+        return self.value
+
+
+@dataclass(frozen=True)
+class Manga:
+    """Immutable data container representing a source-agnostic manga."""
 
     id: str
     title: str
+    source: ContentSource
 
 
-class ProcessedChapter(TypedDict):
-    """Dictionary containing metadata for a chapter."""
+@dataclass(frozen=True)
+class Chapter:
+    """Immutable data container representing a source-agnostic chapter."""
 
     id: str
     title: str
-    chapter: str
+    chapter_num: float
+    source: ContentSource
 
 
-class ProcessedDownloadResource(TypedDict):
-    """Dictionary containing metadata for a download resource."""
+@dataclass(frozen=True)
+class DownloadResource:
+    """Immutable data container representing a source-agnostic download resource."""
 
-    hash: str
     urls: list[str]
+    source: ContentSource

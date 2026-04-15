@@ -8,11 +8,9 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Footer
 
-from ..integrations.content_providers.mangadex.client import (
-    MangaDexApiClient,
-)
+from ..integrations.content_providers import ContentProviderManager
 from ..integrations.exceptions import ApiError, NotFoundError, RateLimitError
-from ..types import ProcessedChapter, ProcessedManga
+from ..types import Chapter, ContentSource
 from ..widgets import SelectionPanel
 
 
@@ -21,7 +19,7 @@ class ChapterResult(NamedTuple):
 
     title: str
     id: str
-    chapter: str
+    chapter: float
 
 
 class PartialJob(TypedDict):
@@ -29,8 +27,9 @@ class PartialJob(TypedDict):
 
     manga_title: str
     chapter_id: str
-    chapter_number: str
+    chapter_number: float
     chapter_title: str
+    source: ContentSource
 
 
 class SelectionScreen(Screen):
@@ -54,26 +53,35 @@ class SelectionScreen(Screen):
 
     results: reactive[list[ChapterResult]] = reactive([])
 
-    def __init__(self, manga: ProcessedManga, mangadex_client: MangaDexApiClient, **kwargs) -> None:
+    def __init__(
+        self,
+        manga_id: str,
+        manga_title: str,
+        provider_manager: ContentProviderManager,
+        source: ContentSource = ContentSource.MANGADEX,
+        **kwargs,
+    ) -> None:
         """Initialize the SelectionScreen.
 
         Args:
-            manga (ProcessedManga): The manga to display chapters for
-            mangadex_client (MangaDexApiClient): The API client for MangaDex
+            manga_id: The ID of the manga
+            manga_title: The title of the manga
+            provider_manager: The content provider manager
+            source: The content source (defaults to MANGADEX)
         """
         super().__init__(**kwargs)
 
-        self._mangadex_client = mangadex_client
-
-        self._manga_id = manga["id"]
-        self._manga_title = manga["title"]
+        self._provider_manager = provider_manager
+        self._source = source
+        self._manga_id = manga_id
+        self._manga_title = manga_title
 
     @work
     async def on_mount(self) -> None:
         """On mount, fetch the chapters for the selected manga."""
         try:
-            chapters: list[ProcessedChapter] = await self._mangadex_client.get_chapters(
-                self._manga_id
+            chapters: list[Chapter] = await self._provider_manager.get_chapters(
+                self._source, self._manga_id
             )
         except RateLimitError:
             self.notify("Too many requests. Please wait a moment.", severity="error")
@@ -84,9 +92,9 @@ class SelectionScreen(Screen):
 
         new_results: list[ChapterResult] = [
             ChapterResult(
-                chapter.get("title") or "untitled",
-                chapter["id"],
-                chapter["chapter"],
+                chapter.title or "untitled",
+                chapter.id,
+                chapter.chapter_num,
             )
             for chapter in chapters
         ]
@@ -95,16 +103,19 @@ class SelectionScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield SelectionPanel(self._manga_title).data_bind(options=SelectionScreen.results)
+            yield SelectionPanel(self._manga_title, self._source).data_bind(
+                options=SelectionScreen.results
+            )
             yield Footer()
 
-    def _queue_downloads(self, selected_chapters: list[tuple[str, str, str]]) -> None:
+    def _queue_downloads(self, selected_chapters: list[tuple[str, str, float]]) -> None:
         partial_jobs: list[PartialJob] = [
             PartialJob(
                 manga_title=self._manga_title,
                 chapter_id=chapter_id,
                 chapter_number=chapter_number,
                 chapter_title=chapter_title,
+                source=self._source,
             )
             for chapter_title, chapter_id, chapter_number in selected_chapters
         ]
@@ -114,7 +125,7 @@ class SelectionScreen(Screen):
 
     @on(SelectionPanel.Selected)
     def _navigate_to_menu_screen(self, event: SelectionPanel.Selected) -> None:
-        selected_chapters: list[tuple[str, str, str]] = event.selected_pairs
+        selected_chapters: list[tuple[str, str, float]] = event.selected_pairs
 
         self._queue_downloads(selected_chapters)
 

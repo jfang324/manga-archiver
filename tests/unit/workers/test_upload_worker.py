@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.manga_archiver.enums import JobStatus, OutputFormat
+from src.manga_archiver.types import ContentSource
 from src.manga_archiver.workers.jobs import UploadJob
 from src.manga_archiver.workers.upload_worker import UploadWorker
 
@@ -22,12 +23,13 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
             complete_file_data=b"fake pdf data",
             full_name="Test Manga [1] - Chapter 1.pdf",
+            source=ContentSource.MANGADEX,
         )
 
         worker = UploadWorker(
@@ -41,13 +43,19 @@ class TestUploadWorkerDoWork:
 
         result = await worker._do_work(job)
 
-        mock_drive_client.get_or_create_manga_folder.assert_called_once_with("Test Manga")
-        mock_drive_client.upload_file.assert_called_once_with(
-            file_data=b"fake pdf data",
-            file_name="Test Manga [1] - Chapter 1.pdf",
-            folder_id="folder_123",
-            mimetype=OutputFormat.PDF.mime_type,
+        mock_drive_client.get_or_create_manga_folder.assert_called_once_with(
+            "Test Manga", source="mangadex"
         )
+        mock_drive_client.upload_file.assert_called_once()
+        call_kwargs = mock_drive_client.upload_file.call_args.kwargs
+        assert call_kwargs["file_data"] == b"fake pdf data"
+        assert call_kwargs["file_name"] == "Test Manga [1] - Chapter 1.pdf"
+        assert call_kwargs["folder_id"] == "folder_123"
+        assert call_kwargs["mimetype"] == OutputFormat.PDF.mime_type
+        assert call_kwargs["file_metadata"] is not None
+        assert call_kwargs["file_metadata"].source == "mangadex"
+        assert call_kwargs["file_metadata"].chapter_num == "1"
+        assert call_kwargs["file_metadata"].chapter_title == "Chapter 1"
         assert result is None
 
     @pytest.mark.asyncio
@@ -58,12 +66,13 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
             complete_file_data=b"fake pdf data",
             full_name="Test Manga [1] - Chapter 1.pdf",
+            source=ContentSource.MANGADEX,
         )
 
         worker = UploadWorker(
@@ -90,12 +99,13 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
             complete_file_data=b"fake pdf data",
             full_name="Test Manga [1] - Chapter 1.pdf",
+            source=ContentSource.MANGADEX,
         )
 
         worker = UploadWorker(
@@ -123,12 +133,13 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
             complete_file_data=b"fake pdf data",
             full_name="Test Manga [1] - Chapter 1.pdf",
+            source=ContentSource.MANGADEX,
         )
 
         worker = UploadWorker(
@@ -147,8 +158,11 @@ class TestUploadWorkerDoWork:
         "invalid_fields, expected_error_message",
         [
             ({"complete_file_data": None}, "complete_file_data"),
-            ({"chapter_number": "not a number"}, "chapter_number"),
-            ({"full_name": "Test Manga [1] - Chapter 1.pdf", "chapter_number": "2"}, "full_name"),
+            ({"chapter_number": "not a number"}, "must be a float"),
+            (
+                {"full_name": "Test Manga [1] - Chapter 1.pdf", "chapter_number": 2.0},
+                "full_name",
+            ),
         ],
         ids=[
             "missing_complete_file_data",
@@ -166,12 +180,13 @@ class TestUploadWorkerDoWork:
         job = UploadJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             output_directory=MagicMock(),
             output_format=OutputFormat.PDF,
             complete_file_data=b"fake pdf data",
             full_name="Test Manga [1] - Chapter 1.pdf",
+            source=ContentSource.MANGADEX,
         )
 
         for key, value in invalid_fields.items():

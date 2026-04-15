@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.manga_archiver.enums import OutputFormat
+from src.manga_archiver.types import ContentSource
 from src.manga_archiver.workers.jobs import MergingJob, UploadJob
 from src.manga_archiver.workers.merge_worker import MergeWorker
 
@@ -18,11 +19,12 @@ class TestMergeWorkerDoWork:
         job = MergingJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Introduction",
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1", b"image2"],
+            source=ContentSource.MANGADEX,
         )
 
         mock_config = MagicMock()
@@ -53,11 +55,12 @@ class TestMergeWorkerDoWork:
         job = MergingJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Introduction",
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1", b"image2"],
+            source=ContentSource.MANGADEX,
         )
 
         worker = MergeWorker(
@@ -89,11 +92,12 @@ class TestMergeWorkerDoWork:
         job = MergingJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Introduction",
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1", b"image2"],
+            source=ContentSource.MANGADEX,
         )
 
         worker = MergeWorker(
@@ -117,11 +121,12 @@ class TestMergeWorkerDoWork:
         job = MergingJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="5",
+            chapter_number=5.0,
             chapter_title="Chapter 5",
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1"],
+            source=ContentSource.MANGADEX,
         )
 
         worker = MergeWorker(
@@ -135,7 +140,7 @@ class TestMergeWorkerDoWork:
 
         result = await worker._do_work(job)
         assert result.chapter_title == "Chapter 5"
-        assert result.chapter_number == "5"
+        assert result.chapter_number == 5.0
 
     @pytest.mark.parametrize(
         "invalid_fields, expected_error_message",
@@ -163,11 +168,12 @@ class TestMergeWorkerDoWork:
         job = MergingJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="5",
+            chapter_number=5.0,
             chapter_title="Chapter 5",
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
             image_data=[b"image1"],
+            source=ContentSource.MANGADEX,
         )
 
         for key, value in invalid_fields.items():

@@ -17,7 +17,7 @@ from .constants.defaults import (
     DEFAULT_UPLOAD_WORKERS,
 )
 from .enums import JobStatus, OutputFormat
-from .integrations.content_providers import MangaDexApiClient
+from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .utils import DownloadClient
 from .workers import (
@@ -31,9 +31,9 @@ from .workers import (
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class PipelineConfig:
-    """A data container for the configuration of a pipeline.
+    """Immutable data container for the configuration of a pipeline.
 
     Attributes:
         num_resolve_workers (int): The number of resolve workers to use
@@ -69,7 +69,7 @@ class PipelineManager:
 
     def __init__(
         self,
-        mangadex_api_client: MangaDexApiClient,
+        provider_manager: ContentProviderManager,
         download_client: DownloadClient,
         config: PipelineConfig,
         google_drive_client: GoogleDriveClient | None = None,
@@ -77,7 +77,7 @@ class PipelineManager:
         """Initialize the pipeline manager.
 
         Args:
-            mangadex_api_client: The API client for MangaDex
+            provider_manager: The content provider manager
             download_client: The client for downloading images
             config: The configuration for the pipeline
             google_drive_client: The Google Drive client for uploading
@@ -108,7 +108,7 @@ class PipelineManager:
             num_merge_workers=config.num_merge_workers,
             num_upload_workers=config.num_upload_workers,
             benchmark_enabled=config.benchmark_enabled,
-            mangadex_api_client=mangadex_api_client,
+            provider_manager=provider_manager,
             download_client=download_client,
             google_drive_client=google_drive_client,
             on_status_update=self._on_status_update,
@@ -170,16 +170,12 @@ class PipelineManager:
             raise ValueError("Job is missing id")
         if not job.manga_title:
             raise ValueError(f"Job {job.id} is missing manga_title")
-        if not job.chapter_number:
-            raise ValueError(f"Job {job.id} is missing chapter_number")
         if not job.chapter_title:
             raise ValueError(f"Job {job.id} is missing chapter_title")
 
-        try:
-            float(job.chapter_number)
-        except (ValueError, TypeError):
+        if not isinstance(job.chapter_number, float):
             raise ValueError(
-                f"Job {job.id} chapter_number '{job.chapter_number}' is not a valid number"
+                f"Job {job.id} chapter_number '{job.chapter_number}' must be float type"
             )
 
         if not job.chapter_id:

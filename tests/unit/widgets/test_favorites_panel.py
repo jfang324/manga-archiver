@@ -3,16 +3,18 @@ from textual.app import App, ComposeResult
 from textual.reactive import reactive
 from textual.widgets import Label, ListView
 
+from src.manga_archiver.repositories import FavoriteManga
+from src.manga_archiver.types import ContentSource
 from src.manga_archiver.widgets.favorites_panel import FavoritesPanel
 
 
 class FavoritesPanelApp(App):
     """Minimal App for testing FavoritesPanel."""
 
-    mock_favorites: reactive[list[dict[str, str]]] = reactive(
+    mock_favorites: reactive[list[FavoriteManga]] = reactive(
         [
-            {"manga_id": "1", "manga_title": "Title 1"},
-            {"manga_id": "2", "manga_title": "Title 2"},
+            FavoriteManga(id="1", title="Title 1", source=ContentSource.MANGADEX),
+            FavoriteManga(id="2", title="Title 2", source=ContentSource.MANGADEX),
         ]
     )
 
@@ -43,9 +45,11 @@ class TestFavoritesPanel:
             assert len(favorites_list.children) == len(app.mock_favorites)
 
             for i in range(len(app.mock_favorites)):
-                title = app.mock_favorites[i]["manga_title"]
+                title = app.mock_favorites[i].title
+                source = app.mock_favorites[i].source
 
-                assert favorites_list.children[i].query_one(Label).content == title
+                label = favorites_list.children[i].query_one(Label).content
+                assert f"\\[{source}] {title}" == label
 
     async def test_delete_action_sends_message(self) -> None:
         app = FavoritesPanelApp()

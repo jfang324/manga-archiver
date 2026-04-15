@@ -9,12 +9,15 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Input, Label, ListItem, ListView
 
+from ..types import ContentSource
+
 
 class SearchItem(ListItem):
     """A ListItem widget for displaying search results.
 
     Attributes:
         title (str): The title of the search result
+        source (ContentSource): The content source of the search result
     """
 
     DEFAULT_CSS = """
@@ -28,18 +31,20 @@ class SearchItem(ListItem):
         }
     """
 
-    def __init__(self, title: str, **kwargs) -> None:
+    def __init__(self, title: str, source: ContentSource, **kwargs) -> None:
         """Initialize the SearchItem widget.
 
         Args:
             title: The title of the search result
+            source: The content source of the search result
         """
         super().__init__(**kwargs)
 
         self.title = title
+        self.source = source
 
     def compose(self) -> ComposeResult:
-        yield Label(self.title)
+        yield Label(f"\\[{self.source}] {self.title}")
 
 
 class SearchPanel(Widget):
@@ -49,7 +54,7 @@ class SearchPanel(Widget):
         debounce_duration (int): The duration in milliseconds to debounce the search query
 
     Reactive Attributes:
-        results (list[tuple[str, str]]): A list of results for the current query. Each result is a tuple of (title, value)
+        results (list[tuple[str, str, ContentSource]]): A list of results for the current query. Each result is a tuple of (title, value, source)
     """
 
     DEFAULT_CSS = """
@@ -96,7 +101,7 @@ class SearchPanel(Widget):
     }
     """
 
-    results: reactive[list[tuple[str, str]]] = reactive([])
+    results: reactive[list[tuple[str, str, ContentSource]]] = reactive([])
 
     BINDINGS = [
         ("ctrl+f", "favorite", "Favorite"),
@@ -125,19 +130,22 @@ class SearchPanel(Widget):
         Attributes:
             title (str): The title of the selected search result
             value (str): The value of the selected search result
+            source (ContentSource): The content source of the selected result
         """
 
-        def __init__(self, title: str, value: str, **kwargs) -> None:
+        def __init__(self, title: str, value: str, source: ContentSource, **kwargs) -> None:
             """Initialize the Selected message.
 
             Args:
                 title: The title of the selected search result
                 value: The value of the selected search result
+                source: The content source of the selected result
             """
             super().__init__(**kwargs)
 
             self.title = title
             self.value = value
+            self.source = source
 
     class Favorite(Message):
         """Message to indicate that a search result should be favorited.
@@ -193,14 +201,14 @@ class SearchPanel(Widget):
 
         self.post_message(self.Search(search_query))
 
-    def _build_results(self, results: list[tuple[str, str]]) -> None:
+    def _build_results(self, results: list[tuple[str, str, ContentSource]]) -> None:
         list_view: ListView = self.query_one("#search-results", ListView)
-        list_items: list[ListItem] = [SearchItem(title) for title, _ in results]
+        list_items: list[ListItem] = [SearchItem(title, source) for title, _, source in results]
 
         list_view.clear()
         list_view.extend(list_items)
 
-    def watch_results(self, new_results: list[tuple[str, str]]) -> None:
+    def watch_results(self, new_results: list[tuple[str, str, ContentSource]]) -> None:
         self._build_results(new_results)
         self.query_one("#results-count", Label).update(f"{len(new_results)} results")
 
@@ -213,8 +221,8 @@ class SearchPanel(Widget):
             self.notify("Invalid index selected", severity="error")
             return
 
-        title, value = self.results[index]
-        self.post_message(self.Selected(title, value))
+        title, value, source = self.results[index]
+        self.post_message(self.Selected(title, value, source))
 
     def action_favorite(self) -> None:
         list_view = self.query_one("#search-results", ListView)

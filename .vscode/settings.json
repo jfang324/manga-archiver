@@ -20,5 +20,9 @@
         "terminal.ansiRed": "#FF0000",
         "terminal.ansiWhite": "#D0D0D0",
         "terminal.ansiYellow": "#FF0099"
-    }
+    },
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff"
+    },
+    "editor.formatOnSave": true
 }

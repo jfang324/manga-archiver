@@ -2,6 +2,7 @@ import logging
 
 from ..db.database import get_connection
 from ..repositories.types import FavoriteManga
+from ..types import ContentSource
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +15,13 @@ class FavoriteRepository:
         try:
             with get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT manga_id, manga_title FROM favorite_manga")
+                cursor.execute("SELECT id, title, source FROM favorite_manga")
                 rows = cursor.fetchall()
 
-                return [FavoriteManga(manga_id=row[0], manga_title=row[1]) for row in rows]
+                return [
+                    FavoriteManga(id=row[0], title=row[1], source=ContentSource(row[2]))
+                    for row in rows
+                ]
         except Exception as e:
             logger.error("Failed to get favorites: %s", e)
             return []
@@ -28,8 +32,8 @@ class FavoriteRepository:
             with get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT OR IGNORE INTO favorite_manga (manga_id, manga_title) VALUES (?, ?)",
-                    (favorite_manga["manga_id"], favorite_manga["manga_title"]),
+                    "INSERT OR IGNORE INTO favorite_manga (id, title, source) VALUES (?, ?, ?)",
+                    (favorite_manga.id, favorite_manga.title, str(favorite_manga.source)),
                 )
 
                 conn.commit()
@@ -42,7 +46,7 @@ class FavoriteRepository:
         try:
             with get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM favorite_manga WHERE manga_id = ?", (manga_id,))
+                cursor.execute("DELETE FROM favorite_manga WHERE id = ?", (manga_id,))
 
                 conn.commit()
         except Exception as e:

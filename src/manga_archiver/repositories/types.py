@@ -1,8 +1,12 @@
-from typing import TypedDict
+from dataclasses import dataclass
+
+from ..types import ContentSource
 
 
-class FavoriteManga(TypedDict):
-    """Dictionary containing metadata for a favorite manga."""
+@dataclass(frozen=True)
+class FavoriteManga:
+    """Immutable dataclass containing metadata for a favorite manga."""
 
-    manga_id: str
-    manga_title: str
+    id: str
+    title: str
+    source: ContentSource

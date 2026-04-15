@@ -2,7 +2,7 @@ import logging
 
 from aiohttp import ClientSession
 
-from ....types import ProcessedChapter, ProcessedDownloadResource, ProcessedManga
+from ....types import Chapter, ContentSource, DownloadResource, Manga
 from ...exceptions import ApiError, NotFoundError, RateLimitError
 from ..base import Provider
 from .constants import MANGADEX_RESOURCE_LINKS_URL, MANGADEX_ROOT_URL
@@ -27,6 +27,7 @@ class MangaDexApiClient(Provider):
         super().__init__(session)
 
         self._data_saver = data_saver
+        self._source = ContentSource.MANGADEX
 
     async def _request(self, url: str, params: dict | None = None) -> dict:
         """Make an HTTP request and return the JSON response.
@@ -87,7 +88,7 @@ class MangaDexApiClient(Provider):
 
         return default
 
-    async def search_manga(self, query: str) -> list[ProcessedManga]:
+    async def search_manga(self, query: str) -> list[Manga]:
         """
         Search for manga matching the query.
 
@@ -95,7 +96,7 @@ class MangaDexApiClient(Provider):
             query: The search query string
 
         Returns:
-            list[ProcessedManga]: List of matching manga objects
+            list[Manga]: List of matching manga objects
 
         Raises:
             NotFoundError: If the resource is not found (404)
@@ -113,17 +114,17 @@ class MangaDexApiClient(Provider):
             logger.error("Error searching manga: %s", e)
             raise
 
-    def _process_manga_data(self, manga_data: dict) -> list[ProcessedManga]:
+    def _process_manga_data(self, manga_data: dict) -> list[Manga]:
         """
-        Process raw manga data into ProcessedManga objects.
+        Process raw manga data into Manga objects.
 
         Args:
             manga_data: Raw API response data
 
         Returns:
-            list[ProcessedManga]: List of processed manga objects
+            list[Manga]: List of processed manga objects
         """
-        processed_manga_data: list[ProcessedManga] = []
+        processed_manga_data: list[Manga] = []
         data: list[dict] = manga_data.get("data", [])
 
         for element in data:
@@ -136,12 +137,12 @@ class MangaDexApiClient(Provider):
                 )
                 element_id = element["id"]
 
-                manga = ProcessedManga(title=title, id=element_id)
+                manga = Manga(id=element_id, title=title, source=self.source)
                 processed_manga_data.append(manga)
 
         return processed_manga_data
 
-    async def get_chapters(self, manga_id: str) -> list[ProcessedChapter]:
+    async def get_chapters(self, manga_id: str) -> list[Chapter]:
         """
         Retrieve chapters for a given manga.
 
@@ -149,7 +150,7 @@ class MangaDexApiClient(Provider):
             manga_id: The ID of the manga to get chapters for
 
         Returns:
-            list[ProcessedChapter]: List of chapter objects sorted by chapter number
+            list[Chapter]: List of chapter objects sorted by chapter number
 
         Raises:
             NotFoundError: If the resource is not found (404)
@@ -171,17 +172,17 @@ class MangaDexApiClient(Provider):
             logger.error("Error retrieving chapters: %s", e)
             raise
 
-    def _process_chapter_data(self, chapter_data: dict) -> list[ProcessedChapter]:
+    def _process_chapter_data(self, chapter_data: dict) -> list[Chapter]:
         """
-        Process raw chapter data into ProcessedChapter objects.
+        Process raw chapter data into Chapter objects.
 
         Args:
             chapter_data: Raw API response data
 
         Returns:
-            list[ProcessedChapter]: List of processed chapter objects
+            list[Chapter]: List of processed chapter objects
         """
-        processed_chapter_data: list[ProcessedChapter] = []
+        processed_chapter_data: list[Chapter] = []
         data: list[dict] = chapter_data.get("data", [])
         already_contains: set[str] = set()
 
@@ -198,13 +199,18 @@ class MangaDexApiClient(Provider):
                 if chapter not in already_contains:
                     already_contains.add(chapter)
                     processed_chapter_data.append(
-                        ProcessedChapter(title=title, id=element["id"], chapter=chapter)
+                        Chapter(
+                            id=element["id"],
+                            title=title,
+                            chapter_num=float(chapter),
+                            source=self.source,
+                        )
                     )
 
-        processed_chapter_data.sort(key=lambda x: float(x["chapter"]))
+        processed_chapter_data.sort(key=lambda x: x.chapter_num)
         return processed_chapter_data
 
-    async def get_download_resource(self, chapter_id: str) -> ProcessedDownloadResource:
+    async def get_download_resource(self, chapter_id: str) -> DownloadResource:
         """
         Get download resource information for a chapter.
 
@@ -212,7 +218,7 @@ class MangaDexApiClient(Provider):
             chapter_id: The ID of the chapter to get download info for
 
         Returns:
-            ProcessedDownloadResource: Download resource object containing URLs
+            DownloadResource: Download resource object containing URLs
 
         Raises:
             NotFoundError: If the chapter is not found
@@ -229,17 +235,15 @@ class MangaDexApiClient(Provider):
             logger.error("Error retrieving download resources: %s", e)
             raise
 
-    def _process_download_resource_data(
-        self, download_resources: dict
-    ) -> ProcessedDownloadResource:
+    def _process_download_resource_data(self, download_resources: dict) -> DownloadResource:
         """
-        Process raw download resource data into ProcessedDownloadResource.
+        Process raw download resource data into DownloadResource.
 
         Args:
             download_resources: Raw API response data
 
         Returns:
-            ProcessedDownloadResource: Processed download resource object
+            DownloadResource: Processed download resource object
         """
         download_urls: list[str] = []
         base_url: str = download_resources["baseUrl"]
@@ -257,4 +261,4 @@ class MangaDexApiClient(Provider):
         for element in chapter_data[file_list_key]:
             download_urls.append(f"{base_url}/{url_quality}/{url_hash}/{element}")  # noqa:PERF401 - explicit loop for clarity, variable conditions prevent list comprehension
 
-        return ProcessedDownloadResource(urls=download_urls, hash=url_hash)
+        return DownloadResource(urls=download_urls, source=self.source)

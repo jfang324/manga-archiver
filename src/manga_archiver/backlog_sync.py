@@ -6,21 +6,22 @@ from pathlib import Path
 import aiohttp
 
 from .enums import OutputFormat
-from .integrations.content_providers import MangaDexApiClient
+from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .repositories import FavoriteRepository
-from .types import ProcessedChapter
+from .types import Chapter, ContentSource
 from .workers.jobs import FetchingResourcesJob
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Manga:
-    """Represents a manga with its chapters from API and Google Drive."""
+    """Immutable data container representing a manga with chapters."""
 
     manga_title: str
-    api_chapters: list[ProcessedChapter]
+    source: ContentSource
+    api_chapters: list[Chapter]
     google_drive_chapters: list[float]
 
 
@@ -65,7 +66,7 @@ class BacklogSync:
         async with aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
         ) as session:
-            mangadex_client = MangaDexApiClient(session)
+            provider_manager = ContentProviderManager(session)
 
             favorites = self._favorite_repository.get_all()
             print(f"Found {len(favorites)} favorites")
@@ -75,18 +76,19 @@ class BacklogSync:
                 return []
 
             for favorite in favorites:
-                manga_id = favorite["manga_id"]
-                manga_title = favorite["manga_title"]
+                manga_id = favorite.id
+                manga_title = favorite.title
+                source = favorite.source
 
                 print(f"Fetching chapters for '{manga_title}'...")
 
                 api_chapters = await self._fetch_api_chapters(
-                    mangadex_client, manga_id, manga_title
+                    provider_manager, source, manga_id, manga_title
                 )
                 if api_chapters is None:
                     continue
 
-                google_drive_chapters = self._fetch_google_drive_chapters(manga_title)
+                google_drive_chapters = self._fetch_google_drive_chapters(manga_title, source.value)
 
                 print(
                     f"  {manga_title}: {len(api_chapters)} from API, "
@@ -96,6 +98,7 @@ class BacklogSync:
                 self._mangas.append(
                     Manga(
                         manga_title=manga_title,
+                        source=source,
                         api_chapters=api_chapters,
                         google_drive_chapters=google_drive_chapters,
                     )
@@ -105,37 +108,26 @@ class BacklogSync:
 
         return self._create_jobs()
 
-    def _calculate_diff(self) -> list[tuple[str, ProcessedChapter]]:
+    def _calculate_diff(self) -> list[tuple[str, ContentSource, Chapter]]:
         """Calculate missing chapters by comparing API chapters vs Google Drive.
 
         Returns:
-            list[tuple[str, ProcessedChapter]]: List of tuples containing (manga_title, chapter)
-                for chapters missing in Google Drive
+            list[tuple[str, ContentSource, Chapter]]: List of tuples containing
+                (manga_title, source, chapter) for chapters missing in Google Drive
         """
-        missing_chapters: list[tuple[str, ProcessedChapter]] = []
+        missing_chapters: list[tuple[str, ContentSource, Chapter]] = []
 
         for manga in self._mangas:
             google_drive_set = set(manga.google_drive_chapters)
 
             for chapter in manga.api_chapters:
-                chapter_number = chapter.get("chapter")
+                chapter_number = chapter.chapter_num
                 if not chapter_number:
-                    logger.error("Skipping chapter %s - no chapter number", chapter.get("id"))
+                    logger.error("Skipping chapter %s - no chapter number", chapter.id)
                     continue
 
-                try:
-                    chapter_num = float(chapter_number)
-                except (ValueError, TypeError) as e:
-                    logger.error(
-                        "Failed to parse chapter number '%s' for %s: %s",
-                        chapter_number,
-                        chapter.get("id"),
-                        e,
-                    )
-                    continue
-
-                if chapter_num not in google_drive_set:
-                    missing_chapters.append((manga.manga_title, chapter))
+                if chapter_number not in google_drive_set:
+                    missing_chapters.append((manga.manga_title, manga.source, chapter))
 
         return missing_chapters
 
@@ -148,21 +140,20 @@ class BacklogSync:
         missing_chapters = self._calculate_diff()
 
         jobs: list[FetchingResourcesJob] = []
-        for manga_title, chapter in missing_chapters:
-            chapter_number = chapter.get("chapter")
-            chapter_title = (
-                chapter.get("title") or "untitled"
-            )  # cannot use .get() default value because None counts as a valid value
+        for manga_title, source, chapter in missing_chapters:
+            chapter_number = chapter.chapter_num
+            chapter_title = chapter.title or "untitled"
 
             jobs.append(
                 FetchingResourcesJob(
-                    id=chapter["id"],
+                    id=chapter.id,
                     manga_title=manga_title,
-                    chapter_id=chapter["id"],
+                    chapter_id=chapter.id,
                     chapter_number=chapter_number,
                     chapter_title=chapter_title,
                     output_directory=self._output_directory,
                     output_format=OutputFormat(self._output_format),
+                    source=source,
                 )
             )
 
@@ -170,37 +161,40 @@ class BacklogSync:
 
     async def _fetch_api_chapters(
         self,
-        client: MangaDexApiClient,
+        provider_manager: ContentProviderManager,
+        source: ContentSource,
         manga_id: str,
         manga_title: str,
-    ) -> list[ProcessedChapter] | None:
-        """Fetch chapters from MangaDex API.
+    ) -> list[Chapter] | None:
+        """Fetch chapters from a content provider.
 
         Args:
-            client: MangaDex API client
+            provider_manager: Content provider manager
+            source: The content source
             manga_id: The manga ID
             manga_title: The manga title (for logging)
 
         Returns:
-            list[ProcessedChapter] | None: List of chapters, or None if fetch failed
+            list[Chapter] | None: List of chapters, or None if fetch failed
         """
         try:
-            return await client.get_chapters(manga_id)
+            return await provider_manager.get_chapters(source, manga_id)
         except Exception as e:
             logger.error("Failed to get chapters for %s: %s", manga_title, e)
             print(f"ERROR: Failed to get chapters for '{manga_title}'")
             return None
 
-    def _fetch_google_drive_chapters(self, manga_title: str) -> list[float]:
+    def _fetch_google_drive_chapters(self, manga_title: str, source: str) -> list[float]:
         """Fetch chapter numbers from Google Drive folder.
 
         Args:
             manga_title: The manga title to look up in folder cache
+            source: The content source (e.g., "mangadex")
 
         Returns:
             list[float]: List of chapter numbers found in Google Drive
         """
-        folder_id = self._google_drive_client.get_manga_folder_id(manga_title)
+        folder_id = self._google_drive_client.get_manga_folder_id(manga_title, source)
         if folder_id:
             files = self._google_drive_client.get_files_in_folder(folder_id)
             return self._parse_chapter_numbers(files)

@@ -7,8 +7,7 @@ from textual import on, work
 from textual.app import App
 from textual.reactive import reactive
 
-from .db import init_db
-from .integrations.content_providers import MangaDexApiClient
+from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .models import AppConfig
 from .pipeline_manager import PipelineConfig, PipelineManager
@@ -27,7 +26,6 @@ from .workers.jobs import FetchingResourcesJob
 
 if TYPE_CHECKING:
     from .screens.selection_screen import PartialJob
-    from .types import ProcessedManga
 
 import asyncio
 
@@ -48,7 +46,7 @@ class MangaArchiverApp(App):
         _favorite_repository (FavoriteRepository): The favorite repository
         _google_drive_client (GoogleDriveClient | None): The Google Drive client
         _session (aiohttp.ClientSession): The aiohttp session
-        _mangadex_client (MangaDexApiClient): The MangaDex API client
+        _provider_manager (ContentProviderManager): The content provider manager
         _download_client (DownloadClient): The download client
         _backlog (list[FetchingResourcesJob] | None): The backlog of missing chapters
         _auto_exit (bool): Whether to automatically exit when all jobs are complete
@@ -101,8 +99,6 @@ class MangaArchiverApp(App):
         self._favorite_repository = favorite_repository
         self._google_drive_client = google_drive_client
 
-        init_db()
-
         try:
             self._favorites = self._favorite_repository.get_all()
         except Exception as e:
@@ -140,7 +136,7 @@ class MangaArchiverApp(App):
     async def _setup_pipeline_manager(self) -> None:
         """Set up the pipeline manager, process backlog, and start it."""
         self._pipeline_manager = PipelineManager(
-            self._mangadex_client,
+            self._provider_manager,
             self._download_client,
             self._pipeline_config,
             google_drive_client=self._google_drive_client,
@@ -176,6 +172,7 @@ class MangaArchiverApp(App):
                 chapter_title=partial_job["chapter_title"],
                 output_directory=self._app_config.output_path,
                 output_format=self._app_config.output_format,
+                source=partial_job["source"],
             )
             for partial_job in partial_jobs
         ]
@@ -188,11 +185,11 @@ class MangaArchiverApp(App):
         self._session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
         )
-        self._mangadex_client = MangaDexApiClient(self._session)
+        self._provider_manager = ContentProviderManager(self._session)
         self._download_client = DownloadClient(self._session)
 
         self.install_screen(MenuScreen(), name="menu_screen")
-        self.install_screen(SearchScreen(self._mangadex_client), name="search_screen")
+        self.install_screen(SearchScreen(self._provider_manager), name="search_screen")
         self.install_screen(
             SettingsScreen().data_bind(app_config=MangaArchiverApp._app_config),
             name="settings_screen",
@@ -284,8 +281,8 @@ class MangaArchiverApp(App):
     def _on_favorite_deleted(self, event: FavoritesScreen.Deleted) -> None:
         """Delete a favorite manga from the database then update in-memory copy."""
         manga_id, manga_title = (
-            event.deleted_manga["manga_id"],
-            event.deleted_manga["manga_title"],
+            event.deleted_manga.id,
+            event.deleted_manga.title,
         )
 
         try:
@@ -294,19 +291,18 @@ class MangaArchiverApp(App):
             self.notify("Failed to remove favorite", severity="error")
             return
 
-        self._favorites = [f for f in self._favorites if f["manga_id"] != manga_id]
+        self._favorites = [f for f in self._favorites if f.id != manga_id]
         self.mutate_reactive(MangaArchiverApp._favorites)
         self.notify(f"Removed '{manga_title}' from favorites", severity="information")
 
     @on(FavoritesScreen.Selected)
     def _on_favorite_selected(self, event: FavoritesScreen.Selected) -> None:
         """Navigate to the selection screen with the selected manga."""
-        manga: ProcessedManga = {
-            "id": event.selected_manga["manga_id"],
-            "title": event.selected_manga["manga_title"],
-        }
+        manga_id = event.selected_manga.id
+        manga_title = event.selected_manga.title
+        source = event.selected_manga.source
 
-        self.push_screen(SelectionScreen(manga, self._mangadex_client))
+        self.push_screen(SelectionScreen(manga_id, manga_title, self._provider_manager, source))
 
     @on(SearchScreen.FavoriteAdded)
     def _on_favorite_added(self, event: SearchScreen.FavoriteAdded) -> None:
@@ -322,6 +318,6 @@ class MangaArchiverApp(App):
         self._favorites.append(favorite_manga)
         self.mutate_reactive(MangaArchiverApp._favorites)
         self.notify(
-            f"Added '{favorite_manga['manga_title']}' to favorites",
+            f"Added '{favorite_manga.title}' to favorites",
             severity="information",
         )

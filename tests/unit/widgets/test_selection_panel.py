@@ -4,16 +4,17 @@ from textual.reactive import reactive
 from textual.widgets import SelectionList
 from textual.widgets.selection_list import Selection
 
+from src.manga_archiver.types import ContentSource
 from src.manga_archiver.widgets.selection_panel import SelectionPanel
 
 
 class SelectionPanelApp(App):
     """Minimal App for testing SelectionPanel."""
 
-    mock_options: reactive[list[tuple[str | None, str, str]]] = reactive(
+    mock_options: reactive[list[tuple[str | None, str, float]]] = reactive(
         [
-            ("Title 1", "Value 1", "1"),
-            ("Title 2", "Value 2", "2"),
+            ("Title 1", "Value 1", 1.0),
+            ("Title 2", "Value 2", 2.0),
         ]
     )
 
@@ -22,7 +23,9 @@ class SelectionPanelApp(App):
         self.selection_records: list[SelectionPanel.Selected] = []
 
     def compose(self) -> ComposeResult:
-        yield SelectionPanel(title="Test").data_bind(options=SelectionPanelApp.mock_options)
+        yield SelectionPanel(title="Test", source=ContentSource.MANGADEX).data_bind(
+            options=SelectionPanelApp.mock_options
+        )
 
     @on(SelectionPanel.Selected)
     def _record_selection_message(self, message: SelectionPanel.Selected) -> None:
@@ -30,11 +33,11 @@ class SelectionPanelApp(App):
 
 
 class TestSelectionPanel:
-    def _format_values(self, values: tuple[str | None, str, str]) -> str:
+    def _format_values(self, values: tuple[str | None, str, float]) -> str:
         """Format a tuple of values for comparison (with prefix for display)."""
-        return f"{values[2]}. {values[0]}" if values[0] else values[2]
+        return f"{values[2]:g}. {values[0]}" if values[0] else f"{values[2]:g}"
 
-    def _get_clean_title(self, values: tuple[str | None, str, str]) -> str:
+    def _get_clean_title(self, values: tuple[str | None, str, float]) -> str:
         """Get clean title without chapter prefix."""
         return values[0] if values[0] else "untitled"
 

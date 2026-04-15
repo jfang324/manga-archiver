@@ -5,6 +5,7 @@ import pytest
 
 from src.manga_archiver.enums import OutputFormat
 from src.manga_archiver.pipeline_manager import PipelineConfig, PipelineManager
+from src.manga_archiver.types import ContentSource
 from src.manga_archiver.workers.jobs import FetchingResourcesJob
 
 
@@ -14,8 +15,8 @@ class TestPipelineValidation:
         [
             ({"id": ""}, "Job is missing id"),
             ({"manga_title": ""}, "is missing manga_title"),
-            ({"chapter_number": ""}, "is missing chapter_number"),
-            ({"chapter_number": "not-a-number"}, "is not a valid number"),
+            ({"chapter_number": None}, "must be float type"),
+            ({"chapter_number": "not-a-number"}, "must be float type"),
             ({"chapter_title": ""}, "is missing chapter_title"),
             ({"chapter_id": ""}, "is missing chapter_id"),
             ({"output_format": None}, "output_format must be OutputFormat"),
@@ -40,18 +41,19 @@ class TestPipelineValidation:
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",
-            chapter_number="1",
+            chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
             output_directory=tmp_path,
             output_format=OutputFormat.PDF,
+            source=ContentSource.MANGADEX,
         )
 
         for key, value in invalid_fields.items():
             setattr(job, key, value)
 
         pm = PipelineManager(
-            mangadex_api_client=MagicMock(),
+            provider_manager=MagicMock(),
             download_client=MagicMock(),
             config=PipelineConfig(),
             google_drive_client=None,
