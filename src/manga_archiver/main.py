@@ -13,6 +13,7 @@ from .constants import (
     EXIT_SUCCESS,
     EXIT_VALIDATION_ERROR,
 )
+from .db.migrations import DEFAULT_GOOGLE_DRIVE_VERSION
 from .db.schema_manager import SchemaManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .pipeline_manager import PipelineConfig
@@ -61,7 +62,7 @@ def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[
         print("Usage: manga-archiver migrate database", file=sys.stderr)
         return True, EXIT_MIGRATION_ERROR
 
-    print("Running database migrations...")
+    print("Running migrations...")
 
     try:
         system = "database" if args.migrate_system == "database" else "google_drive"
@@ -110,6 +111,7 @@ def main() -> None:
         try:
             google_drive_client = GoogleDriveClient(token)
             google_drive_client.initialize()
+            schema_manager.insert_version_record("google_drive", DEFAULT_GOOGLE_DRIVE_VERSION)
         except Exception as e:
             logger.error("Failed to initialize Google Drive: %s", e)
             print(

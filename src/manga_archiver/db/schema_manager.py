@@ -5,15 +5,11 @@ from pathlib import Path
 from sqlite3 import Connection, Cursor
 
 from .database import get_connection, init_db
-from .migrations import (
-    DEFAULT_DATABASE_VERSION,
-    MIN_DATABASE_VERSION,
-    MIN_GOOGLE_DRIVE_VERSION,
-)
+from .migrations import MIN_DATABASE_VERSION, MIN_GOOGLE_DRIVE_VERSION
 
 logger = logging.getLogger(__name__)
 
-MigrationFunc = Callable[[str, Cursor], str]
+MigrationFunc = Callable[[str | None, Cursor], str]
 MigrationStep = tuple[str, MigrationFunc]
 
 
@@ -23,8 +19,10 @@ def _version_key(version: str) -> tuple[int, ...]:
     return tuple(int(x) for x in clean.split("."))
 
 
-def _version_compare(a: str, b: str) -> int:
+def _version_compare(a: str, b: str | None) -> int:
     """Compare version strings. Returns 1 if a > b, -1 if a < b, 0 if equal."""
+    if b is None:
+        return 1  # a is greater than None (needs migration)
     key_a = _version_key(a)
     key_b = _version_key(b)
 
@@ -60,7 +58,19 @@ class SchemaManager:
     def conn(self) -> Connection:
         return self._conn
 
-    def get_current_version(self, system: str) -> str:
+    def insert_version_record(self, system: str, version: str) -> None:
+        """Insert a version record for a system if one doesn't exist."""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                "INSERT OR IGNORE INTO schema_version (system, version) VALUES (?, ?)",
+                (system, version),
+            )
+            self._conn.commit()
+        except Exception as e:
+            logger.error("Failed to insert version record: %s", e)
+
+    def get_current_version(self, system: str) -> str | None:
         """Get current schema version for a system."""
         try:
             cursor = self.conn.cursor()
@@ -70,14 +80,10 @@ class SchemaManager:
             )
             row = cursor.fetchone()
 
-            if not row:
-                # This should never happen since init_db() creates a default version, but just in case.
-                raise Exception("No schema version found for system")
-
-            return row[0]
+            return row[0] if row else None
         except Exception as e:
             logger.error("Failed to get system version: %s", e)
-            return DEFAULT_DATABASE_VERSION
+            return None
 
     def get_pending_migrations(self, system: str) -> list[MigrationStep]:
         """Get all migration functions greater than current version."""
@@ -135,8 +141,14 @@ class SchemaManager:
 
         return f"Migrated to {current_version}"
 
-    def check_versions(self, require_google_drive: bool = False) -> tuple[bool, str]:
+    def check_versions(
+        self,
+        require_google_drive: bool,
+    ) -> tuple[bool, str]:
         """Check if required versions are met.
+
+        Args:
+            require_google_drive: Whether Google Drive is required
 
         Returns:
             tuple[bool, str]: (True, "") if requirements satisfied, (False, error_message) if migration needed
@@ -154,6 +166,7 @@ class SchemaManager:
 
         if require_google_drive and MIN_GOOGLE_DRIVE_VERSION is not None:
             google_drive_current = self.get_current_version("google_drive")
+
             if _version_compare(MIN_GOOGLE_DRIVE_VERSION, google_drive_current) > 0:
                 error_msg = (
                     f"Google Drive migration required. "

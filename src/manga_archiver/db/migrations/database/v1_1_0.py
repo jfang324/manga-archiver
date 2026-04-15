@@ -9,10 +9,11 @@ This migration:
 import logging
 from sqlite3 import Cursor
 
-from manga_archiver.db.migrations import MIN_DATABASE_VERSION
 from manga_archiver.db.schema_manager import _version_compare
 
 logger = logging.getLogger(__name__)
+
+MIGRATION_VERSION = "v1.1.0"
 
 
 def migrate(current_version: str, cursor: Cursor) -> str:
@@ -25,8 +26,8 @@ def migrate(current_version: str, cursor: Cursor) -> str:
     Returns:
         str: message describing changes made.
     """
-    if _version_compare(MIN_DATABASE_VERSION, current_version) <= 0:
-        return f"Already at {MIN_DATABASE_VERSION} - no migration needed"
+    if _version_compare(MIGRATION_VERSION, current_version) <= 0:
+        return f"Already at {MIGRATION_VERSION} - no migration needed"
 
     cursor.execute("PRAGMA table_info(favorite_manga)")
     columns = {row[1] for row in cursor.fetchall()}
@@ -50,7 +51,7 @@ def migrate(current_version: str, cursor: Cursor) -> str:
 
     cursor.execute(
         "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
-        (MIN_DATABASE_VERSION, "database"),
+        (MIGRATION_VERSION, "database"),
     )
 
-    return f"Migrated to {MIN_DATABASE_VERSION}: Added source column and renamed fields"
+    return f"Migrated to {MIGRATION_VERSION}: Added source tracking to favorites"

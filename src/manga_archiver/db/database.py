@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from sqlite3 import Connection, connect
 
-from .migrations import DEFAULT_DATABASE_VERSION, MIN_DATABASE_VERSION
+from .migrations import DEFAULT_DATABASE_VERSION, LEGACY_VERSION
 
 
 def init_schema_version_table(conn: Connection) -> None:
@@ -24,16 +24,28 @@ def init_schema_version_table(conn: Connection) -> None:
         WHERE type='table' AND name='favorite_manga'
     """)
     table_exists = cursor.fetchone() is not None
+    is_legacy_table = False
 
     if table_exists:
-        version = DEFAULT_DATABASE_VERSION
-    else:
-        version = MIN_DATABASE_VERSION
+        cursor.execute("""
+            SELECT 1 FROM pragma_table_info("favorite_manga")
+            WHERE name='manga_id'
+        """)
+        is_legacy_table = cursor.fetchone() is not None
 
-    cursor.execute(
-        "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
-        (version, "database"),
-    )
+    if is_legacy_table:
+        # Legacy user: table exists but no version record = needs migration
+        # We need to insert a version record for migration detection, v1.0.0 is the only legacy version
+        cursor.execute(
+            "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
+            (LEGACY_VERSION, "database"),
+        )
+    else:
+        cursor.execute(
+            "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
+            (DEFAULT_DATABASE_VERSION, "database"),
+        )
+
     conn.commit()
 
 
