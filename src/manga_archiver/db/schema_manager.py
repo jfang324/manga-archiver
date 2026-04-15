@@ -132,7 +132,7 @@ class SchemaManager:
                 cursor.execute("BEGIN IMMEDIATE")
 
                 migration_msg = migrate_func(current, cursor)
-                logging.info(migration_msg)
+                logger.info(migration_msg)
                 self.conn.commit()
                 current_version = migrate_version
         except Exception as e:
