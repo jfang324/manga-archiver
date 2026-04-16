@@ -45,4 +45,4 @@ def decode_tobeparsed(encoded: str) -> dict:
 
         return json.loads(decrypted.decode("utf-8"))
     except Exception as e:
-        raise ApiError(f"Failed to decode response: {e}")
+        raise ApiError(f"Failed to decode response: {e}") from e

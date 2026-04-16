@@ -181,19 +181,29 @@ class AllMangaClient(Provider):
             detail = MangaChaptersDetail.from_dict(
                 chapters_detail.get("availableChaptersDetail", {})
             )
-        except ValueError:
-            raise NotFoundError(f"No chapters found for manga {manga_id}")
+        except ValueError as e:
+            raise NotFoundError(f"No chapters found for manga {manga_id}") from e
 
-        chapters = [
-            Chapter(
-                id=f"{manga_id}:{chapter_str}",
-                title="untitled",
-                chapter_num=float(chapter_str),
-                source=self._source,
+        chapters = []
+
+        for chapter_str in detail.sub:
+            if not chapter_str:
+                continue
+
+            try:
+                chapter_num = float(chapter_str)
+            except ValueError:
+                logger.error("Invalid chapter number: %s", chapter_str)
+                continue
+
+            chapters.append(
+                Chapter(
+                    id=f"{manga_id}:{chapter_str}",
+                    title="untitled",
+                    chapter_num=chapter_num,
+                    source=self._source,
+                )
             )
-            for chapter_str in detail.sub
-            if chapter_str
-        ]
 
         chapters.sort(key=lambda x: x.chapter_num)
         return chapters
@@ -215,8 +225,8 @@ class AllMangaClient(Provider):
         """
         try:
             manga_id, chapter_str = chapter_id.split(":", 1)
-        except ValueError:
-            raise ApiError(f"Invalid chapter_id format: {chapter_id}")
+        except ValueError as e:
+            raise ApiError(f"Invalid chapter_id format: {chapter_id}") from e
 
         variables = CHAPTER_PAGES_QUERY.format(
             manga_id=manga_id,
