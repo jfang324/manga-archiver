@@ -74,7 +74,7 @@ class TestDownloadWorkerDoWork:
         await worker._do_work(job)
 
         mock_download_client.download_images.assert_called_once_with(
-            ["http://example.com/1.jpg", "http://example.com/2.jpg"]
+            ["http://example.com/1.jpg", "http://example.com/2.jpg"], {}
         )
 
     @pytest.mark.asyncio

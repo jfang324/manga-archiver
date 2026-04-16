@@ -94,8 +94,8 @@ class MangaDexApiClient(Provider):
 
         Args:
             query: The search query string
-            page: The page number to fetch
-            page_size: Number of results per page
+            page: The page number to fetch (1-indexed)
+            page_size: Number of results per page (max 100 per API limits)
 
         Returns:
             list[Manga]: List of matching manga objects

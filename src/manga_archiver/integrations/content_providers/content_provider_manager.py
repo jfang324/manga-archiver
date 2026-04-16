@@ -6,6 +6,7 @@ from typing import TypeAlias
 from aiohttp import ClientSession
 
 from ...types import Chapter, ContentSource, DownloadResource, Manga
+from .allanime.client import AllMangaClient
 from .base import Provider
 from .mangadex.client import MangaDexApiClient
 
@@ -42,12 +43,12 @@ class ContentProviderManager:
         Args:
             session: aiohttp ClientSession for HTTP requests
 
-        Creates provider instances internally. Currently includes MangaDex,
-        with support for additional providers planned.
+        Creates provider instances internally. Includes MangaDex and AllManga.
         """
         self._session = session
         self._providers = {
             ContentSource.MANGADEX: MangaDexApiClient(session),
+            ContentSource.ALLMANGA: AllMangaClient(session),
         }
 
     async def search_manga(
@@ -81,6 +82,8 @@ class ContentProviderManager:
                 all_manga.extend(result.results)
             elif result.error is not None:
                 errors.append((result.provider, result.error))
+
+        all_manga.sort(key=lambda manga: manga.title.lower())
 
         if errors:
             logger.error(
