@@ -186,7 +186,7 @@ For more options, run `manga-archiver --help`.
 
 ### Migration Commands
 
-The application includes a migration system to handle database and google drive schema updates.
+The application includes a migration system to handle database and Google Drive schema updates.
 
 ```sh
 # Migrate database schema

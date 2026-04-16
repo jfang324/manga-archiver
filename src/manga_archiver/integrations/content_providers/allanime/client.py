@@ -52,7 +52,7 @@ class AllMangaClient(Provider):
         """
         headers = API_HEADERS.get(ContentSource.ALLMANGA, {})
 
-        async with self._session.get(url, params=params, headers=headers) as response:
+        async with self._session.get(url, params=params, headers=headers, timeout=10) as response:
             if response.status == 404:
                 raise NotFoundError(f"Resource not found: {url}")
 
@@ -205,6 +205,9 @@ class AllMangaClient(Provider):
                 )
             )
 
+        if not chapters:
+            raise NotFoundError(f"No chapters found for manga {manga_id}")
+
         chapters.sort(key=lambda x: x.chapter_num)
         return chapters
 
@@ -227,6 +230,9 @@ class AllMangaClient(Provider):
             manga_id, chapter_str = chapter_id.split(":", 1)
         except ValueError as e:
             raise ApiError(f"Invalid chapter_id format: {chapter_id}") from e
+
+        if not manga_id or not chapter_str:
+            raise ApiError(f"Invalid chapter_id format: {chapter_id}")
 
         variables = CHAPTER_PAGES_QUERY.format(
             manga_id=manga_id,
@@ -275,6 +281,7 @@ class AllMangaClient(Provider):
             f"{CDN_BASE_URL}{picture.url}"
             for edge in chapter_pages.edges
             for picture in edge.picture_urls
+            if picture.url and picture.url.strip()
         ]
 
         if not urls:

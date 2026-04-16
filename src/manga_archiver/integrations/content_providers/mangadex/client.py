@@ -44,7 +44,7 @@ class MangaDexApiClient(Provider):
             RateLimitError: If rate limited (429)
             ApiError: For other API errors
         """
-        async with self._session.get(url, params=params) as response:
+        async with self._session.get(url, params=params, timeout=10) as response:
             if response.status == 404:
                 raise NotFoundError(f"Resource not found: {url}")
 
