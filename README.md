@@ -198,7 +198,7 @@ manga-archiver migrate google-drive
 
 ## Gallery
 
-https://github.com/user-attachments/assets/b4270b0a-4677-48b0-94fc-74b8eb0b0fc9
+https://github.com/user-attachments/assets/f07d5eb4-91d3-4fa1-b90f-23f9f24bfbed
 
 ## Acknowledgements
 
