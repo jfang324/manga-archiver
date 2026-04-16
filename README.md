@@ -10,7 +10,7 @@ A terminal-based manga downloader and archiver.
 
 ## About The Project
 
-A terminal-based tool that makes it easy to search for and download manga from sources like MangaDex.
+A terminal-based tool that makes it easy to search for and download manga from sources like MangaDex and AllManga.
 
 ## Features
 
@@ -163,6 +163,8 @@ The following command-line arguments are available:
 | `--backlog`             | flag | false   | Sync favorites with Google Drive and download missing chapters                            |
 | `--benchmark`           | flag | false   | Enable benchmark metrics collection, written to `~/.manga-archiver/benchmark/metrics.txt` |
 | `--auto-exit`           | flag | false   | Automatically exit when all jobs are complete                                             |
+| `migrate`               | sub  | -       | Run database migrations (subcommands: `database`, `google-drive`)                         |
+| `auth`                  | sub  | -       | Google Drive authentication (subcommands: `login`, `logout`)                              |
 
 ### Usage Examples
 
@@ -182,9 +184,21 @@ manga-archiver --benchmark
 
 For more options, run `manga-archiver --help`.
 
+### Migration Commands
+
+The application includes a migration system to handle database and Google Drive schema updates.
+
+```sh
+# Migrate database schema
+manga-archiver migrate database
+
+# Migrate Google Drive schema
+manga-archiver migrate google-drive
+```
+
 ## Gallery
 
-https://github.com/user-attachments/assets/b4270b0a-4677-48b0-94fc-74b8eb0b0fc9
+https://github.com/user-attachments/assets/f07d5eb4-91d3-4fa1-b90f-23f9f24bfbed
 
 ## Acknowledgements
 
@@ -194,6 +208,7 @@ https://github.com/user-attachments/assets/b4270b0a-4677-48b0-94fc-74b8eb0b0fc9
 
 - Currently only supports English translations
 - Data-saver mode may not work due to issues with MangaDex's CDN
+- AllManga integration may be slightly unstable at times
 
 ## Development
 

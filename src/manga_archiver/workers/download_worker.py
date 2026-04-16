@@ -2,6 +2,7 @@ import time
 from asyncio import Queue, Semaphore
 
 from ..enums import JobStatus
+from ..integrations.content_providers.header_mappings import CDN_HEADERS
 from ..utils import DownloadClient
 from .base import Worker, WorkerConfig
 from .jobs import DownloadingJob, Job, MergingJob, NotificationJob
@@ -60,6 +61,7 @@ class DownloadWorker(Worker):
             output_directory,
             output_format,
             urls,
+            source,
         ) = (
             job.id,
             job.manga_title,
@@ -68,16 +70,19 @@ class DownloadWorker(Worker):
             job.output_directory,
             job.output_format,
             job.urls,
+            job.source,
         )
 
         if not urls:
             raise ValueError(f"Invalid DownloadingJob missing urls: {job}")
 
+        headers = CDN_HEADERS.get(source, {})
+
         download_start = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.DOWNLOADING, download_start)
 
         async with self._semaphore:
-            image_data: list[bytes] = await self._download_client.download_images(urls)
+            image_data: list[bytes] = await self._download_client.download_images(urls, headers)
 
         download_end = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.DOWNLOADING, download_start, download_end)
