@@ -14,7 +14,7 @@ from .constants.exit_codes import (
     EXIT_VALIDATION_ERROR,
 )
 from .db.migrations import DEFAULT_GOOGLE_DRIVE_VERSION
-from .db.schema_manager import SchemaManager
+from .db.schema_manager import MigrationError, SchemaManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .pipeline_manager import PipelineConfig
 from .repositories import FavoriteRepository
@@ -88,7 +88,13 @@ def main() -> None:
         sys.exit(exit_code)
 
     google_drive_enabled = args.archive
-    is_valid, error_msg = schema_manager.check_versions(google_drive_enabled)
+
+    try:
+        is_valid, error_msg = schema_manager.check_versions(google_drive_enabled)
+    except MigrationError as e:
+        logger.error("Failed to check database versions: %s", e)
+        sys.exit(EXIT_VALIDATION_ERROR)
+
     if not is_valid:
         print(error_msg)
         sys.exit(EXIT_VALIDATION_ERROR)
@@ -105,7 +111,10 @@ def main() -> None:
         try:
             google_drive_client = GoogleDriveClient(token)
             google_drive_client.initialize()
+
             schema_manager.insert_version_record("google_drive", DEFAULT_GOOGLE_DRIVE_VERSION)
+        except MigrationError as e:
+            logger.error("Failed to insert %s version record: %s", "google_drive", e)
         except Exception as e:
             logger.error("Failed to initialize Google Drive: %s", e)
             print(

@@ -35,7 +35,7 @@ def init_schema_version_table(conn: Connection) -> None:
 
     if is_legacy_table:
         # Legacy user: table exists but no version record = needs migration
-        # We need to insert a version record for migration detection, v1.0.0 is the only legacy version
+        # We need to insert a version record for migration detection
         cursor.execute(
             "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
             (LEGACY_VERSION, "database"),
@@ -58,7 +58,7 @@ def init_db(conn: Connection) -> None:
         CREATE TABLE IF NOT EXISTS favorite_manga (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
-            source TEXT NOT NULL DEFAULT 'mangadex'
+            source TEXT NOT NULL
         )
     """)
 
