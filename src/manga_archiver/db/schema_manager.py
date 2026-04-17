@@ -58,8 +58,8 @@ class SchemaManager:
                 (system, version),
             )
             self._conn.commit()
-        except Exception:
-            raise
+        except Exception as e:
+            raise MigrationError(f"Failed to insert {system} version record: {e}") from e
 
     def get_current_version(self, system: str) -> str | None:
         """Get current schema version for a system."""
