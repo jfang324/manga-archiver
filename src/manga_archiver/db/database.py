@@ -5,6 +5,23 @@ from sqlite3 import Connection, connect
 from .migrations import DEFAULT_DATABASE_VERSION, LEGACY_VERSION
 
 
+def insert_version_record_if_missing(conn: Connection, system: str, version: str) -> None:
+    """Insert a version record only when the exact system/version pair is absent."""
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO schema_version (version, system)
+        SELECT ?, ?
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM schema_version
+            WHERE version = ? AND system = ?
+        )
+        """,
+        (version, system, version, system),
+    )
+
+
 def init_schema_version_table(conn: Connection) -> None:
     """Initialize schema_version table with appropriate starting version."""
     cursor = conn.cursor()
@@ -35,16 +52,10 @@ def init_schema_version_table(conn: Connection) -> None:
 
     if is_legacy_table:
         # Legacy user: table exists but no version record = needs migration
-        # We need to insert a version record for migration detection, v1.0.0 is the only legacy version
-        cursor.execute(
-            "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
-            (LEGACY_VERSION, "database"),
-        )
+        # We need to insert a version record for migration detection
+        insert_version_record_if_missing(conn, "database", LEGACY_VERSION)
     else:
-        cursor.execute(
-            "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
-            (DEFAULT_DATABASE_VERSION, "database"),
-        )
+        insert_version_record_if_missing(conn, "database", DEFAULT_DATABASE_VERSION)
 
     conn.commit()
 
@@ -58,7 +69,7 @@ def init_db(conn: Connection) -> None:
         CREATE TABLE IF NOT EXISTS favorite_manga (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
-            source TEXT NOT NULL DEFAULT 'mangadex'
+            source TEXT NOT NULL
         )
     """)
 

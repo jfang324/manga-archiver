@@ -1,13 +1,10 @@
 import importlib.util
-import logging
 from collections.abc import Callable
 from pathlib import Path
 from sqlite3 import Connection, Cursor
 
-from .database import get_connection, init_db
+from .database import get_connection, init_db, insert_version_record_if_missing
 from .migrations import MIN_DATABASE_VERSION, MIN_GOOGLE_DRIVE_VERSION
-
-logger = logging.getLogger(__name__)
 
 MigrationFunc = Callable[[str | None, Cursor], str]
 MigrationStep = tuple[str, MigrationFunc]
@@ -42,8 +39,6 @@ def _version_compare(a: str, b: str | None) -> int:
 class MigrationError(Exception):
     """Raised when migration fails."""
 
-    pass
-
 
 class SchemaManager:
     """Manages database schema versions and migrations."""
@@ -51,38 +46,33 @@ class SchemaManager:
     def __init__(self, conn: Connection | None = None) -> None:
         self._conn = conn or get_connection()
 
+        # we need to init_db so that schema_version table exists
         init_db(self._conn)
-
-    @property
-    def conn(self) -> Connection:
-        return self._conn
 
     def insert_version_record(self, system: str, version: str) -> None:
         """Insert a version record for a system if one doesn't exist."""
         try:
-            cursor = self.conn.cursor()
-            cursor.execute(
-                "INSERT OR IGNORE INTO schema_version (system, version) VALUES (?, ?)",
-                (system, version),
-            )
+            insert_version_record_if_missing(self._conn, system, version)
             self._conn.commit()
         except Exception as e:
-            logger.error("Failed to insert version record: %s", e)
+            # rollback needed because we usually catch this and continue
+            self._conn.rollback()
+            raise MigrationError(f"Failed to insert {system} version record: {e}") from e
 
     def get_current_version(self, system: str) -> str | None:
         """Get current schema version for a system."""
         try:
-            cursor = self.conn.cursor()
+            cursor = self._conn.cursor()
             cursor.execute(
                 "SELECT version FROM schema_version WHERE system = ? ORDER BY id DESC LIMIT 1",
                 (system,),
             )
             row = cursor.fetchone()
+            current_version = row[0] if row else None
 
-            return row[0] if row else None
+            return current_version
         except Exception as e:
-            logger.error("Failed to get system version: %s", e)
-            return None
+            raise MigrationError(f"Failed to get current {system} version: {e}") from e
 
     def get_pending_migrations(self, system: str) -> list[MigrationStep]:
         """Get all migration functions greater than current version."""
@@ -123,20 +113,21 @@ class SchemaManager:
             current = self.get_current_version(system)
             return f"Already at {current}"
 
-        cursor = self.conn.cursor()
         current_version = self.get_current_version(system)
 
         try:
+            cursor = self._conn.cursor()
             for migrate_version, migrate_func in pending:
                 current = self.get_current_version(system)
                 cursor.execute("BEGIN IMMEDIATE")
 
                 migration_msg = migrate_func(current, cursor)
-                logger.info(migration_msg)
-                self.conn.commit()
+
+                self._conn.commit()
+                print(migration_msg)  # print is used here to give the user feedback per migration
                 current_version = migrate_version
         except Exception as e:
-            self.conn.rollback()
+            self._conn.rollback()
             raise MigrationError(f"Migration {current_version} failed: {e}") from e
 
         return f"Migrated to {current_version}"
@@ -152,6 +143,9 @@ class SchemaManager:
 
         Returns:
             tuple[bool, str]: (True, "") if requirements satisfied, (False, error_message) if migration needed
+
+        Raises:
+            MigrationError: If unexpected error occurs when checking versions
         """
         db_current = self.get_current_version("database")
 
@@ -161,7 +155,7 @@ class SchemaManager:
                 f"Current: {db_current}, Required: {MIN_DATABASE_VERSION}. "
                 f"Run: manga-archiver migrate database"
             )
-            logger.error(error_msg)
+
             return False, error_msg
 
         if require_google_drive and MIN_GOOGLE_DRIVE_VERSION is not None:
@@ -173,7 +167,7 @@ class SchemaManager:
                     f"Current: {google_drive_current}, Required: {MIN_GOOGLE_DRIVE_VERSION}. "
                     f"Run: manga-archiver migrate google-drive"
                 )
-                logger.error(error_msg)
+
                 return False, error_msg
 
         return True, ""
