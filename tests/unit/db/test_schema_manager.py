@@ -1,6 +1,10 @@
+from sqlite3 import connect
+
 import pytest
 
-from src.manga_archiver.db.schema_manager import _version_compare, _version_key
+from src.manga_archiver.db.database import init_schema_version_table
+from src.manga_archiver.db.migrations import DEFAULT_DATABASE_VERSION
+from src.manga_archiver.db.schema_manager import SchemaManager, _version_compare, _version_key
 
 
 class TestVersionKey:
@@ -83,3 +87,38 @@ class TestVersionCompare:
     )
     def test_version_compare_greater_than_none(self, a: str, expected: int):
         assert _version_compare(a, None) == expected
+
+
+class TestSchemaVersionRecords:
+    def test_insert_version_record_does_not_consume_id_for_duplicate_record(self):
+        conn = connect(":memory:")
+        manager = SchemaManager(conn)
+
+        manager.insert_version_record("google_drive", "v1.0.0")
+        manager.insert_version_record("google_drive", "v1.0.0")
+        manager.insert_version_record("google_drive", "v1.1.0")
+
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, system, version FROM schema_version WHERE system = ? ORDER BY id",
+            ("google_drive",),
+        )
+
+        assert cursor.fetchall() == [
+            (2, "google_drive", "v1.0.0"),
+            (3, "google_drive", "v1.1.0"),
+        ]
+
+    def test_init_schema_version_table_does_not_consume_id_on_repeat_initialization(self):
+        conn = connect(":memory:")
+
+        init_schema_version_table(conn)
+        init_schema_version_table(conn)
+
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, system, version FROM schema_version WHERE system = ? ORDER BY id",
+            ("database",),
+        )
+
+        assert cursor.fetchall() == [(1, "database", DEFAULT_DATABASE_VERSION)]

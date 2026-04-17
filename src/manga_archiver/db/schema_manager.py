@@ -3,7 +3,7 @@ from collections.abc import Callable
 from pathlib import Path
 from sqlite3 import Connection, Cursor
 
-from .database import get_connection, init_db
+from .database import get_connection, init_db, insert_version_record_if_missing
 from .migrations import MIN_DATABASE_VERSION, MIN_GOOGLE_DRIVE_VERSION
 
 MigrationFunc = Callable[[str | None, Cursor], str]
@@ -52,11 +52,7 @@ class SchemaManager:
     def insert_version_record(self, system: str, version: str) -> None:
         """Insert a version record for a system if one doesn't exist."""
         try:
-            cursor = self._conn.cursor()
-            cursor.execute(
-                "INSERT OR IGNORE INTO schema_version (system, version) VALUES (?, ?)",
-                (system, version),
-            )
+            insert_version_record_if_missing(self._conn, system, version)
             self._conn.commit()
         except Exception as e:
             # rollback needed because we usually catch this and continue
@@ -117,10 +113,10 @@ class SchemaManager:
             current = self.get_current_version(system)
             return f"Already at {current}"
 
-        cursor = self._conn.cursor()
         current_version = self.get_current_version(system)
 
         try:
+            cursor = self._conn.cursor()
             for migrate_version, migrate_func in pending:
                 current = self.get_current_version(system)
                 cursor.execute("BEGIN IMMEDIATE")
