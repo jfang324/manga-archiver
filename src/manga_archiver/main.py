@@ -30,21 +30,14 @@ def _handle_auth(args: Namespace) -> tuple[bool, int]:
     Returns:
         tuple[bool, int]: Tuple of (handled, exit_code). If handled is False, caller should continue.
     """
-    if not hasattr(args, "command") or args.command != "auth":
+    if args.command != "auth":
         return False, EXIT_SUCCESS
-
-    if not hasattr(args, "auth_command") or args.auth_command is None:
-        print("Error: Please specify 'login' or 'logout'", file=sys.stderr)
-        print("Usage: manga-archiver auth login", file=sys.stderr)
-        return True, EXIT_AUTH_ERROR
-
     if args.auth_command == "login":
         return True, handle_auth_login()
 
     if args.auth_command == "logout":
         return True, handle_auth_logout()
 
-    logger.error("Please specify 'auth login' or 'auth logout'")
     return True, EXIT_AUTH_ERROR
 
 
@@ -54,18 +47,19 @@ def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[
     Returns:
         tuple[bool, int]: Tuple of (handled, exit_code). If handled is False, caller should continue.
     """
-    if not hasattr(args, "command") or args.command != "migrate":
+    if args.command != "migrate":
         return False, EXIT_SUCCESS
-
-    if not hasattr(args, "migrate_system") or args.migrate_system is None:
-        print("Error: Please specify 'database' or 'google-drive'", file=sys.stderr)
-        print("Usage: manga-archiver migrate database", file=sys.stderr)
-        return True, EXIT_MIGRATION_ERROR
 
     print("Running migrations...")
 
     try:
-        system = "database" if args.migrate_system == "database" else "google_drive"
+        if args.migrate_system == "database":
+            system = "database"
+        elif args.migrate_system == "google-drive":
+            system = "google_drive"
+        else:
+            return True, EXIT_MIGRATION_ERROR
+
         result = schema_manager.run_migrations(system)
         print(f"  {result}")
 
