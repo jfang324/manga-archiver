@@ -4,7 +4,7 @@ from textual.reactive import reactive
 from textual.widgets import SelectionList
 from textual.widgets.selection_list import Selection
 
-from src.manga_archiver.types import ContentSource
+from src.manga_archiver.models import ContentSource
 from src.manga_archiver.widgets.selection_panel import SelectionPanel
 
 

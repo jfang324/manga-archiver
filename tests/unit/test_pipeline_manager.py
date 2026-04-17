@@ -3,9 +3,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.manga_archiver.enums import OutputFormat
+from src.manga_archiver.models import ContentSource
+from src.manga_archiver.models.output_format import OutputFormat
 from src.manga_archiver.pipeline_manager import PipelineConfig, PipelineManager
-from src.manga_archiver.types import ContentSource
 from src.manga_archiver.workers.jobs import FetchingResourcesJob
 
 

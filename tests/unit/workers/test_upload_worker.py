@@ -2,9 +2,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.manga_archiver.enums import JobStatus, OutputFormat
-from src.manga_archiver.types import ContentSource
-from src.manga_archiver.workers.jobs import UploadJob
+from src.manga_archiver.models import ContentSource
+from src.manga_archiver.models.output_format import OutputFormat
+from src.manga_archiver.workers.jobs import JobStatus, UploadJob
 from src.manga_archiver.workers.upload_worker import UploadWorker
 
 

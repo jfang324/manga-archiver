@@ -10,7 +10,7 @@ from textual.widgets import Footer
 
 from ..integrations.content_providers import ContentProviderManager
 from ..integrations.exceptions import ApiError, NotFoundError, RateLimitError
-from ..types import Chapter, ContentSource
+from ..models import Chapter, ContentSource
 from ..widgets import SelectionPanel
 
 

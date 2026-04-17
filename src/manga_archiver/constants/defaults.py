@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ..enums import OutputFormat
+from ..models.output_format import OutputFormat
 
 DEFAULT_OUTPUT_PATH: Path = Path.home() / "Downloads"
 DEFAULT_OUTPUT_FORMAT: OutputFormat = OutputFormat.PDF

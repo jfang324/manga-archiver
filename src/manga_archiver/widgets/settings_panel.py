@@ -12,7 +12,7 @@ from ..constants.defaults import (
     DEFAULT_OUTPUT_PATH,
     DEFAULT_QUALITY,
 )
-from ..enums import OutputFormat
+from ..models.output_format import OutputFormat
 from .directory_explorer import DirectoryExplorer
 
 

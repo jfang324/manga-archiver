@@ -1,6 +1,6 @@
 """Mock data for unit tests."""
 
-from src.manga_archiver.types import Chapter, ContentSource, DownloadResource, Manga
+from src.manga_archiver.models import Chapter, ContentSource, DownloadResource, Manga
 
 # Manga search response data
 mock_manga_data: dict = {

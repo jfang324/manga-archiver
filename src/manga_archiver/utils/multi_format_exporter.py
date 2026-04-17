@@ -8,7 +8,7 @@ from pathlib import Path
 from ebooklib import epub
 from PIL import Image
 
-from ..enums import OutputFormat
+from ..models.output_format import OutputFormat
 
 logger = logging.getLogger(__name__)
 

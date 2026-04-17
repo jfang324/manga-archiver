@@ -9,7 +9,7 @@ from textual.reactive import reactive
 
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
-from .models import AppConfig
+from .models.app_config import AppConfig
 from .pipeline_manager import PipelineConfig, PipelineManager
 from .repositories import FavoriteManga, FavoriteRepository
 from .screens import (

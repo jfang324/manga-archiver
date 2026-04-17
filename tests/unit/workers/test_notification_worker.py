@@ -3,8 +3,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.manga_archiver.enums import JobStatus, OutputFormat
-from src.manga_archiver.workers.jobs import JobMetadata, NotificationJob
+from src.manga_archiver.models.output_format import OutputFormat
+from src.manga_archiver.workers.jobs import JobMetadata, JobStatus, NotificationJob
 from src.manga_archiver.workers.notification_worker import NotificationWorker
 
 

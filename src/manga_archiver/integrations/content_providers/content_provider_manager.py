@@ -5,7 +5,7 @@ from typing import TypeAlias
 
 from aiohttp import ClientSession
 
-from ...types import Chapter, ContentSource, DownloadResource, Manga
+from ...models import Chapter, ContentSource, DownloadResource, Manga
 from .allanime.client import AllMangaClient
 from .base import Provider
 from .mangadex.client import MangaDexApiClient

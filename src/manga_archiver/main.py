@@ -6,7 +6,7 @@ from argparse import Namespace
 from .app import MangaArchiverApp
 from .backlog_sync import BacklogSync
 from .cli import parse_args
-from .constants import (
+from .constants.exit_codes import (
     EXIT_AUTH_ERROR,
     EXIT_INIT_ERROR,
     EXIT_MIGRATION_ERROR,

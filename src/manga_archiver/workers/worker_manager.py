@@ -3,13 +3,12 @@ import logging
 from asyncio import Queue, Semaphore
 from collections.abc import Callable
 
-from ..enums import JobStatus
 from ..integrations.content_providers import ContentProviderManager
 from ..integrations.storage_providers.google_drive import GoogleDriveClient
 from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
 from .download_worker import DownloadWorker
-from .jobs import Job, JobMetadata, NotificationJob
+from .jobs import Job, JobMetadata, JobStatus, NotificationJob
 from .merge_worker import MergeWorker
 from .notification_worker import BenchmarkManager, NotificationWorker
 from .resolve_worker import ResolveWorker

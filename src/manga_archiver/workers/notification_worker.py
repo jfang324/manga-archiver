@@ -4,7 +4,7 @@ import time
 from asyncio import Queue
 from collections.abc import Callable
 
-from ..enums import JobStatus
+from ..workers.jobs import JobStatus
 from .benchmark import BenchmarkManager
 from .jobs import JobMetadata, NotificationJob
 

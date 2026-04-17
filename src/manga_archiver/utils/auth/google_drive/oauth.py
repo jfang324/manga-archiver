@@ -5,7 +5,7 @@ import time
 
 import requests
 
-from ....constants import (
+from ....constants.exit_codes import (
     EXIT_AUTH_LOGIN_FAILED,
     EXIT_AUTH_LOGOUT_FAILED,
     EXIT_SUCCESS,

@@ -1,8 +1,9 @@
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
-from ..enums import JobStatus, OutputFormat
-from ..types import ContentSource
+from ..models import ContentSource
+from ..models.output_format import OutputFormat
 
 
 @dataclass
@@ -24,6 +25,18 @@ class Job:
     chapter_title: str
     output_directory: Path
     output_format: OutputFormat
+
+
+class JobStatus(Enum):
+    """An enum class for the status of a job."""
+
+    QUEUED = "queued"
+    FETCHING_RESOURCES = "fetching_resources"
+    DOWNLOADING = "downloading"
+    MERGING = "merging"
+    UPLOADING = "uploading"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 @dataclass

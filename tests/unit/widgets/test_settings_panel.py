@@ -6,7 +6,7 @@ from textual.app import App, ComposeResult
 from textual.validation import ValidationResult
 from textual.widgets import Input, Select, Switch
 
-from src.manga_archiver.enums import OutputFormat
+from src.manga_archiver.models.output_format import OutputFormat
 from src.manga_archiver.widgets.settings_panel import SettingsPanel
 
 

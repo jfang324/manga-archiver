@@ -3,7 +3,7 @@ import logging
 
 from aiohttp import ClientSession
 
-from ....types import Chapter, ContentSource, DownloadResource, Manga
+from ....models import Chapter, ContentSource, DownloadResource, Manga
 from ...exceptions import ApiError, NotFoundError, RateLimitError
 from ..base import Provider
 from ..header_mappings import API_HEADERS

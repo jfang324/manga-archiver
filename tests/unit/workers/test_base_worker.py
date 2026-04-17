@@ -2,13 +2,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.manga_archiver.enums import JobStatus
 from src.manga_archiver.integrations.exceptions import (
     NotFoundError,
     RateLimitError,
 )
 from src.manga_archiver.workers.base import Worker, WorkerConfig
-from src.manga_archiver.workers.jobs import Job
+from src.manga_archiver.workers.jobs import Job, JobStatus
 
 
 class ConcreteWorker(Worker):

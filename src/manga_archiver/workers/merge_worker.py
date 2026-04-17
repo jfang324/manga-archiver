@@ -1,8 +1,8 @@
 import time
 from asyncio import Queue
 
-from ..enums import JobStatus
 from ..utils import MultiFormatExporter
+from ..workers.jobs import JobStatus
 from .base import Worker, WorkerConfig
 from .jobs import (
     Job,

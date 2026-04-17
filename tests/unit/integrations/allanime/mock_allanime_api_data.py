@@ -1,6 +1,6 @@
 """Mock data for AllManga API unit tests."""
 
-from src.manga_archiver.types import Chapter, ContentSource, DownloadResource, Manga
+from src.manga_archiver.models import Chapter, ContentSource, DownloadResource, Manga
 
 # Search response data (from example_search_response.json)
 mock_search_response: dict = {
