@@ -8,7 +8,7 @@ from ..constants.defaults import (
     DEFAULT_OUTPUT_PATH,
     DEFAULT_QUALITY,
 )
-from ..enums import OutputFormat
+from .output_format import OutputFormat
 
 
 @dataclass

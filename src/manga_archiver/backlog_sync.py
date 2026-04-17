@@ -5,10 +5,10 @@ from pathlib import Path
 
 import aiohttp
 
-from .enums import OutputFormat
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .models import Chapter, ContentSource
+from .models.output_format import OutputFormat
 from .repositories import FavoriteRepository
 from .workers.jobs import FetchingResourcesJob
 

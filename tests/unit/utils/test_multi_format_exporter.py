@@ -3,7 +3,7 @@ from io import BytesIO
 import pytest
 from PIL import Image
 
-from src.manga_archiver.enums import OutputFormat
+from src.manga_archiver.models.output_format import OutputFormat
 from src.manga_archiver.utils.multi_format_exporter import MultiFormatExporter
 
 

@@ -16,9 +16,10 @@ from .constants.defaults import (
     DEFAULT_RESOLVE_WORKERS,
     DEFAULT_UPLOAD_WORKERS,
 )
-from .enums import JobStatus, OutputFormat
+from .enums import JobStatus
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
+from .models.output_format import OutputFormat
 from .utils import DownloadClient
 from .workers import (
     FetchingResourcesJob,

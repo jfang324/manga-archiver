@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..enums import JobStatus, OutputFormat
+from ..enums import JobStatus
 from ..models import ContentSource
+from ..models.output_format import OutputFormat
 
 
 @dataclass

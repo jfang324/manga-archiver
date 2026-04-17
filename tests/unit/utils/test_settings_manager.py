@@ -11,8 +11,8 @@ from src.manga_archiver.constants.defaults import (
     DEFAULT_OUTPUT_PATH,
     DEFAULT_QUALITY,
 )
-from src.manga_archiver.enums import OutputFormat
 from src.manga_archiver.models.app_config import AppConfig
+from src.manga_archiver.models.output_format import OutputFormat
 from src.manga_archiver.utils import settings_manager
 from src.manga_archiver.utils.settings_manager import SettingsData
 
