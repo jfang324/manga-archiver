@@ -124,7 +124,7 @@ class SchemaManager:
                 migration_msg = migrate_func(current, cursor)
 
                 self._conn.commit()
-                print(migration_msg)
+                print(migration_msg)  # print is used here to give the user feedback per migration
                 current_version = migrate_version
         except Exception as e:
             self._conn.rollback()

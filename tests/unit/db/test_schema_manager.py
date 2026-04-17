@@ -89,7 +89,7 @@ class TestVersionCompare:
         assert _version_compare(a, None) == expected
 
 
-class TestSchemaVersionRecords:
+class TestSchemaManager:
     def test_insert_version_record_does_not_consume_id_for_duplicate_record(self):
         conn = connect(":memory:")
         manager = SchemaManager(conn)
