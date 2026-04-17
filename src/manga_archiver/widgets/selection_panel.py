@@ -7,7 +7,7 @@ from textual.widget import Widget
 from textual.widgets import Label, SelectionList
 from textual.widgets.selection_list import Selection
 
-from ..types import ContentSource
+from ..models import ContentSource
 
 
 class SelectionPanel(Widget):

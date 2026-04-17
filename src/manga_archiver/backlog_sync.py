@@ -8,8 +8,8 @@ import aiohttp
 from .enums import OutputFormat
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
+from .models import Chapter, ContentSource
 from .repositories import FavoriteRepository
-from .types import Chapter, ContentSource
 from .workers.jobs import FetchingResourcesJob
 
 logger = logging.getLogger(__name__)

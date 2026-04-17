@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.manga_archiver.enums import OutputFormat
-from src.manga_archiver.types import ContentSource
+from src.manga_archiver.models import ContentSource
 from src.manga_archiver.workers.jobs import MergingJob, UploadJob
 from src.manga_archiver.workers.merge_worker import MergeWorker
 

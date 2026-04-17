@@ -9,7 +9,7 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Input, Label, ListItem, ListView
 
-from ..types import ContentSource
+from ..models import ContentSource
 
 
 class SearchItem(ListItem):

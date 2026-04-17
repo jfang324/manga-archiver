@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ..types import ContentSource
+from ..models import ContentSource
 
 
 @dataclass(frozen=True)

@@ -5,7 +5,7 @@ import pytest
 from src.manga_archiver.integrations.content_providers.allanime.client import AllMangaClient
 from src.manga_archiver.integrations.content_providers.allanime.constants import CDN_BASE_URL
 from src.manga_archiver.integrations.exceptions import ApiError, NotFoundError, RateLimitError
-from src.manga_archiver.types import ContentSource
+from src.manga_archiver.models import ContentSource
 from tests.conftest import AsyncContextManagerMock
 from tests.unit.integrations.allanime.mock_allanime_api_data import (
     mock_chapter_pages_missing_urls,

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..enums import JobStatus, OutputFormat
-from ..types import ContentSource
+from ..models import ContentSource
 
 
 @dataclass

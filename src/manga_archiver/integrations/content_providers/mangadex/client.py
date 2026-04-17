@@ -2,7 +2,7 @@ import logging
 
 from aiohttp import ClientSession
 
-from ....types import Chapter, ContentSource, DownloadResource, Manga
+from ....models import Chapter, ContentSource, DownloadResource, Manga
 from ...exceptions import ApiError, NotFoundError, RateLimitError
 from ..base import Provider
 from .constants import MANGADEX_RESOURCE_LINKS_URL, MANGADEX_ROOT_URL

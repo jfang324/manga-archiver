@@ -3,7 +3,7 @@ from asyncio import Queue, Semaphore
 
 from ..enums import JobStatus
 from ..integrations.content_providers import ContentProviderManager
-from ..types import DownloadResource
+from ..models import DownloadResource
 from .base import Worker, WorkerConfig
 from .jobs import (
     DownloadingJob,

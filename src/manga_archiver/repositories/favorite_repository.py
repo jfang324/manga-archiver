@@ -1,8 +1,8 @@
 import logging
 
 from ..db.database import get_connection
+from ..models import ContentSource
 from ..repositories.types import FavoriteManga
-from ..types import ContentSource
 
 logger = logging.getLogger(__name__)
 

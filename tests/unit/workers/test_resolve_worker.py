@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.manga_archiver.types import ContentSource, DownloadResource
+from src.manga_archiver.models import ContentSource, DownloadResource
 from src.manga_archiver.workers.jobs import (
     DownloadingJob,
     FetchingResourcesJob,

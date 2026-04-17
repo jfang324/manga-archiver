@@ -3,7 +3,7 @@
 For providers that require special headers (e.g., Referer) to access their API or CDN.
 """
 
-from ...types import ContentSource
+from ...models import ContentSource
 
 # Headers required for API requests per provider
 API_HEADERS: dict[ContentSource, dict[str, str]] = {
