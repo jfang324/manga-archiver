@@ -11,20 +11,16 @@ from .subcommands import add_auth_parser, add_migrate_parser
 from .validators import positive_int
 
 
-def create_parser() -> ArgumentParser:
-    """Create the command-line argument parser.
-
-    Returns:
-        ArgumentParser: Configured ArgumentParser instance
-    """
+def _build_parser() -> tuple[ArgumentParser, ArgumentParser, ArgumentParser]:
+    """Create the command-line parser and command-specific subparsers."""
     parser = ArgumentParser(
-        description="Manga Archiver - Download manga from sources like MangaDex directly to your Google Drive",
+        description="Manga Archiver - Download manga from sources like MangaDex and AllManga locally or directly to your Google Drive",
         formatter_class=lambda prog: RawTextHelpFormatter(prog, max_help_position=50),
     )
     subparsers = parser.add_subparsers(dest="command", title="commands", metavar="")
 
-    add_auth_parser(subparsers)
-    add_migrate_parser(subparsers)
+    auth_parser = add_auth_parser(subparsers)
+    migrate_parser = add_migrate_parser(subparsers)
 
     parser.add_argument(
         "--resolve-workers",
@@ -85,7 +81,7 @@ def create_parser() -> ArgumentParser:
         help="Automatically exit when all jobs are complete",
     )
 
-    return parser
+    return parser, auth_parser, migrate_parser
 
 
 def parse_args() -> Namespace:
@@ -94,6 +90,13 @@ def parse_args() -> Namespace:
     Returns:
         Namespace: Parsed command-line arguments
     """
-    parser = create_parser()
+    parser, auth_parser, migrate_parser = _build_parser()
+    args = parser.parse_args()
 
-    return parser.parse_args()
+    if args.command == "auth" and args.auth_command is None:
+        auth_parser.error("please specify a subcommand: login or logout")
+
+    if args.command == "migrate" and args.migrate_system is None:
+        migrate_parser.error("please specify a subcommand: database or google-drive")
+
+    return args
