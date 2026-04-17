@@ -1,4 +1,4 @@
-from argparse import ArgumentParser, ArgumentTypeError, Namespace, RawTextHelpFormatter
+from argparse import ArgumentParser, Namespace, RawTextHelpFormatter
 
 from ..constants.defaults import (
     DEFAULT_DOWNLOAD_RATE_LIMIT,
@@ -7,19 +7,8 @@ from ..constants.defaults import (
     DEFAULT_RESOLVE_RATE_LIMIT,
     DEFAULT_RESOLVE_WORKERS,
 )
-
-
-def _positive_int(value: str) -> int:
-    """Validate that a string is a positive integer."""
-    try:
-        n = int(value)
-    except ValueError as e:
-        raise ArgumentTypeError(f"invalid integer value: {value}") from e
-
-    if n < 1:
-        raise ArgumentTypeError(f"must be at least 1, got {n}")
-
-    return n
+from .subcommands import add_auth_parser, add_migrate_parser
+from .validators import positive_int
 
 
 def create_parser() -> ArgumentParser:
@@ -34,49 +23,40 @@ def create_parser() -> ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", title="commands", metavar="")
 
-    auth_parser = subparsers.add_parser("auth", help="Google Drive authentication")
-    auth_subparsers = auth_parser.add_subparsers(dest="auth_command", metavar="")
-
-    auth_subparsers.add_parser("login", help="Log in to Google Drive")
-    auth_subparsers.add_parser("logout", help="Log out of Google Drive")
-
-    migrate_parser = subparsers.add_parser("migrate", help="Run database migrations")
-    migrate_subparsers = migrate_parser.add_subparsers(dest="migrate_system", metavar="")
-
-    migrate_subparsers.add_parser("database", help="Migrate database schema")
-    migrate_subparsers.add_parser("google-drive", help="Migrate google drive schema")
+    add_auth_parser(subparsers)
+    add_migrate_parser(subparsers)
 
     parser.add_argument(
         "--resolve-workers",
-        type=_positive_int,
+        type=positive_int,
         default=DEFAULT_RESOLVE_WORKERS,
         help=f"Number of workers retrieving download resources (default: {DEFAULT_RESOLVE_WORKERS})",
     )
 
     parser.add_argument(
         "--download-workers",
-        type=_positive_int,
+        type=positive_int,
         default=DEFAULT_DOWNLOAD_WORKERS,
         help=f"Number of workers downloading images (default: {DEFAULT_DOWNLOAD_WORKERS})",
     )
 
     parser.add_argument(
         "--merge-workers",
-        type=_positive_int,
+        type=positive_int,
         default=DEFAULT_MERGE_WORKERS,
         help=f"Number of workers merging images into an output format (default: {DEFAULT_MERGE_WORKERS})",
     )
 
     parser.add_argument(
         "--resolve-rate-limit",
-        type=_positive_int,
+        type=positive_int,
         default=DEFAULT_RESOLVE_RATE_LIMIT,
         help=f"Global rate limit for resolve workers (default: {DEFAULT_RESOLVE_RATE_LIMIT})",
     )
 
     parser.add_argument(
         "--download-rate-limit",
-        type=_positive_int,
+        type=positive_int,
         default=DEFAULT_DOWNLOAD_RATE_LIMIT,
         help=f"Global rate limit for download workers (default: {DEFAULT_DOWNLOAD_RATE_LIMIT})",
     )
