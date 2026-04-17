@@ -13,7 +13,7 @@ from ..constants.defaults import (
     DEFAULT_OUTPUT_PATH,
     DEFAULT_QUALITY,
 )
-from ..models import AppConfig
+from ..models.app_config import AppConfig
 from ..models.output_format import OutputFormat
 from ..widgets import SettingsPanel
 

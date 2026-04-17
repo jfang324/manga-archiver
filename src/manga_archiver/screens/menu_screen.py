@@ -4,7 +4,7 @@ from textual.containers import Vertical
 from textual.screen import Screen
 from textual.widgets import Footer
 
-from ..constants import MENU_OPTIONS
+from ..constants.menu_options import MENU_OPTIONS
 from ..widgets import MenuSelector
 
 

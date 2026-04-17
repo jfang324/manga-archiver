@@ -5,7 +5,7 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Label, ListItem, ListView
 
-from ..constants import MenuOption
+from ..constants.menu_options import MenuOption
 
 
 class MenuSelector(Widget):
