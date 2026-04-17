@@ -59,6 +59,8 @@ class SchemaManager:
             )
             self._conn.commit()
         except Exception as e:
+            # rollback needed because we usually catch this and continue
+            self._conn.rollback()
             raise MigrationError(f"Failed to insert {system} version record: {e}") from e
 
     def get_current_version(self, system: str) -> str | None:
@@ -125,8 +127,8 @@ class SchemaManager:
 
                 migration_msg = migrate_func(current, cursor)
 
-                print(migration_msg)
                 self._conn.commit()
+                print(migration_msg)
                 current_version = migrate_version
         except Exception as e:
             self._conn.rollback()

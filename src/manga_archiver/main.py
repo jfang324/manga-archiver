@@ -32,6 +32,7 @@ def _handle_auth(args: Namespace) -> tuple[bool, int]:
     """
     if args.command != "auth":
         return False, EXIT_SUCCESS
+
     if args.auth_command == "login":
         return True, handle_auth_login()
 
@@ -55,8 +56,10 @@ def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[
     try:
         if args.migrate_system == "database":
             system = "database"
+
         elif args.migrate_system == "google-drive":
             system = "google_drive"
+
         else:
             return True, EXIT_MIGRATION_ERROR
 
@@ -65,7 +68,7 @@ def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[
 
         return True, EXIT_SUCCESS
     except Exception as e:
-        print(f"Migration failed: {e}", file=sys.stderr)
+        print(f"Migration failed: {e}")
         return True, EXIT_MIGRATION_ERROR
 
 
@@ -115,6 +118,10 @@ def main() -> None:
             schema_manager.insert_version_record("google_drive", DEFAULT_GOOGLE_DRIVE_VERSION)
         except MigrationError as e:
             logger.error("Failed to insert %s version record: %s", "google_drive", e)
+            print(
+                "Failed to write Google Drive version record. Run: manga-archiver migrate google-drive"
+            )
+            sys.exit(EXIT_INIT_ERROR)
         except Exception as e:
             logger.error("Failed to initialize Google Drive: %s", e)
             print(
