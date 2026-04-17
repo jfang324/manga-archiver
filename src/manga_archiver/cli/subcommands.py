@@ -24,6 +24,6 @@ def add_migrate_parser(subparsers: _SubParsersAction) -> ArgumentParser:
     )
 
     migrate_subparsers.add_parser("database", help="Migrate database schema")
-    migrate_subparsers.add_parser("google-drive", help="Migrate google drive schema")
+    migrate_subparsers.add_parser("google-drive", help="Migrate Google Drive schema")
 
     return migrate_parser
