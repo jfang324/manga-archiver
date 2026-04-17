@@ -96,7 +96,20 @@ manga-archiver/
 - Test files: use absolute imports (e.g., `from src.manga_archiver...`)
 - Service modules use `from module import *` pattern (as in main.py)
 - Order: standard library → third-party → local imports
-- All imports on separate lines, never grouped
+- Multiple imports per line are fine as long as they are from the same module/file
+
+### Barrel Exports
+
+Keep `__init__.py` barrel exports minimal - only expose what is considered the stable public API. This prevents circular dependency issues as the codebase grows.
+
+```python
+# ✅ GOOD - Minimal stable public API
+from .client import MangaDexApiClient  # Main client only
+from .exceptions import NotFoundError, RateLimitError  # Required exceptions
+
+# ❌ BAD - Exposing internal modules
+from .submodule.internal import helper_function  # Leaks internal details
+```
 
 ### Import Patterns and Type Hints
 
