@@ -7,11 +7,11 @@ from dataclasses import dataclass
 
 from aiohttp import ClientError
 
-from ..enums import JobStatus
 from ..integrations.exceptions import (
     NotFoundError,
     RateLimitError,
 )
+from ..workers.jobs import JobStatus
 from .jobs import Job, NotificationJob
 
 logger = logging.getLogger(__name__)

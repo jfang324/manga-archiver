@@ -2,9 +2,9 @@ import logging
 import time
 from asyncio import Queue
 
-from ..enums import JobStatus
 from ..integrations.storage_providers.google_drive import GoogleDriveClient
 from ..integrations.storage_providers.google_drive.types import GoogleDriveFileMetadata
+from ..workers.jobs import JobStatus
 from .base import Worker, WorkerConfig
 from .jobs import Job, NotificationJob, UploadJob
 

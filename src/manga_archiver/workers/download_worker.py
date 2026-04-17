@@ -1,9 +1,9 @@
 import time
 from asyncio import Queue, Semaphore
 
-from ..enums import JobStatus
 from ..integrations.content_providers.header_mappings import CDN_HEADERS
 from ..utils import DownloadClient
+from ..workers.jobs import JobStatus
 from .base import Worker, WorkerConfig
 from .jobs import DownloadingJob, Job, MergingJob, NotificationJob
 
