@@ -50,6 +50,15 @@ class ContentProviderManager:
                 errors.append((source, result))
             elif isinstance(result, list):
                 all_manga.extend(result)
+            else:
+                errors.append(
+                    (
+                        source,
+                        TypeError(
+                            f"Unexpected results type from provider {source}: {type(result).__name__}"
+                        ),
+                    )
+                )
 
         all_manga.sort(key=lambda manga: manga.title.lower())
 
