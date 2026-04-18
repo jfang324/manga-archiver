@@ -61,9 +61,15 @@ class MangaDexChapterResponse:
         if "data" not in response:
             raise ValueError("Invalid response: missing data")
 
+        if not isinstance(response["data"], list):
+            raise ValueError("Invalid response: data must be a list")
+
         results: list[ChapterResult] = []
 
         for result in response["data"]:
+            if not isinstance(result, dict):
+                continue
+
             try:
                 results.append(ChapterResult.from_dict(result))
             except ValueError:  # noqa: PERF203 - try catch is required to skip invalid results

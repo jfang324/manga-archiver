@@ -20,6 +20,9 @@ class ResourceBundle:
         if "data" not in bundle:
             raise ValueError("Invalid bundle: missing data")
 
+        if not isinstance(bundle["data"], list):
+            raise ValueError("Invalid bundle: data must be a list")
+
         return cls(
             hash=bundle["hash"],
             data=bundle["data"],
