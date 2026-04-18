@@ -17,8 +17,12 @@ class SearchResult:
         if "_id" not in data:
             raise ValueError("Invalid search result: missing _id")
 
+        _id = data["_id"]
+        if not isinstance(_id, str):
+            raise ValueError("Invalid search result: _id must be a string")
+
         return cls(
-            _id=data["_id"],
+            _id=_id,
             english_name=data.get("englishName"),
             name=data.get("name"),
         )
