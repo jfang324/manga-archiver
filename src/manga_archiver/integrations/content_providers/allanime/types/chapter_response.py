@@ -51,6 +51,10 @@ class ChapterResponse:
             raise ValueError("Invalid response: missing availableChaptersDetail")
 
         chapters_detail = manga_data["availableChaptersDetail"]
+
+        if not isinstance(chapters_detail, dict):
+            raise ValueError("Invalid response: availableChaptersDetail is not a dict")
+
         detail = MangaChaptersDetail.from_dict(chapters_detail)
 
         return cls(detail=detail)

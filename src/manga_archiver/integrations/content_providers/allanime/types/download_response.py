@@ -16,8 +16,11 @@ class PictureUrl:
             raise ValueError("Invalid picture URL: missing url")
 
         url = data["url"]
-        if not url:
-            raise ValueError("Invalid picture URL: empty url")
+
+        if not isinstance(url, str):
+            raise ValueError("Invalid picture URL: url must be a string")
+        if not url.strip():
+            raise ValueError("Invalid picture URL: url must not be empty")
 
         return cls(url=url)
 

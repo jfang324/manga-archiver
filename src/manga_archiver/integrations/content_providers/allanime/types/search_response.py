@@ -77,4 +77,8 @@ class AllMangaSearchResponse:
             raise ValueError("Invalid response: missing data")
 
         root = response["data"]
+
+        if not isinstance(root, dict):
+            raise ValueError("Invalid response: data is not a dict")
+
         return cls(data=SearchEdges.from_dict(root))
