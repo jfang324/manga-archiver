@@ -5,8 +5,6 @@ from typing import TypedDict
 class ClientNotInitializedError(Exception):
     """Raised when client methods are called before initialize()."""
 
-    pass
-
 
 class GoogleApiStoredToken(TypedDict):
     """Token data for google.oauth2.credentials.Credentials."""

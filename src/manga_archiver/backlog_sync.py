@@ -213,7 +213,7 @@ class BacklogSync:
         chapter_numbers: list[float] = []
 
         for file in files:
-            name = file.get("name", "")
+            name = file["name"]
             match = re.search(r"\[(\d+\.?\d*)\]", name)
             if match:
                 chapter_numbers.append(float(match.group(1)))
