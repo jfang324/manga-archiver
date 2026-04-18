@@ -11,7 +11,8 @@ from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .models.app_config import AppConfig
 from .pipeline_manager import PipelineConfig, PipelineManager
-from .repositories import FavoriteManga, FavoriteRepository
+from .repositories import FavoriteRepository
+from .repositories.types import FavoriteManga
 from .screens import (
     DownloadsScreen,
     FavoritesScreen,

@@ -5,7 +5,7 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Footer
 
-from ..repositories import FavoriteManga
+from ..repositories.types import FavoriteManga
 from ..widgets import FavoritesPanel
 
 

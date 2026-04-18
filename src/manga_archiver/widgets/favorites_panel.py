@@ -6,7 +6,7 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Label, ListItem, ListView
 
-from ..repositories import FavoriteManga
+from ..repositories.types import FavoriteManga
 
 
 class FavoritesPanel(Widget):
