@@ -1,16 +1,11 @@
-import logging
-
 from aiohttp import ClientSession
 
 from ....models import Chapter, ContentSource, DownloadResource, Manga
 from ...exceptions import ApiError, NotFoundError, RateLimitError
 from ..base import Provider
-from ..constants import DEFAULT_REQUEST_TIMEOUT
-from ..header_mappings import API_HEADERS
+from ..constants import API_HEADERS, DEFAULT_REQUEST_TIMEOUT
 from .constants import MANGADEX_RESOURCE_LINKS_URL, MANGADEX_ROOT_URL
 from .types import MangaDexChapterResponse, MangaDexDownloadResourceResponse, MangaDexSearchResponse
-
-logger = logging.getLogger(__name__)
 
 
 class MangaDexApiClient(Provider):

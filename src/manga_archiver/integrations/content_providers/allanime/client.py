@@ -5,7 +5,7 @@ from aiohttp import ClientSession
 from ....models import Chapter, ContentSource, DownloadResource, Manga
 from ...exceptions import ApiError, NotFoundError, RateLimitError
 from ..base import Provider
-from ..header_mappings import API_HEADERS
+from ..constants import API_HEADERS, DEFAULT_REQUEST_TIMEOUT
 from .constants import (
     ALLANIME_API_URL,
     CDN_BASE_URL,
@@ -49,7 +49,9 @@ class AllMangaClient(Provider):
         """
         headers = API_HEADERS.get(ContentSource.ALLMANGA, {})
 
-        async with self._session.get(url, params=params, headers=headers, timeout=10) as response:
+        async with self._session.get(
+            url, params=params, headers=headers, timeout=DEFAULT_REQUEST_TIMEOUT
+        ) as response:
             if response.status == 404:
                 raise NotFoundError(f"Resource not found: {url}")
 

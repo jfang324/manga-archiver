@@ -40,7 +40,7 @@ The project uses Ruff for linting and formatting:
 #### Pyright (Type Checking)
 - Run type checking: `poetry run pyright`
 - Type checking mode: basic
-- Python version: 3.9+
+- Python version: 3.10
 
 ## Project Structure
 ```
@@ -239,36 +239,76 @@ logger.error(f"Failed to process: {e}")   # Extra string interpolation
 
 ### Error Handling
 
-**For API/Service Clients:**
-- Log with module-level logger for debugging
-- Use bare `raise` (not `raise e`) to preserve traceback
-- Raise exceptions to let consumers handle them
+**Core Principle: Low-level modules raise, consumers handle logging.**
+
+Low-level modules (API clients, utilities, data access) should raise exceptions without logging. Consumers (workers, UI, entry points) handle errors appropriately for their context.
 
 ```python
+# In low-level modules - raise exceptions, don't log
 try:
     response = await self._request(url, params)
 except (NotFoundError, RateLimitError, ApiError) as e:
-    logger.error("Error searching manga: %s", e)
     raise  # Bare raise preserves traceback
 ```
 
-**For Screen/UI Consumers:**
-- Catch exceptions, show user-friendly notifications
-- Don't log if the module already logs (avoids duplicate entries)
-- Distinguish RateLimitError with specific message
+**In ContentProviderManager:**
+- Methods return errors in result tuples for parallel operations (e.g., `search_manga` returns `(results, errors)`)
+- Single-provider methods raise exceptions (`ValueError` for invalid source, API errors for failures)
+
+**In Consumers (workers, UI):**
+- Handle errors appropriately for context
+- Workers log errors for audit trail
+- UI shows user-friendly notifications
 
 ```python
+# Worker handles background errors - logs for debugging
 try:
-    results = await self._client.search_manga(query)
+    await self._process_job(job)
+except Exception as e:
+    logger.error("Job failed: %s", e)  # Log in worker
+    await self._send_notification(job, JobStatus.FAILED)
+
+# UI handles foreground errors - shows notification
+try:
+    results = await client.search_manga(query)
 except RateLimitError:
-    self.notify("Too many requests. Please wait a moment.", severity="error")
+    self.notify("Too many requests. Please wait.")
 except (NotFoundError, ApiError):
-    self.notify("Error searching for manga", severity="error")
+    self.notify("Error searching for manga")
 ```
 
-- Never expose raw exception details in `notify()` messages
-- Use specific exception types when catching
-- Don't duplicate logs — let modules handle logging
+### Logging at Boundaries Only
+
+Log errors at system boundaries where they can be usefully captured:
+- Entry point (startup, shutdown, uncaught errors)
+- Workers (background task audit trail)
+- NOT in low-level modules (API clients, managers, utilities)
+
+```python
+# Entry point - catches unhandled errors
+async def main():
+    try:
+        await app.run()
+    except Exception as e:
+        logger.critical("Fatal error: %s", e)  # Log at boundary
+        raise
+```
+
+### Validation in Types
+
+Use `from_dict` methods with fail-fast validation:
+
+```python
+@dataclass(frozen=True)
+class SearchResult:
+    _id: str
+
+    @classmethod
+    def from_dict(cls, data: dict) -> SearchResult:
+        if "_id" not in data:
+            raise ValueError("Invalid result: missing _id")
+        return cls(_id=data["_id"])
+```
 
 ## Code Quality Standards
 
