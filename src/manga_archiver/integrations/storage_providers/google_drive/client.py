@@ -341,7 +341,7 @@ class GoogleDriveClient:
         file_metadata: GoogleDriveFileMetadata,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         attempts: int = 1,
-    ) -> str:
+    ) -> str | None:
         """Upload a file to Google Drive (synchronous).
 
         Handles file conflicts by retrying with modified filenames.
@@ -356,7 +356,7 @@ class GoogleDriveClient:
             file_metadata: Metadata for the file
 
         Returns:
-            str: The ID of the uploaded file
+            str | None: The ID of the uploaded file, or None if API response missing ID
 
         Raises:
             ApiError: If max retries exceeded due to file conflicts
@@ -408,7 +408,7 @@ class GoogleDriveClient:
         mimetype: str,
         file_metadata: GoogleDriveFileMetadata,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
-    ) -> str:
+    ) -> str | None:
         """Upload a file to Google Drive (asynchronous).
 
         Args:
@@ -420,7 +420,7 @@ class GoogleDriveClient:
             chunk_size: The chunk size for resumable upload (default: 5MB)
 
         Returns:
-            str: The ID of the uploaded file
+            str | None: The ID of the uploaded file, or None if API response missing ID
 
         Raises:
             ApiError: If max retries exceeded due to file conflicts
