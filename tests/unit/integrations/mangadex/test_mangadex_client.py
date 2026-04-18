@@ -18,7 +18,6 @@ from tests.unit.integrations.mangadex.mock_mangadex_api_data import (
     mock_empty_manga_data,
     mock_malformed_download_resource_data,
     mock_manga_data,
-    mock_nested_data,
     mock_processed_chapter_data,
     mock_processed_download_resource_data,
     mock_processed_download_resource_data_saver,
@@ -63,34 +62,6 @@ class TestMangaDexApiClientRequest:
 
         with pytest.raises(expected_error):
             await client._request("https://test.com")
-
-
-class TestMangaDexApiClientGetNested:
-    @pytest.mark.parametrize(
-        "raw_data, keys, expected_result",
-        [
-            ({"a": {"b": "value"}}, ["a", "b"], "value"),
-            (mock_nested_data, ["title", "en"], "Test Title"),
-        ],
-        ids=["generic_keys", "actual_keys"],
-    )
-    def test_existing_keys_returns_value(self, raw_data, keys, expected_result):
-        result = MangaDexApiClient._get_nested(raw_data, *keys)
-
-        assert result == expected_result
-
-    @pytest.mark.parametrize(
-        "raw_data, keys, default, expected_result",
-        [
-            ({"a": {}}, ["a", "b"], "default", "default"),
-            (mock_nested_data, ["nonexistent"], None, None),
-        ],
-        ids=["generic_keys", "actual_keys"],
-    )
-    def test_missing_keys_returns_default(self, raw_data, keys, default, expected_result):
-        result = MangaDexApiClient._get_nested(raw_data, *keys, default=default)
-
-        assert result == expected_result
 
 
 class TestMangaDexApiClientSearchManga:
