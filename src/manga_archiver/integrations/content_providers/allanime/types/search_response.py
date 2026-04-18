@@ -21,10 +21,18 @@ class SearchResult:
         if not isinstance(_id, str):
             raise ValueError("Invalid search result: _id must be a string")
 
+        english_name = data.get("englishName")
+        if english_name is not None and not isinstance(english_name, str):
+            raise ValueError("Invalid search result: englishName must be a string")
+
+        name = data.get("name")
+        if name is not None and not isinstance(name, str):
+            raise ValueError("Invalid search result: name must be a string")
+
         return cls(
             _id=_id,
-            english_name=data.get("englishName"),
-            name=data.get("name"),
+            english_name=english_name,
+            name=name,
         )
 
     @property
@@ -77,6 +85,9 @@ class AllMangaSearchResponse:
     @classmethod
     def from_dict(cls, response: dict) -> AllMangaSearchResponse:
         """Create an AllMangaSearchResponse from a dictionary."""
+        if not isinstance(response, dict):
+            raise ValueError("Invalid response: not a dict")
+
         if "data" not in response:
             raise ValueError("Invalid response: missing data")
 
