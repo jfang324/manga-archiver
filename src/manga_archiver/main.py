@@ -113,7 +113,14 @@ def main() -> None:
 
         try:
             google_drive_client = GoogleDriveClient(token)
-            google_drive_client.initialize()
+
+            print("Initializing Google Drive...")
+            init_result = google_drive_client.initialize()
+
+            if init_result.was_created:
+                print(f"Created root folder: {init_result.root_folder_id}")
+
+            print(f"Cached {init_result.cached_folder_count} manga folders")
 
             schema_manager.insert_version_record("google_drive", DEFAULT_GOOGLE_DRIVE_VERSION)
         except MigrationError as e:

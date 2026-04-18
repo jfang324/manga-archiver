@@ -2,8 +2,12 @@ from dataclasses import dataclass
 from typing import TypedDict
 
 
+class ClientNotInitializedError(Exception):
+    """Raised when client methods are called before initialize()."""
+
+
 class GoogleApiStoredToken(TypedDict):
-    """Dictionary containing metadata for google.oauth2.credentials.Credentials."""
+    """Token data for google.oauth2.credentials.Credentials."""
 
     token_uri: str
     client_id: str
@@ -12,11 +16,28 @@ class GoogleApiStoredToken(TypedDict):
 
 
 class GoogleDriveDirectory(TypedDict):
-    """Dictionary containing metadata for a Google Drive directory."""
+    """Directory metadata from Google Drive API."""
 
     id: str
     name: str
     appProperties: dict[str, str] | None
+
+
+class GoogleDriveFile(TypedDict):
+    """File metadata from Google Drive API."""
+
+    id: str
+    name: str
+    appProperties: dict[str, str] | None
+
+
+@dataclass(frozen=True)
+class InitResult:
+    """Result from GoogleDriveClient.initialize()."""
+
+    root_folder_id: str
+    cached_folder_count: int
+    was_created: bool
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,5 @@
 import asyncio
 import io
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,7 +8,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseUpload
 
-from ...exceptions import RateLimitError
+from ...exceptions import ApiError, RateLimitError
 from .constants import (
     DEFAULT_CHUNK_SIZE,
     DEFAULT_MAX_RETRIES,
@@ -19,13 +18,14 @@ from .constants import (
     SYSTEM_SOURCE,
 )
 from .types import (
+    ClientNotInitializedError,
     GoogleApiStoredToken,
     GoogleDriveDirectory,
+    GoogleDriveFile,
     GoogleDriveFileMetadata,
     GoogleDriveFolderMetadata,
+    InitResult,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def _escape_query_string(value: str) -> str:
@@ -72,33 +72,30 @@ class GoogleDriveClient:
         self._folder_cache: dict[_MangaFolderKey, str] = {}
         self._max_retries = max_retries
 
-    def initialize(self) -> str:
+    def initialize(self) -> InitResult:
         """Initialize and cache folders from Google Drive.
 
         Searches for the root Manga-Archiver folder, creates it if not
         found, then caches all existing manga subfolders.
 
         Returns:
-            str: The ID of the root folder
+            InitResult: Information about the initialization including root folder ID,
+            cached folder count, and whether the root folder was created.
         """
-        # initialize is meant to be called before the app starts, so we use print for visual feedback
-        print("Initializing Google Drive...")
-
         root_folders = self._get_root_folders(page_size=DEFAULT_ROOT_PAGE_SIZE)
 
+        was_created = False
         for folder in root_folders:
             if folder["name"] == ROOT_FOLDER_NAME:
                 self._root_folder_id = folder["id"]
                 break
 
         if not self._root_folder_id:
-            print(f"Creating root folder: {ROOT_FOLDER_NAME}")
             root_metadata = GoogleDriveFolderMetadata(source=SYSTEM_SOURCE)
             self._root_folder_id = self._create_folder_sync(
                 ROOT_FOLDER_NAME, folder_metadata=root_metadata
             )
-        else:
-            print(f"Found existing root folder: {self._root_folder_id}")
+            was_created = True
 
         sub_folders = self._get_sub_folders(
             self._root_folder_id, page_size=DEFAULT_SUB_FOLDER_PAGE_SIZE
@@ -108,7 +105,6 @@ class GoogleDriveClient:
         for folder in sub_folders:
             app_props = folder.get("appProperties")
             if not app_props or not app_props.get("source"):
-                logger.debug("Folder '%s' has no source metadata, skipping cache", folder["name"])
                 continue
 
             source = app_props["source"]
@@ -116,9 +112,11 @@ class GoogleDriveClient:
             self._folder_cache[cache_key] = folder["id"]
             cached_count += 1
 
-        print(f"Cached {cached_count} manga folders")
-
-        return self._root_folder_id
+        return InitResult(
+            root_folder_id=self._root_folder_id,
+            cached_folder_count=cached_count,
+            was_created=was_created,
+        )
 
     def _get_root_folders(self, page_size: int | None = None) -> list[GoogleDriveDirectory]:
         """List all folders in My Drive.
@@ -170,7 +168,9 @@ class GoogleDriveClient:
 
         return results.get("files", [])
 
-    def get_files_in_folder(self, folder_id: str, page_size: int | None = None) -> list[dict]:
+    def get_files_in_folder(
+        self, folder_id: str, page_size: int | None = None
+    ) -> list[GoogleDriveFile]:
         """List all files in a specific folder.
 
         Args:
@@ -178,7 +178,7 @@ class GoogleDriveClient:
             page_size: Maximum number of results to return (default: None)
 
         Returns:
-            list[dict]: List of file dictionaries with 'id' and 'name' keys
+            list[GoogleDriveFile]: List of files with 'id', 'name', 'appProperties' keys
         """
         query = f"'{folder_id}' in parents and trashed=false"
 
@@ -236,7 +236,7 @@ class GoogleDriveClient:
             str: The ID of the folder
 
         Raises:
-            RuntimeError: If the client has not been initialized
+            ClientNotInitializedError: If the client has not been initialized
         """
         cache_key = _MangaFolderKey(source, manga_title)
 
@@ -244,7 +244,7 @@ class GoogleDriveClient:
             return self._folder_cache[cache_key]
 
         if not self._root_folder_id:
-            raise RuntimeError("Client not initialized. Call initialize() first.")
+            raise ClientNotInitializedError("Client not initialized. Call initialize() first.")
 
         existing_id = await asyncio.to_thread(
             self._search_folder_by_name, manga_title, self._root_folder_id, source
@@ -273,6 +273,7 @@ class GoogleDriveClient:
             str | None: The folder ID if found in cache, None otherwise
         """
         cache_key = _MangaFolderKey(source, manga_title)
+
         return self._folder_cache.get(cache_key)
 
     def _search_folder_by_name(self, name: str, parent_id: str, source: str) -> str | None:
@@ -312,13 +313,11 @@ class GoogleDriveClient:
             folder_id: The ID of the folder to update
             metadata: The folder metadata to apply
         """
-        try:
-            self._service.files().update(
-                fileId=folder_id,
-                body={"appProperties": metadata.to_app_properties()},
-            ).execute()
-        except Exception as e:
-            logger.error("Failed to update folder %s metadata: %s", folder_id, e)
+
+        self._service.files().update(
+            fileId=folder_id,
+            body={"appProperties": metadata.to_app_properties()},
+        ).execute()
 
     def _update_file_metadata(self, file_id: str, metadata: GoogleDriveFileMetadata) -> None:
         """Update file metadata with appProperties.
@@ -327,13 +326,11 @@ class GoogleDriveClient:
             file_id: The ID of the file to update
             metadata: The file metadata to apply
         """
-        try:
-            self._service.files().update(
-                fileId=file_id,
-                body={"appProperties": metadata.to_app_properties()},
-            ).execute()
-        except Exception as e:
-            logger.error("Failed to update file %s metadata: %s", file_id, e)
+
+        self._service.files().update(
+            fileId=file_id,
+            body={"appProperties": metadata.to_app_properties()},
+        ).execute()
 
     def _upload_file_sync(
         self,
@@ -359,7 +356,10 @@ class GoogleDriveClient:
             file_metadata: Metadata for the file
 
         Returns:
-            str: The ID of the uploaded file
+            str | None: The ID of the uploaded file, or None if API response missing ID
+
+        Raises:
+            ApiError: If max retries exceeded due to file conflicts
         """
         name = Path(file_name).stem
         extension = Path(file_name).suffix
@@ -393,16 +393,9 @@ class GoogleDriveClient:
                         chunk_size,
                         attempts + 1,
                     )
-                logger.error(
-                    "Upload failed: max retries exceeded due to file conflicts for %s",
-                    file_name,
-                )
+                raise ApiError(f"Upload failed: max retries exceeded for {file_name}") from e
 
             if e.resp.status == 429:
-                logger.error(
-                    "Upload failed: rate limit exceeded after internal retries for %s",
-                    file_name,
-                )
                 raise RateLimitError(f"Rate limit exceeded: {file_name}") from e
 
             raise
@@ -427,7 +420,10 @@ class GoogleDriveClient:
             chunk_size: The chunk size for resumable upload (default: 5MB)
 
         Returns:
-            str | None: The ID of the uploaded file, or None if upload failed
+            str | None: The ID of the uploaded file, or None if API response missing ID
+
+        Raises:
+            ApiError: If max retries exceeded due to file conflicts
         """
         return await asyncio.to_thread(
             self._upload_file_sync,
@@ -437,5 +433,4 @@ class GoogleDriveClient:
             mimetype,
             file_metadata,
             chunk_size,
-            1,  # attempts
         )

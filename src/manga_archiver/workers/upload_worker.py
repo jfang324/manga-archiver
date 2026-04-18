@@ -104,8 +104,6 @@ class UploadWorker(Worker):
 
             if uploaded_id:
                 await self._send_notification(job, JobStatus.UPLOADING, upload_start, upload_end)
-
-                return None
             else:
                 logger.error("Failed to upload %s to Google Drive", full_name)
                 await self._send_notification(job, JobStatus.FAILED)

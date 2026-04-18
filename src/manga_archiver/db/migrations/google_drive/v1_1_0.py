@@ -196,7 +196,7 @@ def migrate(current: str, cursor: Cursor) -> str:
     client = GoogleDriveClient(token)
 
     try:
-        root_folder_id = client.initialize()
+        init_result = client.initialize()
     except Exception as e:
         logger.error("Failed to initialize Google Drive client: %s", e)
         cursor.execute(
@@ -205,7 +205,7 @@ def migrate(current: str, cursor: Cursor) -> str:
         )
         return f"Migrated to {MIGRATION_VERSION}: Failed to initialize Drive client"
 
-    sub_folders = client._get_sub_folders(root_folder_id)
+    sub_folders = client._get_sub_folders(init_result.root_folder_id)
 
     # Pre-flight: count items needing migration
     total_folders_needed, total_files_needed = _count_items_needing_migration(client, sub_folders)
