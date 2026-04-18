@@ -92,7 +92,7 @@ class UploadWorker(Worker):
                 chapter_title=chapter_title,
             )
 
-            uploaded_id = await self._google_drive_client.upload_file(
+            await self._google_drive_client.upload_file(
                 file_data=complete_file_data,
                 file_name=full_name,
                 folder_id=folder_id,
@@ -101,14 +101,7 @@ class UploadWorker(Worker):
             )
 
             upload_end = time.perf_counter_ns()
-
-            if uploaded_id:
-                await self._send_notification(job, JobStatus.UPLOADING, upload_start, upload_end)
-
-                return None
-            else:
-                logger.error("Failed to upload %s to Google Drive", full_name)
-                await self._send_notification(job, JobStatus.FAILED)
+            await self._send_notification(job, JobStatus.UPLOADING, upload_start, upload_end)
 
         except Exception as e:
             logger.error("Upload error for %s: %s", job_id, e)

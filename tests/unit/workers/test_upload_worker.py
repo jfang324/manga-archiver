@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.manga_archiver.integrations.exceptions import ApiError
 from src.manga_archiver.models import ContentSource
 from src.manga_archiver.models.output_format import OutputFormat
 from src.manga_archiver.workers.jobs import JobStatus, UploadJob
@@ -92,8 +93,11 @@ class TestUploadWorkerDoWork:
         assert notifications[1][0][0].status == JobStatus.UPLOADING
 
     @pytest.mark.asyncio
-    async def test_do_work_sends_failed_notification_when_upload_returns_none(self):
-        mock_drive_client = self._create_mock_drive_client(uploaded_id=None)
+    async def test_do_work_raises_exception_on_upload_failure(self):
+        mock_drive_client = self._create_mock_drive_client()
+        mock_drive_client.upload_file = AsyncMock(
+            side_effect=ApiError("Upload failed: max retries exceeded")
+        )
         mock_notification_queue = AsyncMock()
 
         job = UploadJob(
@@ -117,13 +121,8 @@ class TestUploadWorkerDoWork:
             config=MagicMock(),
         )
 
-        result = await worker._do_work(job)
-
-        assert result is None
-        assert mock_notification_queue.put.call_count == 2
-        notifications = mock_notification_queue.put.call_args_list
-        assert notifications[0][0][0].status == JobStatus.UPLOADING
-        assert notifications[1][0][0].status == JobStatus.FAILED
+        with pytest.raises(ApiError, match="max retries exceeded"):
+            await worker._do_work(job)
 
     @pytest.mark.asyncio
     async def test_do_work_raises_exception(self):

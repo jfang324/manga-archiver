@@ -7,6 +7,7 @@ import aiohttp
 
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
+from .integrations.storage_providers.google_drive.types import GoogleDriveFile
 from .models import Chapter, ContentSource
 from .models.output_format import OutputFormat
 from .repositories import FavoriteRepository
@@ -200,11 +201,11 @@ class BacklogSync:
             return self._parse_chapter_numbers(files)
         return []
 
-    def _parse_chapter_numbers(self, files: list[dict]) -> list[float]:
+    def _parse_chapter_numbers(self, files: list[GoogleDriveFile]) -> list[float]:
         """Parse chapter numbers from file names.
 
         Args:
-            files: List of file dictionaries with 'name' key
+            files: List of file metadata with 'name' key
 
         Returns:
             list[float]: List of parsed chapter numbers
