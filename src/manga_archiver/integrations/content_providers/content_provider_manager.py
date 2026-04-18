@@ -34,7 +34,7 @@ class ContentProviderManager:
             page_size: Number of results per page
 
         Returns:
-            Tuple of (successful results, errors). Errors contain exceptions
+            SearchResults: Tuple of (successful results, errors). Errors contain exceptions
             from failed providers.
         """
         source_client_pairs = list(self._providers.items())
