@@ -1,7 +1,7 @@
 import time
 from asyncio import Queue, Semaphore
 
-from ..integrations.content_providers.header_mappings import CDN_HEADERS
+from ..integrations.content_providers.constants import CDN_HEADERS
 from ..utils import DownloadClient
 from ..workers.jobs import JobStatus
 from .base import Worker, WorkerConfig

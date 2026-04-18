@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.manga_archiver.integrations.content_providers import MangaDexApiClient
+from src.manga_archiver.integrations.content_providers.mangadex import MangaDexApiClient
 from src.manga_archiver.integrations.exceptions import (
     ApiError,
     NotFoundError,
