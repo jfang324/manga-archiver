@@ -12,7 +12,7 @@ class SearchResultAttributes:
     @classmethod
     def from_dict(cls, attributes: dict) -> SearchResultAttributes:
         """Create a SearchResultAttributes from a dictionary."""
-        if "title" not in attributes:
+        if "title" not in attributes or not attributes["title"]:
             return cls(title="unknown")
 
         title: str = "unknown"
@@ -39,6 +39,9 @@ class SearchResult:
         """Create a SearchResult from a dictionary."""
         if "id" not in result:
             raise ValueError("Invalid result: missing id")
+
+        if "attributes" not in result:
+            raise ValueError("Invalid result: missing attributes")
 
         return cls(
             id=result["id"], attributes=SearchResultAttributes.from_dict(result["attributes"])

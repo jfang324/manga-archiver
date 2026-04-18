@@ -40,6 +40,9 @@ class MangaDexDownloadResourceResponse:
         if "baseUrl" not in response:
             raise ValueError("Invalid response: missing baseUrl")
 
+        if "chapter" not in response:
+            raise ValueError("Invalid response: missing chapter")
+
         return cls(
             base_url=response["baseUrl"],
             chapter=ResourceBundle.from_dict(response["chapter"]),

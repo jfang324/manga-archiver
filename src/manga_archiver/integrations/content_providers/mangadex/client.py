@@ -84,12 +84,9 @@ class MangaDexApiClient(Provider):
         offset: int = (page - 1) * page_size
         params: dict = {"limit": page_size, "offset": offset}
 
-        try:
-            response: dict = await self._request(url, params)
+        response: dict = await self._request(url, params)
 
-            return self._process_manga_data(response)
-        except (NotFoundError, RateLimitError, ApiError):
-            raise
+        return self._process_manga_data(response)
 
     def _process_manga_data(self, response: dict) -> list[Manga]:
         """
@@ -100,8 +97,14 @@ class MangaDexApiClient(Provider):
 
         Returns:
             list[Manga]: List of processed manga objects
+
+        Raises:
+            ApiError: If response is missing required data
         """
-        raw_data = MangaDexSearchResponse.from_dict(response)
+        try:
+            raw_data = MangaDexSearchResponse.from_dict(response)
+        except ValueError as e:
+            raise ApiError(f"Invalid response: {e}") from e
 
         return [
             Manga(id=result.id, title=result.attributes.title, source=self.source)
@@ -130,12 +133,9 @@ class MangaDexApiClient(Provider):
             "includeEmptyPages": 0,
         }
 
-        try:
-            response: dict = await self._request(url, params)
+        response: dict = await self._request(url, params)
 
-            return self._process_chapter_data(response)
-        except (NotFoundError, RateLimitError, ApiError):
-            raise
+        return self._process_chapter_data(response)
 
     def _process_chapter_data(self, response: dict) -> list[Chapter]:
         """
@@ -146,8 +146,15 @@ class MangaDexApiClient(Provider):
 
         Returns:
             list[Chapter]: List of processed chapter objects
+
+        Raises:
+            ApiError: If response is missing required data
         """
-        raw_data = MangaDexChapterResponse.from_dict(response)
+        try:
+            raw_data = MangaDexChapterResponse.from_dict(response)
+        except ValueError as e:
+            raise ApiError(f"Invalid response: {e}") from e
+
         chapters: list[Chapter] = []
         seen_chapters: set[float] = set()
 
@@ -185,12 +192,9 @@ class MangaDexApiClient(Provider):
         """
         url: str = f"{MANGADEX_RESOURCE_LINKS_URL}/{chapter_id}"
 
-        try:
-            response: dict = await self._request(url)
+        response: dict = await self._request(url)
 
-            return self._process_download_resource_data(response)
-        except (NotFoundError, RateLimitError, ApiError):
-            raise
+        return self._process_download_resource_data(response)
 
     def _process_download_resource_data(self, response: dict) -> DownloadResource:
         """
@@ -201,8 +205,16 @@ class MangaDexApiClient(Provider):
 
         Returns:
             DownloadResource: Processed download resource object
+
+        Raises:
+            ApiError: If response is missing required data
+            ValueError: If response is missing required data or chapter data is invalid
         """
-        raw_data = MangaDexDownloadResourceResponse.from_dict(response)
+        try:
+            raw_data = MangaDexDownloadResourceResponse.from_dict(response)
+        except ValueError as e:
+            raise ApiError(f"Invalid response: {e}") from e
+
         if self._data_saver and raw_data.chapter.data_saver is not None:
             quality = "data-saver"
             urls = raw_data.chapter.data_saver

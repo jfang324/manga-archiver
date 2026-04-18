@@ -18,7 +18,7 @@ class ChapterResultAttributes:
 
         try:
             chapter = float(attributes["chapter"])
-        except ValueError:
+        except (ValueError, TypeError):
             raise ValueError("Invalid attributes: chapter failed to parse to float")
 
         return cls(
@@ -39,6 +39,9 @@ class ChapterResult:
         """Create a ChapterResult from a dictionary."""
         if "id" not in result:
             raise ValueError("Invalid result: missing id")
+
+        if "attributes" not in result:
+            raise ValueError("Invalid result: missing attributes")
 
         return cls(
             id=result["id"],
