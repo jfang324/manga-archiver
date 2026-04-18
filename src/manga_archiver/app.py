@@ -11,7 +11,8 @@ from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .models.app_config import AppConfig
 from .pipeline_manager import PipelineConfig, PipelineManager
-from .repositories import FavoriteManga, FavoriteRepository
+from .repositories import FavoriteRepository
+from .repositories.types import FavoriteManga
 from .screens import (
     DownloadsScreen,
     FavoritesScreen,
@@ -287,7 +288,8 @@ class MangaArchiverApp(App):
 
         try:
             self._favorite_repository.delete_by_id(manga_id)
-        except Exception:
+        except Exception as e:
+            logger.error("Failed to remove %s from favorites: %s", manga_title, e)
             self.notify("Failed to remove favorite", severity="error")
             return
 
@@ -311,7 +313,8 @@ class MangaArchiverApp(App):
 
         try:
             self._favorite_repository.create_one(favorite_manga)
-        except Exception:
+        except Exception as e:
+            logger.error("Failed to add %s to favorites: %s", favorite_manga.title, e)
             self.notify("Failed to add favorite", severity="error")
             return
 

@@ -11,7 +11,7 @@ from textual.widgets import Footer
 from ..integrations.content_providers import ContentProviderManager
 from ..integrations.exceptions import ApiError, NotFoundError, RateLimitError
 from ..models import ContentSource
-from ..repositories import FavoriteManga
+from ..repositories.types import FavoriteManga
 from ..widgets import SearchPanel
 from .selection_screen import SelectionScreen
 

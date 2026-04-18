@@ -4,7 +4,7 @@ from textual.reactive import reactive
 from textual.widgets import Label, ListView
 
 from src.manga_archiver.models import ContentSource
-from src.manga_archiver.repositories import FavoriteManga
+from src.manga_archiver.repositories.types import FavoriteManga
 from src.manga_archiver.widgets.favorites_panel import FavoritesPanel
 
 
