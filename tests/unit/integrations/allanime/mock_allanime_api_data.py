@@ -179,7 +179,6 @@ mock_chapter_pages_missing_urls: dict = {
             "edges": [
                 {
                     "pictureUrls": [
-                        {"url": "valid.jpg"},
                         {"url": ""},
                         {"url": None},
                     ],

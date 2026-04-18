@@ -127,12 +127,12 @@ class TestAllMangaClientGetChapters:
         [(200, mock_manga_details_empty_chapters)],
         indirect=["mock_api_response"],
     )
-    async def test_get_chapters_empty_raises_not_found(self, mock_session, mock_api_response):
+    async def test_get_chapters_empty_returns_empty_list(self, mock_session, mock_api_response):
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
 
-        with pytest.raises(NotFoundError):
-            await client.get_chapters("empty123")
+        result = await client.get_chapters("empty123")
+        assert result == []
 
     @pytest.mark.parametrize(
         "mock_api_response",
@@ -183,7 +183,7 @@ class TestAllMangaClientGetDownloadResource:
     async def test_get_download_resource_invalid_chapter_id_format(self):
         client = AllMangaClient(MagicMock())
 
-        with pytest.raises(ApiError):
+        with pytest.raises(ValueError):
             await client.get_download_resource("invalid-id-without-colon")
 
     @pytest.mark.parametrize(
@@ -208,19 +208,19 @@ class TestAllMangaClientGetDownloadResource:
     @pytest.mark.parametrize(
         "mock_api_response",
         [
-            ((200, mock_chapter_response_empty_pages)),
-            ((200, mock_chapter_response_no_edges)),
+            (200, mock_chapter_response_empty_pages),
+            (200, mock_chapter_response_no_edges),
         ],
         indirect=["mock_api_response"],
         ids=["empty_pages", "no_edges"],
     )
-    async def test_get_download_resource_not_found_when_no_pages(
+    async def test_get_download_resource_raises_api_error_when_no_pages(
         self, mock_session, mock_api_response
     ):
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
 
-        with pytest.raises(NotFoundError):
+        with pytest.raises(ApiError):
             await client.get_download_resource("test:1")
 
     @pytest.mark.parametrize(
@@ -246,7 +246,7 @@ class TestAllMangaClientGetDownloadResource:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
 
-        with pytest.raises(NotFoundError):
+        with pytest.raises(ApiError):
             await client.get_download_resource("manga:1")
 
     @pytest.mark.parametrize(

@@ -1,5 +1,4 @@
 import json
-import logging
 
 from aiohttp import ClientSession
 
@@ -18,9 +17,7 @@ from .constants import (
     SEARCH_QUERY,
 )
 from .decode import decode_tobeparsed
-from .types import ChapterPagesData, MangaChaptersDetail, SearchResult
-
-logger = logging.getLogger(__name__)
+from .types import AllMangaChapterResponse, AllMangaSearchResponse, DownloadResourceResponse
 
 
 class AllMangaClient(Provider):
@@ -91,48 +88,31 @@ class AllMangaClient(Provider):
             "extensions": extensions,
         }
 
-        try:
-            response = await self._request(ALLANIME_API_URL, params=params)
-            return self._parse_search_response(response)
-        except (NotFoundError, RateLimitError, ApiError) as e:
-            logger.error("Error searching manga: %s", e)
-            raise
+        response = await self._request(ALLANIME_API_URL, params=params)
 
-    def _parse_search_response(self, data: dict) -> list[Manga]:
+        return self._parse_search_response(response)
+
+    def _parse_search_response(self, response: dict) -> list[Manga]:
         """Parse search response into Manga objects.
 
         Args:
-            data: Raw API response data
+            response: Raw API response data
 
         Returns:
             list[Manga]: List of processed manga objects
-        """
-        edges = data.get("data", {}).get("mangas", {}).get("edges", [])
-        results: list[Manga] = []
 
-        for edge in edges:
-            result = self._parse_search_result(edge)
-            if result:
-                results.append(result)
-
-        return results
-
-    def _parse_search_result(self, edge: dict) -> Manga | None:
-        """Parse single search result edge into Manga object.
-
-        Args:
-            edge: Raw edge dictionary from search response
-
-        Returns:
-            Manga object if valid, None otherwise
+        Raises:
+            ApiError: If response is missing required data
         """
         try:
-            result = SearchResult.from_dict(edge)
-        except ValueError:
-            logger.error("Error parsing search result: %s", edge)
-            return None
+            raw_data = AllMangaSearchResponse.from_dict(response)
+        except ValueError as e:
+            raise ApiError(f"Invalid response: {e}") from e
 
-        return Manga(id=result._id, title=result.title, source=self._source)
+        return [
+            Manga(id=result._id, title=result.title, source=self._source)
+            for result in raw_data.data.edges
+        ]
 
     async def get_chapters(self, manga_id: str) -> list[Chapter]:
         """Retrieve all chapters for a manga.
@@ -155,58 +135,37 @@ class AllMangaClient(Provider):
             "extensions": extensions,
         }
 
-        try:
-            response = await self._request(ALLANIME_API_URL, params=params)
-            return self._parse_chapter_data(response, manga_id)
-        except (NotFoundError, RateLimitError, ApiError) as e:
-            logger.error("Error retrieving chapters: %s", e)
-            raise
+        response = await self._request(ALLANIME_API_URL, params=params)
 
-    def _parse_chapter_data(self, data: dict, manga_id: str) -> list[Chapter]:
+        return self._parse_chapter_data(response, manga_id)
+
+    def _parse_chapter_data(self, response: dict, manga_id: str) -> list[Chapter]:
         """Parse manga details response into Chapter objects.
 
         Args:
-            data: Raw API response data
+            response: Raw API response data
             manga_id: AllManga manga ID
 
         Returns:
             list[Chapter]: List of processed chapter objects
 
         Raises:
-            NotFoundError: If no chapters are found
+            ApiError: If response is missing required data
         """
-        chapters_detail = data.get("data", {}).get("manga", {})
-
         try:
-            detail = MangaChaptersDetail.from_dict(
-                chapters_detail.get("availableChaptersDetail", {})
-            )
+            raw_data = AllMangaChapterResponse.from_dict(response)
         except ValueError as e:
-            raise NotFoundError(f"No chapters found for manga {manga_id}") from e
+            raise ApiError(f"Invalid response: {e}") from e
 
-        chapters = []
-
-        for chapter_str in detail.sub:
-            if not chapter_str:
-                continue
-
-            try:
-                chapter_num = float(chapter_str)
-            except ValueError:
-                logger.error("Invalid chapter number: %s", chapter_str)
-                continue
-
-            chapters.append(
-                Chapter(
-                    id=f"{manga_id}:{chapter_str}",
-                    title="untitled",
-                    chapter_num=chapter_num,
-                    source=self._source,
-                )
+        chapters: list[Chapter] = [
+            Chapter(
+                id=f"{manga_id}:{chapter_num:g}",
+                title="untitled",
+                chapter_num=chapter_num,
+                source=self._source,
             )
-
-        if not chapters:
-            raise NotFoundError(f"No chapters found for manga {manga_id}")
+            for chapter_num in raw_data.data.detail.sub
+        ]
 
         chapters.sort(key=lambda x: x.chapter_num)
         return chapters
@@ -224,15 +183,15 @@ class AllMangaClient(Provider):
             NotFoundError: If the chapter is not found
             RateLimitError: If the API rate limit is exceeded
             ApiError: If the API returns any other error
-            ApiError: If chapter_id format is invalid
+            ValueError: If chapter_id format is invalid
         """
         try:
             manga_id, chapter_str = chapter_id.split(":", 1)
         except ValueError as e:
-            raise ApiError(f"Invalid chapter_id format: {chapter_id}") from e
+            raise ValueError(f"Invalid chapter_id format: {chapter_id}") from e
 
         if not manga_id or not chapter_str:
-            raise ApiError(f"Invalid chapter_id format: {chapter_id}")
+            raise ValueError(f"Invalid chapter_id format: {chapter_id}")
 
         variables = CHAPTER_PAGES_QUERY.format(
             manga_id=manga_id,
@@ -244,47 +203,46 @@ class AllMangaClient(Provider):
             "extensions": extensions,
         }
 
-        try:
-            response = await self._request(ALLANIME_API_URL, params=params)
-            return self._parse_download_resource(response, chapter_id)
-        except (NotFoundError, RateLimitError, ApiError) as e:
-            logger.error("Error retrieving download resources: %s", e)
-            raise
+        response = await self._request(ALLANIME_API_URL, params=params)
 
-    def _parse_download_resource(self, data: dict, chapter_id: str) -> DownloadResource:
+        return self._parse_download_resource(response, chapter_id)
+
+    def _parse_download_resource(self, response: dict, chapter_id: str) -> DownloadResource:
         """Parse chapter pages response into DownloadResource.
 
         Args:
-            data: Raw API response data
+            response: Raw API response data
             chapter_id: The chapter ID being fetched
 
         Returns:
             DownloadResource: Processed download resource object
 
         Raises:
-            NotFoundError: If no chapter pages are found or URLs are invalid
+            ApiError: If response data is invalid or no URLs found
         """
-        response_data = data.get("data", {})
+        response_data = response.get("data", {})
+
+        if not isinstance(response_data, dict):
+            raise ApiError("Invalid response: not a dict")
 
         if "tobeparsed" in response_data:
             response_data = decode_tobeparsed(response_data["tobeparsed"])
+            if not isinstance(response_data, dict):
+                raise ApiError("Invalid response: tobeparsed is not a dict")
 
         try:
-            chapter_pages = ChapterPagesData.from_dict(response_data.get("chapterPages", {}))
-        except ValueError:
-            raise NotFoundError(f"No chapter pages found for chapter {chapter_id}")
-
-        if not chapter_pages.edges:
-            raise NotFoundError(f"No chapter pages found for chapter {chapter_id}")
+            download_response = DownloadResourceResponse.from_dict(response_data)
+        except ValueError as e:
+            raise ApiError(f"Invalid response: {e}") from e
 
         urls = [
             f"{CDN_BASE_URL}{picture.url}"
-            for edge in chapter_pages.edges
+            for edge in download_response.pages.edges
             for picture in edge.picture_urls
             if picture.url and picture.url.strip()
         ]
 
         if not urls:
-            raise NotFoundError(f"No image URLs found for chapter {chapter_id}")
+            raise ApiError(f"No image URLs found for chapter {chapter_id}")
 
         return DownloadResource(urls=urls, source=self._source)
