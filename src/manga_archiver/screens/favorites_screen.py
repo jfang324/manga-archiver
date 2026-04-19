@@ -1,3 +1,5 @@
+import logging
+
 from textual import on
 from textual.app import ComposeResult
 from textual.message import Message
@@ -8,13 +10,15 @@ from textual.widgets import Footer
 from ..repositories.types import FavoriteManga
 from ..widgets import FavoritesPanel
 
+logger = logging.getLogger(__name__)
+
 
 class FavoritesScreen(Screen):
     """
-    Favorites screen for displaying favorited manga.
+    Favorites screen for displaying user's favorite manga.
 
     Reactive Attributes:
-        favorites (list[FavoriteManga]): List of favorited manga with manga_id and manga_title
+        favorites (list[FavoriteManga]): List of favorites with manga_id and manga_title
     """
 
     favorites: reactive[list[FavoriteManga]] = reactive([])
@@ -48,6 +52,7 @@ class FavoritesScreen(Screen):
     @on(FavoritesPanel.DeleteAt)
     def _on_delete_at(self, event: FavoritesPanel.DeleteAt) -> None:
         if event.index < 0 or event.index >= len(self.favorites):
+            logger.error("Index out of range: %s", event.index)
             return
 
         deleted_manga = self.favorites[event.index]
@@ -56,6 +61,7 @@ class FavoritesScreen(Screen):
     @on(FavoritesPanel.SelectAt)
     def _on_select_at(self, event: FavoritesPanel.SelectAt) -> None:
         if event.index < 0 or event.index >= len(self.favorites):
+            logger.error("Index out of range: %s", event.index)
             return
 
         selected_manga = self.favorites[event.index]
