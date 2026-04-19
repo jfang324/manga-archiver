@@ -3,9 +3,8 @@ from asyncio import Queue, Semaphore
 
 from ..integrations.content_providers.constants import CDN_HEADERS
 from ..utils import DownloadClient
-from ..workers.jobs import JobStatus
 from .base import Worker, WorkerConfig
-from .jobs import DownloadingJob, Job, MergingJob, NotificationJob
+from .jobs import DownloadingJob, Job, JobStatus, MergingJob, NotificationJob
 
 
 class DownloadWorker(Worker):

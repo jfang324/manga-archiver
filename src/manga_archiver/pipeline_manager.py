@@ -20,14 +20,13 @@ from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .models.output_format import OutputFormat
 from .utils import DownloadClient
-from .workers import (
+from .workers import WorkerManager
+from .workers.jobs import (
     FetchingResourcesJob,
     Job,
-    JobMetadata,
     NotificationJob,
-    WorkerManager,
 )
-from .workers.jobs import JobStatus
+from .workers.types import JobMetadata, JobStatus
 
 logger = logging.getLogger(__name__)
 

@@ -4,9 +4,9 @@ import time
 from asyncio import Queue
 from collections.abc import Callable
 
-from ..workers.jobs import JobStatus
 from .benchmark import BenchmarkManager
-from .jobs import JobMetadata, NotificationJob
+from .jobs import NotificationJob
+from .types import JobMetadata, JobStatus
 
 logger = logging.getLogger(__name__)
 
