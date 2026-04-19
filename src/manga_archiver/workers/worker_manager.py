@@ -8,10 +8,11 @@ from ..integrations.storage_providers.google_drive import GoogleDriveClient
 from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
 from .download_worker import DownloadWorker
-from .jobs import Job, JobMetadata, JobStatus, NotificationJob
+from .jobs import Job, NotificationJob
 from .merge_worker import MergeWorker
 from .notification_worker import BenchmarkManager, NotificationWorker
 from .resolve_worker import ResolveWorker
+from .types import JobMetadata, JobStatus
 from .upload_worker import UploadWorker
 
 logger = logging.getLogger(__name__)

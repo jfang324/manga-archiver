@@ -6,7 +6,7 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import DataTable, Footer
 
-from ..workers.jobs import JobMetadata, JobStatus
+from ..workers.types import JobMetadata, JobStatus
 
 JobStatusRecord = tuple[JobStatus, JobMetadata]
 
