@@ -1,3 +1,4 @@
+import logging
 from typing import NamedTuple
 
 from textual import on, work
@@ -9,11 +10,12 @@ from textual.screen import Screen
 from textual.widgets import Footer
 
 from ..integrations.content_providers import ContentProviderManager
-from ..integrations.exceptions import ApiError, NotFoundError, RateLimitError
 from ..models import ContentSource
 from ..repositories.types import FavoriteManga
 from ..widgets import SearchPanel
 from .selection_screen import SelectionScreen
+
+logger = logging.getLogger(__name__)
 
 
 class SearchResult(NamedTuple):
@@ -56,7 +58,6 @@ class SearchScreen(Screen):
             provider_manager: The content provider manager for searches
         """
         super().__init__(**kwargs)
-
         self._provider_manager = provider_manager
 
     def compose(self) -> ComposeResult:
@@ -71,15 +72,13 @@ class SearchScreen(Screen):
 
         try:
             search_results, errors = await self._provider_manager.search_manga(query, 1, PAGE_SIZE)
-
-        except RateLimitError:
-            self.notify("Too many requests. Please wait a moment.", severity="error")
-            return
-        except (NotFoundError, ApiError):
-            self.notify("Error searching for manga", severity="error")
+        except Exception as e:
+            logger.error("Failed to search for manga: %s", e)
+            self.notify("Failed to search for manga", severity="error")
             return
 
         if errors:
+            logger.error("Errors returned from providers: %s", errors)
             self.notify(
                 f"{len(errors)} provider(s) failed.",
                 severity="warning",
@@ -98,6 +97,7 @@ class SearchScreen(Screen):
     def _favorite_manga(self, event: SearchPanel.Favorite) -> None:
         index = event.index
         if index < 0 or index >= len(self.results):
+            logger.error("Index out of range: %s", index)
             return
 
         title, manga_id, source = self.results[index]
@@ -115,11 +115,9 @@ class SearchScreen(Screen):
                 event.query, page, PAGE_SIZE
             )
 
-        except RateLimitError:
-            self.notify("Too many requests. Please wait a moment.", severity="error")
-            return
-        except (NotFoundError, ApiError):
-            self.notify("Error searching for manga", severity="error")
+        except Exception as e:
+            logger.error("Failed to retrieve page %s: %s", page, e)
+            self.notify("Failed to search for manga", severity="error")
             return
 
         if errors:

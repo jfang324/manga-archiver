@@ -42,7 +42,6 @@ class DownloadsScreen(Screen):
             get_jobs: Callable that returns the current job statuses
         """
         super().__init__(**kwargs)
-
         self._get_jobs = get_jobs
 
     def compose(self) -> ComposeResult:
@@ -57,6 +56,7 @@ class DownloadsScreen(Screen):
         self.set_interval(1, self._poll_jobs)
 
     def _poll_jobs(self) -> None:
+        """Retrieve current job statuses and update class state."""
         self.jobs = self._get_jobs()
 
     def watch_jobs(self) -> None:

@@ -50,7 +50,6 @@ class QuitScreen(ModalScreen[bool]):
             incomplete_count: Number of jobs not yet in a terminal state
         """
         super().__init__(**kwargs)
-
         self._incomplete_count = incomplete_count
 
     def compose(self) -> ComposeResult:

@@ -1,3 +1,5 @@
+import logging
+
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Vertical
@@ -6,6 +8,8 @@ from textual.widgets import Footer
 
 from ..constants.menu_options import MENU_OPTIONS
 from ..widgets import MenuSelector
+
+logger = logging.getLogger(__name__)
 
 
 class MenuScreen(Screen):
@@ -26,7 +30,7 @@ class MenuScreen(Screen):
         requested_screen: str = event.screen
 
         if not requested_screen or requested_screen not in available_screens:
-            self.log.error("Invalid screen selected in MenuScreen: %s", requested_screen)
+            logger.error("Invalid screen selected: %s", requested_screen)
             self.notify("Invalid screen selected", severity="error")
 
             return

@@ -1,3 +1,4 @@
+import logging
 from typing import NamedTuple, TypedDict
 
 from textual import on, work
@@ -12,6 +13,8 @@ from ..integrations.content_providers import ContentProviderManager
 from ..integrations.exceptions import ApiError, NotFoundError, RateLimitError
 from ..models import Chapter, ContentSource
 from ..widgets import SelectionPanel
+
+logger = logging.getLogger(__name__)
 
 
 class ChapterResult(NamedTuple):
@@ -48,7 +51,6 @@ class SelectionScreen(Screen):
 
         def __init__(self, partial_jobs: list[PartialJob], **kwargs) -> None:
             super().__init__(**kwargs)
-
             self.partial_jobs = partial_jobs
 
     results: reactive[list[ChapterResult]] = reactive([])
@@ -83,16 +85,18 @@ class SelectionScreen(Screen):
             chapters: list[Chapter] = await self._provider_manager.get_chapters(
                 self._source, self._manga_id
             )
-        except RateLimitError:
+        except RateLimitError as e:
+            logger.error("Error fetching chapters for %s: %s", self._manga_title, e)
             self.notify("Too many requests. Please wait a moment.", severity="error")
             return
-        except (NotFoundError, ApiError):
+        except (NotFoundError, ApiError) as e:
+            logger.error("Error fetching chapters for %s: %s", self._manga_title, e)
             self.notify("Error fetching chapters", severity="error")
             return
 
         new_results: list[ChapterResult] = [
             ChapterResult(
-                chapter.title or "untitled",
+                chapter.title,
                 chapter.id,
                 chapter.chapter_num,
             )

@@ -159,8 +159,8 @@ class MangaArchiverApp(App):
     async def _enqueue_jobs(self, event: SelectionScreen.EnqueueJobs) -> None:
         """Enqueue jobs to the pipeline manager."""
         if not self._pipeline_manager:
+            logger.error("Pipeline manager not initialized - missing from app setup")
             self.notify("Pipeline manager not initialized", severity="error")
-            self.log.error("Pipeline manager not initialized")
             return
 
         partial_jobs: list[PartialJob] = event.partial_jobs

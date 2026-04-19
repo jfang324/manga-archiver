@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from textual.app import ComposeResult
@@ -17,6 +18,8 @@ from ..models.app_config import AppConfig
 from ..models.output_format import OutputFormat
 from ..widgets import SettingsPanel
 
+logger = logging.getLogger(__name__)
+
 
 class SettingsScreen(Screen):
     """Settings screen for the application.
@@ -34,7 +37,6 @@ class SettingsScreen(Screen):
 
         def __init__(self, app_config: AppConfig, **kwargs) -> None:
             super().__init__(**kwargs)
-
             self.app_config = app_config
 
     BINDINGS = [("ctrl+s", "save_settings", "Save")]
@@ -92,6 +94,7 @@ class SettingsScreen(Screen):
                 data_saver=DEFAULT_DATA_SAVER,
             )
         except ValueError:
+            logger.error("Invalid settings values: %s", new_settings)
             self.app.notify("Invalid settings values", severity="error")
             return
 
