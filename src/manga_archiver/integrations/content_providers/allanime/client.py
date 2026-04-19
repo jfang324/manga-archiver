@@ -224,7 +224,7 @@ class AllMangaClient(Provider):
         """
         errors = response.get("errors")
 
-        # AllManga suspected to have non-standart rate limiting; instead of 429, they return malformed response
+        # AllManga suspected to have non-standard rate limiting; instead of 429, they return malformed response
         if errors and isinstance(errors, list):
             error = errors[0]
             if error.get("message") == "PersistedQueryNotFound":
