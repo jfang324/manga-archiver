@@ -251,6 +251,7 @@ class MultiFormatExporter:
         full_output_path: Path = output_directory / file_name
 
         output_data: bytes = b""
+        file_data: bytes = b""
 
         images = self._load_images(image_data_list)
 
@@ -274,6 +275,7 @@ class MultiFormatExporter:
                     file_data = write_location.getvalue()
 
             if return_bytes and file_data:
+                # conditional needed because CBZ path always returns bytes
                 output_data = file_data
 
             return file_name, output_data
