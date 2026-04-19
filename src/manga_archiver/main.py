@@ -160,7 +160,7 @@ def main() -> None:
                 favorite_repository=favorite_repository,
                 google_drive_client=google_drive_client,
                 output_directory=app_config.output_path,
-                output_format=str(app_config.output_format),
+                output_format=app_config.output_format,
             )
             backlog = asyncio.run(backlog_sync.run())
 

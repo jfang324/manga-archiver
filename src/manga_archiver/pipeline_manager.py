@@ -137,11 +137,12 @@ class PipelineManager:
         # Check and remove expired jobs (O(1) amortized)
         while self._job_expiry_queue:
             oldest_timestamp, oldest_job_id = self._job_expiry_queue[0]
-            if time.time() - oldest_timestamp > self._job_expiry_seconds:
-                self._job_expiry_queue.popleft()
-                self._job_statuses.pop(oldest_job_id, None)
-            else:
+
+            if time.time() - oldest_timestamp < self._job_expiry_seconds:
                 break
+
+            self._job_expiry_queue.popleft()
+            self._job_statuses.pop(oldest_job_id, None)
 
     def get_jobs(self) -> dict[str, tuple[JobStatus, JobMetadata]]:
         """Return a copy of the current job statuses."""

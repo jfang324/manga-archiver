@@ -30,7 +30,7 @@ class WorkerConfig:
     max_retries: int = 5
     base_delay: int = 2
     jitter: bool = False
-    await_output_space: bool = False
+    await_output_space: bool = False  # currently no way to set, still testing performance impact
 
 
 class Worker(ABC):
