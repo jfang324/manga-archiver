@@ -3,12 +3,12 @@ from asyncio import Queue, Semaphore
 
 from ..integrations.content_providers import ContentProviderManager
 from ..models import DownloadResource
-from ..workers.jobs import JobStatus
 from .base import Worker, WorkerConfig
 from .jobs import (
     DownloadingJob,
     FetchingResourcesJob,
     Job,
+    JobStatus,
     NotificationJob,
 )
 

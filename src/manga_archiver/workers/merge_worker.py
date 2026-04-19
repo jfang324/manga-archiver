@@ -2,10 +2,10 @@ import time
 from asyncio import Queue
 
 from ..utils import MultiFormatExporter
-from ..workers.jobs import JobStatus
 from .base import Worker, WorkerConfig
 from .jobs import (
     Job,
+    JobStatus,
     MergingJob,
     NotificationJob,
     UploadJob,
@@ -62,7 +62,7 @@ class MergeWorker(Worker):
             job.output_format,
             job.image_data,
             job.chapter_number,
-            job.chapter_title or "untitled",
+            job.chapter_title,
         )
 
         if not isinstance(chapter_number, float):

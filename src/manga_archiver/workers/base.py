@@ -11,8 +11,7 @@ from ..integrations.exceptions import (
     NotFoundError,
     RateLimitError,
 )
-from ..workers.jobs import JobStatus
-from .jobs import Job, NotificationJob
+from .jobs import Job, JobStatus, NotificationJob
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +74,13 @@ class Worker(ABC):
             job: Job | None = None
 
             try:
-                if self._config.await_output_space and self._output_queue:
-                    while self._output_queue.full():
+                # don't start processing until we have space in the output queue to reduce memory usage
+                if self._config.await_output_space and self._output_queue is not None:
+                    while self._output_queue.full() and self._running:
                         await asyncio.sleep(0.1)
+
+                    if not self._running:
+                        break
 
                 job = await self._input_queue.get()
 

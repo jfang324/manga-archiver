@@ -2,7 +2,7 @@ import tracemalloc
 from dataclasses import dataclass
 from typing import TypedDict
 
-from ..workers.jobs import JobStatus
+from .jobs import JobStatus
 
 
 class PhaseTimings(TypedDict):
