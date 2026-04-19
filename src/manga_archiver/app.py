@@ -22,7 +22,8 @@ from .screens import (
     SelectionScreen,
     SettingsScreen,
 )
-from .utils import DownloadClient, save_settings
+from .utils import DownloadClient
+from .utils.settings_manager import save_settings
 from .workers.jobs import FetchingResourcesJob
 
 if TYPE_CHECKING:

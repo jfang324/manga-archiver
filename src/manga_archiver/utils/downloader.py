@@ -1,9 +1,6 @@
 import asyncio
-import logging
 
 from aiohttp import ClientSession
-
-logger = logging.getLogger(__name__)
 
 
 class DownloadError(Exception):
@@ -38,11 +35,6 @@ class DownloadClient:
             if response.status == 200:
                 return await response.read()
             else:
-                logger.error(
-                    "Failed to download image from %s. Status code: %s",
-                    url,
-                    response.status,
-                )
                 raise DownloadError(
                     f"Failed to download image from {url}. Status code: {response.status}"
                 )
@@ -64,9 +56,7 @@ class DownloadClient:
 
         try:
             return await asyncio.gather(*tasks)
-        except Exception as e:
-            logger.error("Error downloading images: %s", e)
-
+        except Exception:
             for task in tasks:
                 task.cancel()
 
