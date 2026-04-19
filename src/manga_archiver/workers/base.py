@@ -79,6 +79,9 @@ class Worker(ABC):
                     while self._output_queue.full():
                         await asyncio.sleep(0.1)
 
+                        if not self._running:
+                            break
+
                 job = await self._input_queue.get()
 
                 await self._process_job(job)

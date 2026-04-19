@@ -1,11 +1,8 @@
-import logging
 import tracemalloc
 from dataclasses import dataclass
 from typing import TypedDict
 
 from .jobs import JobStatus
-
-logger = logging.getLogger(__name__)
 
 
 class PhaseTimings(TypedDict):
@@ -75,7 +72,6 @@ class BenchmarkManager:
             end_ns: End time in nanoseconds (-1 if phase just started)
         """
         if status not in self._TRACKED_PHASES:
-            logger.error("Job %s reported invalid status: %s", job_id, status)
             return
 
         metric = self._metrics.setdefault(job_id, {"timings": {}})
