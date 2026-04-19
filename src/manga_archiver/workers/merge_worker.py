@@ -1,3 +1,4 @@
+import asyncio
 import time
 from asyncio import Queue
 
@@ -82,13 +83,16 @@ class MergeWorker(Worker):
         merge_start = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.MERGING, merge_start)
 
-        full_name, file_data = self._multi_format_exporter.generate(
+        # need to delegate to thread pools to avoid blocking the event loop
+        full_name, file_data = await asyncio.to_thread(
+            self._multi_format_exporter.generate,
             image_data_list=image_data,
             output_directory=output_directory,
             output_name=output_name,
             output_format=output_format,
             return_bytes=self._output_queue is not None,
         )
+
         merge_end = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.MERGING, merge_start, merge_end)
 

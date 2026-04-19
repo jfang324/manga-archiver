@@ -222,7 +222,15 @@ class AllMangaClient(Provider):
         Raises:
             ApiError: If response data is invalid or no URLs found
         """
-        response_data = response.get("data", {})
+        errors = response.get("errors")
+
+        # AllManga suspected to have non-standart rate limiting; instead of 429, they return malformed response
+        if errors and isinstance(errors, list):
+            error = errors[0]
+            if error.get("message") == "PersistedQueryNotFound":
+                raise RateLimitError(f"API returned malformed response: {errors}")
+
+        response_data = response.get("data")
 
         if not isinstance(response_data, dict):
             raise ApiError("Invalid response: not a dict")
