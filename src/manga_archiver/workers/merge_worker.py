@@ -89,7 +89,6 @@ class MergeWorker(Worker):
             output_format=output_format,
             return_bytes=self._output_queue is not None,
         )
-
         merge_end = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.MERGING, merge_start, merge_end)
 
