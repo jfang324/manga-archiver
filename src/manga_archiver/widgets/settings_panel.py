@@ -141,7 +141,6 @@ class SettingsPanel(Widget):
         str_format = str(event.value)
 
         if str_format not in OutputFormat.list_formats():
-            self.log.error("Invalid output format: %s", str_format)
             self.notify("Invalid output format", severity="error")
             return
 

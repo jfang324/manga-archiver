@@ -121,7 +121,6 @@ class SearchPanel(Widget):
                 query: The search query
             """
             super().__init__(**kwargs)
-
             self.query = query
 
     class Selected(Message):
@@ -235,7 +234,6 @@ class SearchPanel(Widget):
         index = event.index
 
         if index is None or index < 0 or index >= len(self.results):
-            self.log.error("Invalid index selected in SearchPanel: %s", index)
             self.notify("Invalid index selected", severity="error")
             return
 
@@ -245,6 +243,7 @@ class SearchPanel(Widget):
     def action_favorite(self) -> None:
         list_view = self.query_one("#search-results", ListView)
         index = list_view.index
+
         if index is not None and index >= 0:
             self.post_message(self.Favorite(index))
 

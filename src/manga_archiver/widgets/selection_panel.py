@@ -54,7 +54,6 @@ class SelectionPanel(Widget):
                 selected_pairs: A list of selected (name, id, chapter_number) tuples
             """
             super().__init__(**kwargs)
-
             self.selected_pairs = selected_pairs
 
     options: reactive[list[tuple[str, str, float]]] = reactive([])

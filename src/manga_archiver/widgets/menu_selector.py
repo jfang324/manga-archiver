@@ -68,7 +68,6 @@ class MenuSelector(Widget):
                 screen: The screen to display when the option is selected
             """
             super().__init__(**kwargs)
-
             self.screen = screen
 
     def __init__(
@@ -119,7 +118,6 @@ class MenuSelector(Widget):
             return
 
         if index < 0 or index >= len(self._menu_options):
-            self.log.error("Invalid index selected in MenuSelector: %s", index)
             self.notify("Invalid index selected", severity="error")
             return
 

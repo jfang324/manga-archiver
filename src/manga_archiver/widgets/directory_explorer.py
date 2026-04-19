@@ -69,7 +69,6 @@ class DirectoryExplorer(Widget):
             title: The title to display on the directory explorer's border
         """
         super().__init__(**kwargs)
-
         self.border_title = title
 
     def compose(self) -> ComposeResult:
