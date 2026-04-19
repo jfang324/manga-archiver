@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 from pathlib import Path
 from typing import TypedDict
@@ -13,8 +12,6 @@ from ..constants.defaults import (
 )
 from ..models.app_config import AppConfig
 from ..models.output_format import OutputFormat
-
-logger = logging.getLogger(__name__)
 
 SETTINGS_FILENAME = "settings.json"
 
@@ -75,8 +72,7 @@ def _create_app_config(settings_data: SettingsData) -> AppConfig:
             optimize=settings_data.get("optimize", DEFAULT_OPTIMIZE),
             data_saver=settings_data.get("data_saver", DEFAULT_DATA_SAVER),
         )
-    except ValueError as e:
-        logger.error("Configuration validation failed: %s. Using default settings instead.", e)
+    except ValueError:
         # Use current working directory as fallback since DEFAULT_OUTPUT_PATH
         # may not exist (e.g., CI environment or deleted Downloads folder).
         # This is a safe fallback as cwd is guaranteed to exist.
@@ -100,15 +96,11 @@ def load_settings() -> AppConfig:
         config_dir.mkdir(parents=True, exist_ok=True)
         default_settings: SettingsData = _get_default_settings()
         settings_path.write_text(json.dumps(default_settings, indent=2))
-        logger.info("Settings file not found at %s, created with defaults", settings_path)
 
     settings_data: SettingsData | None = _parse_settings_file(settings_path)
 
     if settings_data is None:
-        logger.error("Failed to read settings.json from %s", settings_path)
         settings_data = _get_default_settings()
-    else:
-        logger.info("Loaded settings from %s: %s", settings_path, settings_data)
 
     return _create_app_config(settings_data)
 
@@ -132,7 +124,6 @@ def save_settings(app_config: AppConfig) -> None:
             _quality=app_config.quality,
         )
     except ValueError as e:
-        logger.error("Invalid settings: %s", e)
         raise ValueError(f"Invalid settings: {e}") from e
 
     settings_path: Path = _get_settings_path()
@@ -146,7 +137,5 @@ def save_settings(app_config: AppConfig) -> None:
 
     try:
         settings_path.write_text(json.dumps(settings_data, indent=2))
-        logger.info("Saved settings to %s: %s", settings_path, settings_data)
     except OSError as e:
-        logger.error("Failed to save settings.json to %s: %s", settings_path, e)
         raise ValueError(f"Failed to save settings.json: {e}") from e

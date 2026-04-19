@@ -1,4 +1,3 @@
-import logging
 import re
 import uuid
 import zipfile
@@ -9,8 +8,6 @@ from ebooklib import epub
 from PIL import Image
 
 from ..models.output_format import OutputFormat
-
-logger = logging.getLogger(__name__)
 
 
 class MultiFormatExporter:
@@ -52,21 +49,18 @@ class MultiFormatExporter:
         Returns:
             bytes: The CBZ file data
         """
-        try:
-            with zipfile.ZipFile(write_location, "w", compression=zipfile.ZIP_DEFLATED) as cbz:
-                for i, img in enumerate(images, start=1):
-                    img_buf = BytesIO()
-                    img.save(img_buf, format="PNG")
-                    img_buf.seek(0)
-                    cbz.writestr(f"page_{i:03}.png", img_buf.read())
 
-            if isinstance(write_location, BytesIO):
-                return write_location.getvalue()
+        with zipfile.ZipFile(write_location, "w", compression=zipfile.ZIP_DEFLATED) as cbz:
+            for i, img in enumerate(images, start=1):
+                img_buf = BytesIO()
+                img.save(img_buf, format="PNG")
+                img_buf.seek(0)
+                cbz.writestr(f"page_{i:03}.png", img_buf.read())
 
-            return b""
-        except Exception as e:
-            logger.error("Error generating CBZ file: %s", e)
-            raise
+        if isinstance(write_location, BytesIO):
+            return write_location.getvalue()
+
+        return b""
 
     def _generate_pdf(
         self,
@@ -84,18 +78,15 @@ class MultiFormatExporter:
         Returns:
             None: The PDF file data is written to the write_location regardless of if it was a BytesIO or Path
         """
-        try:
-            images[0].save(
-                write_location,
-                format=str(OutputFormat.PDF),
-                save_all=True,
-                append_images=images[1:],
-                quality=quality,
-                optimize=optimize,
-            )
-        except Exception as e:
-            logger.error("Error generating PDF file: %s", e)
-            raise
+
+        images[0].save(
+            write_location,
+            format=str(OutputFormat.PDF),
+            save_all=True,
+            append_images=images[1:],
+            quality=quality,
+            optimize=optimize,
+        )
 
     def _generate_epub(
         self,
@@ -111,59 +102,56 @@ class MultiFormatExporter:
         Returns:
             None: The EPUB file is written to write_location
         """
-        try:
-            book = epub.EpubBook()
-            book.set_identifier(str(uuid.uuid4()))
-            book.set_language("en")
 
-            css = """
-                body { margin: 0; padding: 0; width: 100%; height: 100%; }
-                img { width: 100%; height: 100%; display: block; }
+        book = epub.EpubBook()
+        book.set_identifier(str(uuid.uuid4()))
+        book.set_language("en")
+
+        css = """
+            body { margin: 0; padding: 0; width: 100%; height: 100%; }
+            img { width: 100%; height: 100%; display: block; }
             """
-            nav_css = epub.EpubItem(
-                uid="style_nav",
-                file_name="style/nav.css",
-                media_type="text/css",
-                content=css,
+        nav_css = epub.EpubItem(
+            uid="style_nav",
+            file_name="style/nav.css",
+            media_type="text/css",
+            content=css,
+        )
+        book.add_item(nav_css)
+
+        pages = []
+        for i, img in enumerate(images, start=1):
+            buffer = BytesIO()
+            img.save(buffer, format="JPEG")
+            img_data = buffer.getvalue()
+
+            img_item = epub.EpubItem(
+                uid=f"page_{i}",
+                file_name=f"images/page_{i:03}.jpg",
+                media_type="image/jpeg",
+                content=img_data,
             )
-            book.add_item(nav_css)
+            book.add_item(img_item)
 
-            pages = []
-            for i, img in enumerate(images, start=1):
-                buffer = BytesIO()
-                img.save(buffer, format="JPEG")
-                img_data = buffer.getvalue()
+            page = epub.EpubHtml(
+                title=f"Page {i}",
+                file_name=f"page_{i}.xhtml",
+            )
+            page.set_content(
+                f"<html><head></head><body><img src='images/page_{i:03}.jpg' alt='Page {i}'/></body></html>"
+            )
+            page.add_item(nav_css)
+            book.add_item(page)
+            pages.append(page)
 
-                img_item = epub.EpubItem(
-                    uid=f"page_{i}",
-                    file_name=f"images/page_{i:03}.jpg",
-                    media_type="image/jpeg",
-                    content=img_data,
-                )
-                book.add_item(img_item)
+            if i == 1:
+                book.set_cover("cover.jpg", img_data)
 
-                page = epub.EpubHtml(
-                    title=f"Page {i}",
-                    file_name=f"page_{i}.xhtml",
-                )
-                page.set_content(
-                    f"<html><head></head><body><img src='images/page_{i:03}.jpg' alt='Page {i}'/></body></html>"
-                )
-                page.add_item(nav_css)
-                book.add_item(page)
-                pages.append(page)
+        book.add_item(epub.EpubNcx())
+        book.add_item(epub.EpubNav())
+        book.spine = pages
 
-                if i == 1:
-                    book.set_cover("cover.jpg", img_data)
-
-            book.add_item(epub.EpubNcx())
-            book.add_item(epub.EpubNav())
-            book.spine = pages
-
-            epub.write_epub(write_location, book, {})
-        except Exception as e:
-            logger.error("Error generating EPUB file: %s", e)
-            raise
+        epub.write_epub(write_location, book, {})
 
     def _validate_inputs(
         self,
@@ -263,6 +251,7 @@ class MultiFormatExporter:
         full_output_path: Path = output_directory / file_name
 
         output_data: bytes = b""
+        file_data: bytes = b""
 
         images = self._load_images(image_data_list)
 
@@ -285,7 +274,8 @@ class MultiFormatExporter:
                 if isinstance(write_location, BytesIO):
                     file_data = write_location.getvalue()
 
-            if return_bytes:
+            if return_bytes and file_data:
+                # conditional needed because CBZ path always returns bytes
                 output_data = file_data
 
             return file_name, output_data
