@@ -1,11 +1,8 @@
 import json
-import logging
 import os
 from pathlib import Path
 
 from .types import GoogleApiStoredToken
-
-logger = logging.getLogger(__name__)
 
 TOKEN_FILENAME = "google_drive_token.json"  # noqa: S105 - local filename, not a credential
 
@@ -25,8 +22,7 @@ def load_token() -> GoogleApiStoredToken | None:
 
     try:
         return json.loads(token_file.read_text())
-    except (json.JSONDecodeError, OSError) as e:
-        logger.error("Failed to load token: %s", e)
+    except (json.JSONDecodeError, OSError):
         return None
 
 
@@ -35,7 +31,6 @@ def save_token(token: GoogleApiStoredToken) -> None:
     token_file = get_token_path()
     token_file.parent.mkdir(parents=True, exist_ok=True)
     token_file.write_text(json.dumps(token, indent=2))
-    logger.debug("Token saved to %s", token_file)
 
 
 def delete_token() -> None:
@@ -44,4 +39,3 @@ def delete_token() -> None:
 
     if token_file.exists():
         token_file.unlink()
-        logger.debug("Token deleted")

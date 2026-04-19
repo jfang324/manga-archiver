@@ -18,8 +18,9 @@ from .db.schema_manager import MigrationError, SchemaManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .pipeline_manager import PipelineConfig
 from .repositories import FavoriteRepository
-from .utils import load_settings, setup_logging
+from .utils import setup_logging
 from .utils.auth.google_drive import handle_auth_login, handle_auth_logout, load_token
+from .utils.settings_manager import load_settings
 
 logger = logging.getLogger(__name__)
 
