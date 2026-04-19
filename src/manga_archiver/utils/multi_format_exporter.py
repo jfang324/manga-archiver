@@ -273,7 +273,7 @@ class MultiFormatExporter:
                 if isinstance(write_location, BytesIO):
                     file_data = write_location.getvalue()
 
-            if return_bytes:
+            if return_bytes and file_data:
                 output_data = file_data
 
             return file_name, output_data
