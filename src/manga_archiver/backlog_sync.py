@@ -34,7 +34,7 @@ class BacklogSync:
         favorite_repository: FavoriteRepository,
         google_drive_client: GoogleDriveClient,
         output_directory: Path,
-        output_format: str,
+        output_format: OutputFormat,
     ) -> None:
         """Initialize backlog sync.
 
@@ -123,8 +123,8 @@ class BacklogSync:
 
             for chapter in manga.api_chapters:
                 chapter_number = chapter.chapter_num
-                if not chapter_number:
-                    logger.error("Skipping chapter %s - no chapter number", chapter.id)
+                if not isinstance(chapter_number, float):
+                    logger.error("Skipping chapter %s - chapter number is not a float", chapter.id)
                     continue
 
                 if chapter_number not in google_drive_set:
@@ -143,7 +143,7 @@ class BacklogSync:
         jobs: list[FetchingResourcesJob] = []
         for manga_title, source, chapter in missing_chapters:
             chapter_number = chapter.chapter_num
-            chapter_title = chapter.title or "untitled"
+            chapter_title = chapter.title
 
             jobs.append(
                 FetchingResourcesJob(
@@ -153,7 +153,7 @@ class BacklogSync:
                     chapter_number=chapter_number,
                     chapter_title=chapter_title,
                     output_directory=self._output_directory,
-                    output_format=OutputFormat(self._output_format),
+                    output_format=self._output_format,
                     source=source,
                 )
             )
