@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import time
 
@@ -21,8 +20,6 @@ from .constants import (
 from .enums import GoogleAuthDeviceFlowResult
 from .token_storage import delete_token, load_token, save_token
 from .types import GoogleApiStoredToken, GoogleAuthCredentials, GoogleAuthDeviceCode
-
-logger = logging.getLogger(__name__)
 
 
 def _get_credentials_path() -> str:
@@ -131,8 +128,6 @@ def _poll_for_token(
             if error == GoogleAuthDeviceFlowResult.EXPIRED_TOKEN:
                 return GoogleAuthDeviceFlowResult.EXPIRED_TOKEN
 
-        logger.error("Unexpected token response: %s", token_response.text)
-
     return GoogleAuthDeviceFlowResult.TIMEOUT
 
 
@@ -215,16 +210,13 @@ def handle_auth_login() -> int:
         return EXIT_AUTH_LOGIN_FAILED
 
     except (requests.Timeout, requests.ConnectionError) as e:
-        logger.error("Network error during authentication: %s", e)
-        print(f"Network error: {e}")
+        print(f"Network error during authentication: {e}")
         return EXIT_AUTH_LOGIN_FAILED
     except requests.HTTPError as e:
-        logger.error("HTTP error during authentication: %s", e)
-        print(f"Server error: {e}")
+        print(f"HTTP error during authentication: {e}")
         return EXIT_AUTH_LOGIN_FAILED
     except Exception as e:
-        logger.error("Failed to complete authentication: %s", e)
-        print(f"Error: {e}")
+        print(f"Failed to complete authentication: {e}")
         return EXIT_AUTH_LOGIN_FAILED
 
 

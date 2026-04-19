@@ -85,7 +85,7 @@ class TestHandleAuthLogin:
         result = handle_auth_login()
 
         assert result == EXIT_AUTH_LOGIN_FAILED
-        assert "Server error" in capsys.readouterr().out
+        assert "HTTP error" in capsys.readouterr().out
 
 
 class TestHandleAuthLogout:
