@@ -72,7 +72,7 @@ def _create_app_config(settings_data: SettingsData) -> AppConfig:
             optimize=settings_data.get("optimize", DEFAULT_OPTIMIZE),
             data_saver=settings_data.get("data_saver", DEFAULT_DATA_SAVER),
         )
-    except ValueError:
+    except (TypeError, ValueError):
         return AppConfig()
 
 
