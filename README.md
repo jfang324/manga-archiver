@@ -206,7 +206,7 @@ https://github.com/user-attachments/assets/f07d5eb4-91d3-4fa1-b90f-23f9f24bfbed
 
 ## Known Issues
 
-- Default output directory causes issues on Linux
+- Default output directory causes issues on Linux due to Downloads directory not existing by default
 - `--backlog` sometimes skips valid chapters if the source doesn't have a chapter title
 - `--backlog` doesn't correctly skip existing chapters
 - Manga with long titles and chapter titles sometimes fails to upload to Google Drive
