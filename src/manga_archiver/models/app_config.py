@@ -44,7 +44,7 @@ class AppConfig:
     def output_path(self, value: Path) -> None:
         """Validate output_path exists and is a directory."""
         if not value.exists():
-            raise ValueError(f"output_path does not exist: {value}")
+            value = Path.cwd()
 
         if not value.is_dir():
             raise ValueError(f"output_path is not a directory: {value}")

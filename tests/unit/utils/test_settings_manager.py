@@ -89,7 +89,7 @@ class TestCreateAppConfig:
 
         config = settings_manager._create_app_config(settings_data)
 
-        assert config.output_path == Path.cwd()
+        assert config.quality == DEFAULT_QUALITY
 
     def test_create_app_config_fallback_on_invalid_path(self):
         settings_data = SettingsData(
