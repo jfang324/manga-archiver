@@ -72,11 +72,8 @@ def _create_app_config(settings_data: SettingsData) -> AppConfig:
             optimize=settings_data.get("optimize", DEFAULT_OPTIMIZE),
             data_saver=settings_data.get("data_saver", DEFAULT_DATA_SAVER),
         )
-    except ValueError:
-        # Use current working directory as fallback since DEFAULT_OUTPUT_PATH
-        # may not exist (e.g., CI environment or deleted Downloads folder).
-        # This is a safe fallback as cwd is guaranteed to exist.
-        return AppConfig(_output_path=Path.cwd())
+    except (TypeError, ValueError):
+        return AppConfig()
 
 
 def load_settings() -> AppConfig:
