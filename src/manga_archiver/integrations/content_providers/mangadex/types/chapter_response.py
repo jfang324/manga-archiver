@@ -13,6 +13,7 @@ class ChapterResultAttributes:
     @classmethod
     def from_dict(cls, attributes: dict) -> ChapterResultAttributes:
         """Create a ChapterResultAttributes from a dictionary."""
+
         if "chapter" not in attributes:
             raise ValueError("Invalid attributes: missing chapter")
 
@@ -21,9 +22,18 @@ class ChapterResultAttributes:
         except (ValueError, TypeError):
             raise ValueError("Invalid attributes: chapter failed to parse to float")
 
+        title = "untitled"
+
+        if (
+            "title" in attributes
+            and isinstance(attributes["title"], str)
+            and attributes["title"].strip()
+        ):
+            title = attributes["title"]
+
         return cls(
             chapter=chapter,
-            title=attributes.get("title", "untitled"),
+            title=title,
         )
 
 
