@@ -5,6 +5,7 @@ import pytest
 from src.manga_archiver.integrations.content_providers.mangadex import MangaDexApiClient
 from src.manga_archiver.integrations.exceptions import (
     ApiError,
+    BadGatewayError,
     NotFoundError,
     RateLimitError,
 )
@@ -49,9 +50,10 @@ class TestMangaDexApiClientRequest:
             ((404, {}), NotFoundError),
             ((429, {}), RateLimitError),
             ((500, {}), ApiError),
+            ((502, {}), BadGatewayError),
         ],
         indirect=["mock_api_response"],
-        ids=["not_found", "rate_limit", "server_error"],
+        ids=["not_found", "rate_limit", "server_error", "bad_gateway"],
     )
     async def test_failed_request_raises_custom_errors(
         self, mock_session, mock_api_response, expected_error
@@ -126,9 +128,10 @@ class TestMangaDexApiClientGetChapters:
             ((500, {}), ApiError),
             ((404, {}), NotFoundError),
             ((429, {}), RateLimitError),
+            ((502, {}), BadGatewayError),
         ],
         indirect=["mock_api_response"],
-        ids=["server_error", "not_found", "rate_limit"],
+        ids=["server_error", "not_found", "rate_limit", "bad_gateway"],
     )
     async def test_get_chapters_raises_api_errors(
         self, mock_session, mock_api_response, expected_error

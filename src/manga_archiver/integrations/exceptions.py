@@ -8,3 +8,7 @@ class NotFoundError(ApiError):
 
 class RateLimitError(ApiError):
     """Raised when the API rate limit is exceeded (429)."""
+
+
+class BadGatewayError(ApiError):
+    """Raised when the API returns a 502 Bad Gateway error."""

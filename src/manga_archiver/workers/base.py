@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from aiohttp import ClientError
 
 from ..integrations.exceptions import (
+    BadGatewayError,
     NotFoundError,
     RateLimitError,
 )
@@ -146,7 +147,7 @@ class Worker(ABC):
             )
             await self._send_notification(job, JobStatus.FAILED)
             return
-        except (TimeoutError, asyncio.TimeoutError, ClientError) as e:
+        except (TimeoutError, BadGatewayError, asyncio.TimeoutError, ClientError) as e:
             # Transient network errors: retry normally
             if attempt < self._config.max_retries:
                 delay = self._calculate_backoff(attempt)
