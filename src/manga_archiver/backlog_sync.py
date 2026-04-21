@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import logging
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -217,9 +218,17 @@ class BacklogSync:
         chapter_numbers: list[float] = []
 
         for file in files:
-            name = file["name"]
-            match = re.search(r"\[(\d+\.?\d*)\]", name)
-            if match:
-                chapter_numbers.append(float(match.group(1)))
+            app_props = file.get("appProperties")
+
+            if not app_props:
+                logger.error("Skipping chapter %s - missing appProperties", file["name"])
+                continue
+
+            chapter_num = app_props.get("chapter_num")
+            if chapter_num is None:
+                logger.error("Skipping chapter %s - missing chapter_num", file["name"])
+                continue
+
+            chapter_numbers.append(float(chapter_num))
 
         return chapter_numbers

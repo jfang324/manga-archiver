@@ -103,12 +103,16 @@ class GoogleDriveClient:
 
         cached_count = 0
         for folder in sub_folders:
-            app_props = folder.get("appProperties")
-            if not app_props or not app_props.get("source"):
+            app_props = folder.get("appProperties", {})
+            if not app_props:
                 continue
 
-            source = app_props["source"]
-            cache_key = _MangaFolderKey(source, folder["name"])
+            try:
+                metadata = GoogleDriveFolderMetadata.from_app_properties(app_props)
+            except ValueError:
+                continue
+
+            cache_key = _MangaFolderKey(metadata.source, folder["name"])
             self._folder_cache[cache_key] = folder["id"]
             cached_count += 1
 
