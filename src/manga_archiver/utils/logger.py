@@ -14,7 +14,7 @@ def setup_logging() -> None:
     - error.log: Only ERROR and above messages
     - info.log: INFO and above messages (for benchmark output)
 
-    Keeps 7 days of log history (auto-deletes older logs).
+    Keeps 2 days of log history (auto-deletes older logs).
     """
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -26,7 +26,7 @@ def setup_logging() -> None:
         LOG_DIR / "debug.log",
         when="midnight",
         interval=1,
-        backupCount=7,
+        backupCount=2,
     )
     debug_handler.setLevel(logging.DEBUG)
     debug_handler.setFormatter(
@@ -38,7 +38,7 @@ def setup_logging() -> None:
         LOG_DIR / "error.log",
         when="midnight",
         interval=1,
-        backupCount=7,
+        backupCount=2,
     )
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(
@@ -50,7 +50,7 @@ def setup_logging() -> None:
         LOG_DIR / "info.log",
         when="midnight",
         interval=1,
-        backupCount=7,
+        backupCount=2,
     )
     info_handler.setLevel(logging.INFO)
     info_handler.setFormatter(
