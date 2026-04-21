@@ -97,7 +97,7 @@ mock_chapter_data: dict = {
             "uploadDate": "2022-01-05T00:00:00.000Z",
         },
         {
-            "id": "6",
+            "id": "7",
             "attributes": {
                 "title": "",
                 "chapter": "6",
@@ -118,7 +118,7 @@ mock_processed_chapter_data: list[Chapter] = [
     Chapter(id="2", title="Chapter 2", chapter_num=2.0, source=ContentSource.MANGADEX),
     Chapter(id="3", title="untitled", chapter_num=3.0, source=ContentSource.MANGADEX),
     Chapter(id="5", title="untitled", chapter_num=5.0, source=ContentSource.MANGADEX),
-    Chapter(id="6", title="untitled", chapter_num=6.0, source=ContentSource.MANGADEX),
+    Chapter(id="7", title="untitled", chapter_num=6.0, source=ContentSource.MANGADEX),
 ]
 
 # # Download resource response
