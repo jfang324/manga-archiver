@@ -228,6 +228,16 @@ class BacklogSync:
                 logger.error("Skipping chapter %s - missing chapter_num", file["name"])
                 continue
 
+            try:
+                chapter_num = float(chapter_num)
+            except (ValueError, TypeError):
+                logger.error(
+                    "Skipping chapter %s - chapter_num is not a float: %s",
+                    file["name"],
+                    chapter_num,
+                )
+                continue
+
             chapter_numbers.append(float(chapter_num))
 
         return chapter_numbers
