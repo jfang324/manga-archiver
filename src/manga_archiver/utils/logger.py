@@ -14,7 +14,7 @@ def setup_logging() -> None:
     - error.log: Only ERROR and above messages
     - info.log: INFO and above messages (for benchmark output)
 
-    Keeps 7 days of log history (auto-deletes older logs).
+    Keeps 2 days of log history (auto-deletes older logs).
     """
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 

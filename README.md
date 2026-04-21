@@ -206,8 +206,7 @@ https://github.com/user-attachments/assets/f07d5eb4-91d3-4fa1-b90f-23f9f24bfbed
 
 ## Known Issues
 
-- Manga with long titles and chapter titles sometimes fails to upload to Google Drive
-- Download screen reports "complete" even if it failed due to exceeding retry limit
+- AllManga integration may be slightly unstable at times
 
 ## Development
 
