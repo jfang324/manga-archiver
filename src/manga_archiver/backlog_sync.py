@@ -157,6 +157,7 @@ class BacklogSync:
                 )
             )
 
+        print(f"Found {len(jobs)} missing chapters")
         return jobs
 
     async def _fetch_api_chapters(
