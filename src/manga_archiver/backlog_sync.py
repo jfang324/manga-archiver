@@ -196,10 +196,14 @@ class BacklogSync:
             list[float]: List of chapter numbers found in Google Drive
         """
         folder_id = self._google_drive_client.get_manga_folder_id(manga_title, source)
+        files = []
+
         if folder_id:
-            files = self._google_drive_client.get_files_in_folder(folder_id)
-            return self._parse_chapter_numbers(files)
-        return []
+            # 1000 is just a placeholder for now, I don't expect many manga to have more than 1000 chapters
+            cloud_files = self._google_drive_client.get_files_in_folder(folder_id, 1000)
+            files.extend(cloud_files)
+
+        return self._parse_chapter_numbers(files)
 
     def _parse_chapter_numbers(self, files: list[GoogleDriveFile]) -> list[float]:
         """Parse chapter numbers from file names.
