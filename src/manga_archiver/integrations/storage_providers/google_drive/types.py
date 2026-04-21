@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import TypedDict
 
@@ -46,6 +48,13 @@ class GoogleDriveFolderMetadata:
 
     source: str
 
+    @classmethod
+    def from_app_properties(cls, props: dict[str, str]) -> GoogleDriveFolderMetadata:
+        if "source" not in props:
+            raise ValueError("Missing source in appProperties")
+
+        return cls(source=props["source"])
+
     def to_app_properties(self) -> dict[str, str]:
         return {"source": self.source}
 
@@ -57,6 +66,23 @@ class GoogleDriveFileMetadata:
     source: str
     chapter_num: str
     chapter_title: str
+
+    @classmethod
+    def from_app_properties(cls, props: dict[str, str]) -> GoogleDriveFileMetadata:
+        if "source" not in props:
+            raise ValueError("Missing source in appProperties")
+
+        if "chapter_num" not in props:
+            raise ValueError("Missing chapter_num in appProperties")
+
+        if "chapter_title" not in props:
+            raise ValueError("Missing chapter_title in appProperties")
+
+        return cls(
+            source=props["source"],
+            chapter_num=props["chapter_num"],
+            chapter_title=props["chapter_title"],
+        )
 
     def to_app_properties(self) -> dict[str, str]:
         return {

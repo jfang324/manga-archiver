@@ -1,5 +1,4 @@
 import logging
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -158,6 +157,7 @@ class BacklogSync:
                 )
             )
 
+        print(f"Found {len(jobs)} missing chapters")
         return jobs
 
     async def _fetch_api_chapters(
@@ -196,10 +196,14 @@ class BacklogSync:
             list[float]: List of chapter numbers found in Google Drive
         """
         folder_id = self._google_drive_client.get_manga_folder_id(manga_title, source)
+        files = []
+
         if folder_id:
-            files = self._google_drive_client.get_files_in_folder(folder_id)
-            return self._parse_chapter_numbers(files)
-        return []
+            # 1000 is just a placeholder for now, I don't expect many manga to have more than 1000 chapters
+            cloud_files = self._google_drive_client.get_files_in_folder(folder_id, 1000)
+            files.extend(cloud_files)
+
+        return self._parse_chapter_numbers(files)
 
     def _parse_chapter_numbers(self, files: list[GoogleDriveFile]) -> list[float]:
         """Parse chapter numbers from file names.
@@ -213,9 +217,27 @@ class BacklogSync:
         chapter_numbers: list[float] = []
 
         for file in files:
-            name = file["name"]
-            match = re.search(r"\[(\d+\.?\d*)\]", name)
-            if match:
-                chapter_numbers.append(float(match.group(1)))
+            app_props = file.get("appProperties")
+
+            if not app_props:
+                logger.error("Skipping chapter %s - missing appProperties", file["name"])
+                continue
+
+            chapter_num = app_props.get("chapter_num")
+            if chapter_num is None:
+                logger.error("Skipping chapter %s - missing chapter_num", file["name"])
+                continue
+
+            try:
+                chapter_num = float(chapter_num)
+            except (ValueError, TypeError):
+                logger.error(
+                    "Skipping chapter %s - chapter_num is not a float: %s",
+                    file["name"],
+                    chapter_num,
+                )
+                continue
+
+            chapter_numbers.append(float(chapter_num))
 
         return chapter_numbers
