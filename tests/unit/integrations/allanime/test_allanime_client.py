@@ -312,8 +312,10 @@ class TestAllMangaClientErrorPropagation:
             ((404, {}), NotFoundError),
             ((429, {}), RateLimitError),
             ((500, {}), ApiError),
+            ((502, {}), BadGatewayError),
         ],
         indirect=["mock_api_response"],
+        ids=["not_found", "rate_limit", "server_error", "bad_gateway"],
     )
     async def test_error_propagates(
         self, mock_session, mock_api_response, method_name, method_args, expected_error

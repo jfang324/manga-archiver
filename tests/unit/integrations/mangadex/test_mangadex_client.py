@@ -175,7 +175,7 @@ class TestMangaDexApiClientGetDownloadResource:
             ((502, {}), BadGatewayError),
         ],
         indirect=["mock_api_response"],
-        ids=["server_error", "not_found", "rate_limit"],
+        ids=["server_error", "not_found", "rate_limit", "bad_gateway"],
     )
     async def test_get_download_resource_raises_api_errors(
         self, mock_session, mock_api_response, expected_error
