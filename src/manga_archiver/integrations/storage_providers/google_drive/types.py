@@ -3,6 +3,26 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypedDict
 
+MAX_APP_PROPERTY_BYTES = 124
+
+
+def _truncate_for_app_properties(key: str, value: str) -> str:
+    """Truncate value to fit within Google Drive appProperties limit.
+
+    Google Drive limits each property (key + value) to 124 bytes in UTF-8.
+    This function ensures the value fits within that limit.
+    """
+    max_value_bytes = MAX_APP_PROPERTY_BYTES - len(key.encode("utf-8"))
+    if max_value_bytes < 0:
+        max_value_bytes = 0
+
+    value_bytes = value.encode("utf-8")
+    if len(value_bytes) <= max_value_bytes:
+        return value
+
+    truncated = value_bytes[:max_value_bytes].decode("utf-8", errors="ignore")
+    return truncated
+
 
 class ClientNotInitializedError(Exception):
     """Raised when client methods are called before initialize()."""
@@ -56,7 +76,7 @@ class GoogleDriveFolderMetadata:
         return cls(source=props["source"])
 
     def to_app_properties(self) -> dict[str, str]:
-        return {"source": self.source}
+        return {"source": _truncate_for_app_properties("source", self.source)}
 
 
 @dataclass(frozen=True)
@@ -86,7 +106,7 @@ class GoogleDriveFileMetadata:
 
     def to_app_properties(self) -> dict[str, str]:
         return {
-            "source": self.source,
+            "source": _truncate_for_app_properties("source", self.source),
             "chapter_num": self.chapter_num,
-            "chapter_title": self.chapter_title,
+            "chapter_title": _truncate_for_app_properties("chapter_title", self.chapter_title),
         }

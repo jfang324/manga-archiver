@@ -399,6 +399,9 @@ class GoogleDriveClient:
                     )
                 raise ApiError(f"Upload failed: max retries exceeded for {file_name}") from e
 
+            if e.resp.status == 403:
+                raise ApiError(f"Permission denied (403): {file_name}") from e
+
             if e.resp.status == 429:
                 raise RateLimitError(f"Rate limit exceeded: {file_name}") from e
 
