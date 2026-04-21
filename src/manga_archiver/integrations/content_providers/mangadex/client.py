@@ -40,6 +40,7 @@ class MangaDexApiClient(Provider):
         Raises:
             NotFoundError: If the resource is not found (404)
             RateLimitError: If rate limited (429)
+            BadGatewayError: If the API is temporarily unavailable (502)
             ApiError: For other API errors
         """
         headers = API_HEADERS.get(ContentSource.MANGADEX, {})
@@ -122,6 +123,7 @@ class MangaDexApiClient(Provider):
         Raises:
             NotFoundError: If the resource is not found (404)
             RateLimitError: If rate limited (429)
+            BadGatewayError: If the API is temporarily unavailable (502)
             ApiError: If the API returns any other error
         """
         url: str = f"{MANGADEX_ROOT_URL}/{manga_id}/feed"

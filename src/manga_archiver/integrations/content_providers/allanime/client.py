@@ -45,6 +45,7 @@ class AllMangaClient(Provider):
         Raises:
             NotFoundError: 404 response
             RateLimitError: 429 response
+            BadGatewayError: 502 response
             ApiError: Other error status codes
         """
         headers = API_HEADERS.get(ContentSource.ALLMANGA, {})
@@ -131,6 +132,7 @@ class AllMangaClient(Provider):
         Raises:
             NotFoundError: If the resource is not found (404)
             RateLimitError: If rate limited (429)
+            BadGatewayError: If the API is temporarily unavailable (502)
             ApiError: If the API returns any other error
         """
         variables = MANGA_DETAILS_QUERY.format(manga_id=manga_id)

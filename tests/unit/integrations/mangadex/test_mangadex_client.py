@@ -172,6 +172,7 @@ class TestMangaDexApiClientGetDownloadResource:
             ((500, {}), ApiError),
             ((404, {}), NotFoundError),
             ((429, {}), RateLimitError),
+            ((502, {}), BadGatewayError),
         ],
         indirect=["mock_api_response"],
         ids=["server_error", "not_found", "rate_limit"],

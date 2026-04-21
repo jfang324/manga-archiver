@@ -218,9 +218,10 @@ class TestAllMangaClientGetDownloadResource:
             ((404, {}), NotFoundError),
             ((429, {}), RateLimitError),
             ((500, {}), ApiError),
+            ((502, {}), BadGatewayError),
         ],
         indirect=["mock_api_response"],
-        ids=["not_found", "rate_limit", "server_error"],
+        ids=["not_found", "rate_limit", "server_error", "bad_gateway"],
     )
     async def test_get_download_resource_raises_api_errors(
         self, mock_session, mock_api_response, expected_error
