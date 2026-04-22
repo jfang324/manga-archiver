@@ -121,13 +121,19 @@ docstring-code-line-length = "dynamic"
 
 [tool.pyright]
 include = ["src"]
-exclude = ["**/tests", "**/__pycache__", "**/.*"]
+exclude = [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.venv",
+    "**/dist",
+]
 venvPath = "."
 venv = ".venv"
+pythonVersion = "3.10"
+typeCheckingMode = "standard"
 reportMissingImports = true
 reportMissingTypeStubs = false
-pythonVersion = "3.10"
-typeCheckingMode = "basic"
 
 [build-system]
 requires = ["poetry-core"]

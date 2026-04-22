@@ -43,7 +43,7 @@ class ResolveWorker(Worker):
 
         self._provider_manager = provider_manager
 
-    async def _do_work(self, job: FetchingResourcesJob) -> DownloadingJob:
+    async def _do_work(self, job: Job) -> DownloadingJob:
         """Fetch, process resources and enqueue them for downloading.
 
         Args:
@@ -55,6 +55,9 @@ class ResolveWorker(Worker):
         Raises:
             ValueError: If the job is missing a chapter ID
         """
+        if not isinstance(job, FetchingResourcesJob):
+            raise ValueError(f"Invalid job type: {type(job).__name__}")
+
         (
             job_id,
             chapter_id,

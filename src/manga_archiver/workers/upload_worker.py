@@ -36,12 +36,15 @@ class UploadWorker(Worker):
 
         self._google_drive_client = google_drive_client
 
-    async def _do_work(self, job: UploadJob) -> None:
+    async def _do_work(self, job: Job) -> None:
         """Upload the merged file to Google Drive.
 
         Args:
             job: The upload job containing file data to upload
         """
+        if not isinstance(job, UploadJob):
+            raise ValueError(f"Invalid job type: {type(job).__name__}")
+
         (
             job_id,
             manga_title,

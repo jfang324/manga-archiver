@@ -144,3 +144,21 @@ class TestDownloadWorkerDoWork:
 
         with pytest.raises(ValueError, match="Invalid DownloadingJob missing urls"):
             await worker._do_work(job)
+
+    @pytest.mark.asyncio
+    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job):
+        mock_download_client = MagicMock(spec=DownloadClient)
+        test_semaphore = asyncio.Semaphore(5)
+
+        worker = DownloadWorker(
+            download_client=mock_download_client,
+            provider_manager=self._create_mock_provider_manager(test_semaphore),
+            worker_id="download_worker_0",
+            input_queue=MagicMock(),
+            output_queue=MagicMock(),
+            notification_queue=AsyncMock(),
+            config=MagicMock(),
+        )
+
+        with pytest.raises(ValueError, match="Invalid job type"):
+            await worker._do_work(mock_job)
