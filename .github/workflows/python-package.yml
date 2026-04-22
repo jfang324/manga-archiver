@@ -58,3 +58,7 @@ jobs:
               run: |
                   poetry run coverage run -m pytest -v
                   poetry run coverage report -m
+
+            - uses: pypa/gh-action-pip-audit@v1.1.0
+              with:
+                  inputs: ../../
