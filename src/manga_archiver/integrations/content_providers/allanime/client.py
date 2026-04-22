@@ -241,9 +241,10 @@ class AllMangaClient(Provider):
             raise ApiError("Invalid response: not a dict")
 
         if "tobeparsed" in response_data:
-            response_data = decode_tobeparsed(response_data["tobeparsed"])
-            if not isinstance(response_data, dict):
-                raise ApiError("Invalid response: tobeparsed is not a dict")
+            try:
+                response_data = decode_tobeparsed(response_data["tobeparsed"])
+            except ValueError as e:
+                raise ApiError(f"Failed to decode response: {e}") from e
 
         try:
             download_response = DownloadResourceResponse.from_dict(response_data)

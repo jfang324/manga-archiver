@@ -14,6 +14,9 @@ def decode_tobeparsed(encoded: str) -> dict:
     try:
         raw = base64.b64decode(encoded)
 
+        if len(raw) < 29:
+            raise ValueError(f"Payload too short: {len(raw)} bytes, expected at least 29 bytes")
+
         # Structure:
         # [0]        = 1 byte header
         # [1:13]     = 12 byte IV
@@ -35,4 +38,4 @@ def decode_tobeparsed(encoded: str) -> dict:
         return json.loads(plaintext.decode("utf-8"))
 
     except Exception as e:
-        raise Exception(f"Failed to decode response: {e}") from e
+        raise ValueError(f"Failed to decode response: {e}") from e
