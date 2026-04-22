@@ -244,7 +244,7 @@ class AllMangaClient(Provider):
             try:
                 response_data = decode_tobeparsed(response_data["tobeparsed"])
             except ValueError as e:
-                raise ApiError(f"Failed to decode response: {e}") from e
+                raise ApiError(str(e)) from e
 
         if not isinstance(response_data, dict):
             raise ApiError("Invalid response: reponse_data is not a dict")
