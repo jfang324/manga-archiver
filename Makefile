@@ -1,4 +1,4 @@
-.PHONY: test report fix format typecheck clean
+.PHONY: test report fix format typecheck check
 
 test:
 	poetry run coverage run -m pytest
@@ -15,4 +15,4 @@ format:
 typecheck:
 	poetry run pyright
 
-clean: fix format typecheck
+check: fix format typecheck test
