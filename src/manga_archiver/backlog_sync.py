@@ -14,6 +14,8 @@ from .workers.jobs import FetchingResourcesJob
 
 logger = logging.getLogger(__name__)
 
+CHUNK_SIZE: int = 3
+
 
 @dataclass(frozen=True)
 class Manga:
@@ -134,31 +136,57 @@ class BacklogSync:
     def _create_jobs(self) -> list[FetchingResourcesJob]:
         """Create FetchingResourcesJob for missing chapters.
 
+        Jobs are interleaved in chunks to prevent rate limit hotspots.
+        e.g., [M1, M2, M3, A1, A2, A3, M4, M5, M6, A4, A5, A6, ...]
+
         Returns:
             list[FetchingResourcesJob]: List of jobs to enqueue
         """
         missing_chapters = self._calculate_diff()
+        groups = self._group_by_source(missing_chapters)
 
         jobs: list[FetchingResourcesJob] = []
-        for manga_title, source, chapter in missing_chapters:
-            chapter_number = chapter.chapter_num
-            chapter_title = chapter.title
+        while groups:
+            for source in list(groups.keys()):
+                chunk = groups[source][:CHUNK_SIZE]
 
-            jobs.append(
-                FetchingResourcesJob(
-                    id=chapter.id,
-                    manga_title=manga_title,
-                    chapter_id=chapter.id,
-                    chapter_number=chapter_number,
-                    chapter_title=chapter_title,
-                    output_directory=self._output_directory,
-                    output_format=self._output_format,
-                    source=source,
+                jobs.extend(
+                    self._make_job(source, manga_title, chapter) for manga_title, chapter in chunk
                 )
-            )
+
+                groups[source] = groups[source][CHUNK_SIZE:]
+
+                if not groups[source]:
+                    del groups[source]
 
         print(f"Found {len(jobs)} missing chapters")
         return jobs
+
+    def _group_by_source(
+        self, chapters: list[tuple[str, ContentSource, Chapter]]
+    ) -> dict[ContentSource, list[tuple[str, Chapter]]]:
+        """Group chapters by content source."""
+        groups: dict[ContentSource, list[tuple[str, Chapter]]] = {}
+
+        for manga_title, source, chapter in chapters:
+            groups.setdefault(source, []).append((manga_title, chapter))
+
+        return groups
+
+    def _make_job(
+        self, source: ContentSource, manga_title: str, chapter: Chapter
+    ) -> FetchingResourcesJob:
+        """Create a FetchingResourcesJob."""
+        return FetchingResourcesJob(
+            id=chapter.id,
+            manga_title=manga_title,
+            chapter_id=chapter.id,
+            chapter_number=chapter.chapter_num,
+            chapter_title=chapter.title,
+            output_directory=self._output_directory,
+            output_format=self._output_format,
+            source=source,
+        )
 
     async def _fetch_api_chapters(
         self,
