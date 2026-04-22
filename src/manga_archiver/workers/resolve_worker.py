@@ -1,5 +1,5 @@
 import time
-from asyncio import Queue, Semaphore
+from asyncio import Queue
 
 from ..integrations.content_providers import ContentProviderManager
 from ..models import DownloadResource
@@ -28,7 +28,6 @@ class ResolveWorker(Worker):
         notification_queue: Queue[NotificationJob],
         config: WorkerConfig,
         provider_manager: ContentProviderManager,
-        semaphore: Semaphore,
     ):
         """Initialize the worker.
 
@@ -38,13 +37,11 @@ class ResolveWorker(Worker):
             output_queue: The output queue for the worker
             notification_queue: The queue for notification jobs
             config: The configuration for the worker
-            provider_manager: The content provider manager
-            semaphore: The semaphore to use for global rate limiting
+            provider_manager: The content provider manager (handles rate limiting internally)
         """
         super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
 
         self._provider_manager = provider_manager
-        self._semaphore = semaphore
 
     async def _do_work(self, job: FetchingResourcesJob) -> DownloadingJob:
         """Fetch, process resources and enqueue them for downloading.
@@ -82,10 +79,9 @@ class ResolveWorker(Worker):
         resolve_start = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.FETCHING_RESOURCES, resolve_start)
 
-        async with self._semaphore:
-            resources: DownloadResource = await self._provider_manager.get_download_resource(
-                job.source, job.chapter_id
-            )
+        resources: DownloadResource = await self._provider_manager.get_download_resource(
+            job.source, job.chapter_id
+        )
 
         resolve_end = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.FETCHING_RESOURCES, resolve_start, resolve_end)

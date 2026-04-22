@@ -187,7 +187,11 @@ class MangaArchiverApp(App):
         self._session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
         )
-        self._provider_manager = ContentProviderManager(self._session)
+        self._provider_manager = ContentProviderManager(
+            self._session,
+            resolve_rate_limit=self._pipeline_config.resolve_rate_limit,
+            download_rate_limit=self._pipeline_config.download_rate_limit,
+        )
         self._download_client = DownloadClient(self._session)
 
         self.install_screen(MenuScreen(), name="menu_screen")

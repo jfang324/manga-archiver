@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 import tracemalloc
-from asyncio import Queue, Semaphore
+from asyncio import Queue
 from collections import deque
 from dataclasses import dataclass
 
@@ -11,8 +11,8 @@ from .constants.defaults import (
     DEFAULT_DOWNLOAD_WORKERS,
     DEFAULT_JOB_EXPIRY_SECONDS,
     DEFAULT_MERGE_WORKERS,
+    DEFAULT_PROVIDER_RATE_LIMIT,
     DEFAULT_QUEUE_SIZE,
-    DEFAULT_RESOLVE_RATE_LIMIT,
     DEFAULT_RESOLVE_WORKERS,
     DEFAULT_UPLOAD_WORKERS,
 )
@@ -40,8 +40,8 @@ class PipelineConfig:
         num_download_workers (int): The number of download workers to use
         num_merge_workers (int): The number of merge workers to use
         num_upload_workers (int): The number of upload workers to use
-        resolve_rate_limit (int): The global rate limit for resolve workers (requests per second)
-        download_rate_limit (int): The global rate limit for download workers (requests per second)
+        resolve_rate_limit (int): Per-provider rate limit for resolve operations
+        download_rate_limit (int): Per-provider rate limit for download operations
         benchmark_enabled (bool): Whether to enable benchmark metrics collection
     """
 
@@ -50,7 +50,7 @@ class PipelineConfig:
     num_merge_workers: int = DEFAULT_MERGE_WORKERS
     num_upload_workers: int = DEFAULT_UPLOAD_WORKERS
 
-    resolve_rate_limit: int = DEFAULT_RESOLVE_RATE_LIMIT
+    resolve_rate_limit: int = DEFAULT_PROVIDER_RATE_LIMIT
     download_rate_limit: int = DEFAULT_DOWNLOAD_RATE_LIMIT
 
     download_queue_size: int = DEFAULT_QUEUE_SIZE
@@ -92,17 +92,12 @@ class PipelineManager:
         self._job_expiry_queue: deque[tuple[float, str]] = deque()
         self._job_expiry_seconds: int = DEFAULT_JOB_EXPIRY_SECONDS
 
-        self._resolve_semaphore: Semaphore = Semaphore(config.resolve_rate_limit)
-        self._download_semaphore: Semaphore = Semaphore(config.download_rate_limit)
-
         self._worker_manager = WorkerManager(
             resolve_queue=self._resolve_queue,
             download_queue=self._download_queue,
             merge_queue=self._merge_queue,
             upload_queue=self._upload_queue,
             notification_queue=self._notification_queue,
-            resolve_semaphore=self._resolve_semaphore,
-            download_semaphore=self._download_semaphore,
             num_resolve_workers=config.num_resolve_workers,
             num_download_workers=config.num_download_workers,
             num_merge_workers=config.num_merge_workers,

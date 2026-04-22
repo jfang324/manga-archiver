@@ -2,6 +2,11 @@ from unittest.mock import patch
 
 import pytest
 
+from src.manga_archiver.integrations.exceptions import (
+    BadGatewayError,
+    NotFoundError,
+    RateLimitError,
+)
 from src.manga_archiver.utils.downloader import DownloadClient, DownloadError
 from tests.conftest import AsyncContextManagerMock
 
@@ -25,12 +30,13 @@ class TestDownloadClientDownloadImage:
     @pytest.mark.parametrize(
         "mock_api_response, expected_error",
         [
-            ((404, {}), DownloadError),
-            ((429, {}), DownloadError),
+            ((404, {}), NotFoundError),
+            ((429, {}), RateLimitError),
             ((500, {}), DownloadError),
+            ((502, {}), BadGatewayError),
         ],
         indirect=["mock_api_response"],
-        ids=["not_found", "rate_limit", "server_error"],
+        ids=["not_found", "rate_limit", "server_error", "bad_gateway"],
     )
     async def test_failed_download_raises_error(
         self, mock_session, mock_api_response, expected_error
@@ -71,12 +77,13 @@ class TestDownloadClientDownloadImages:
     @pytest.mark.parametrize(
         "mock_api_response_list, expect_error",
         [
-            ([(200, b"success"), (404, None), (200, b"success")], True),
+            ([(200, b"success"), (404, None), (200, b"success")], NotFoundError),
             ([(200, b"image1"), (200, b"image2"), (200, b"image3")], False),
-            ([(404, None), (404, None), (404, None)], True),
+            ([(404, None), (404, None), (404, None)], NotFoundError),
+            ([(500, None), (500, None), (500, None)], DownloadError),
         ],
         indirect=["mock_api_response_list"],
-        ids=["partial_failure", "all_success", "all_failure"],
+        ids=["partial_failure", "all_success", "all_not_found", "all_server_error"],
     )
     async def test_download_images_various_results(
         self, mock_session, mock_api_response_list, expect_error, task_tracker
@@ -92,7 +99,7 @@ class TestDownloadClientDownloadImages:
 
         if expect_error:
             with patch("asyncio.create_task", side_effect=task_tracker) and pytest.raises(
-                DownloadError, match="404"
+                expect_error
             ):
                 await client.download_images(urls)
 

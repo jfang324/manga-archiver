@@ -1,4 +1,4 @@
-from asyncio import Queue, Semaphore
+from asyncio import Queue
 from unittest.mock import MagicMock
 
 from src.manga_archiver.workers import WorkerManager
@@ -16,8 +16,6 @@ class TestWorkerManagerInit:
             merge_queue=Queue(),
             upload_queue=Queue(),
             notification_queue=Queue(),
-            resolve_semaphore=Semaphore(5),
-            download_semaphore=Semaphore(10),
             num_resolve_workers=3,
             num_download_workers=4,
             num_merge_workers=2,
@@ -46,8 +44,6 @@ class TestWorkerManagerInit:
             merge_queue=Queue(),
             upload_queue=Queue(),
             notification_queue=Queue(),
-            resolve_semaphore=Semaphore(5),
-            download_semaphore=Semaphore(10),
             num_resolve_workers=1,
             num_download_workers=1,
             num_merge_workers=1,
@@ -72,8 +68,6 @@ class TestWorkerManagerInit:
             merge_queue=Queue(),
             upload_queue=Queue(),
             notification_queue=Queue(),
-            resolve_semaphore=Semaphore(5),
-            download_semaphore=Semaphore(10),
             num_resolve_workers=1,
             num_download_workers=1,
             num_merge_workers=1,
@@ -98,8 +92,6 @@ class TestWorkerManagerInit:
             merge_queue=Queue(),
             upload_queue=Queue(),
             notification_queue=Queue(),
-            resolve_semaphore=Semaphore(5),
-            download_semaphore=Semaphore(10),
             num_resolve_workers=1,
             num_download_workers=1,
             num_merge_workers=1,
@@ -119,7 +111,6 @@ class TestWorkerManagerWiring:
         resolve_q = Queue()
         download_q = Queue()
         notify_q = Queue()
-        resolve_sem = Semaphore(5)
         mock_provider_manager = MagicMock()
         mock_download_client = MagicMock()
         mock_callback = MagicMock()
@@ -130,8 +121,6 @@ class TestWorkerManagerWiring:
             merge_queue=Queue(),
             upload_queue=Queue(),
             notification_queue=notify_q,
-            resolve_semaphore=resolve_sem,
-            download_semaphore=Semaphore(10),
             num_resolve_workers=2,
             num_download_workers=1,
             num_merge_workers=1,
@@ -147,14 +136,12 @@ class TestWorkerManagerWiring:
             assert worker._input_queue is resolve_q
             assert worker._output_queue is download_q
             assert worker._notification_queue is notify_q
-            assert worker._semaphore is resolve_sem
             assert worker._provider_manager is mock_provider_manager
 
     def test_download_workers_wired_correctly(self):
         download_q = Queue()
         merge_q = Queue()
         notify_q = Queue()
-        download_sem = Semaphore(10)
         mock_download_client = MagicMock()
         mock_callback = MagicMock()
 
@@ -164,8 +151,6 @@ class TestWorkerManagerWiring:
             merge_queue=merge_q,
             upload_queue=Queue(),
             notification_queue=notify_q,
-            resolve_semaphore=Semaphore(5),
-            download_semaphore=download_sem,
             num_resolve_workers=1,
             num_download_workers=2,
             num_merge_workers=1,
@@ -181,7 +166,6 @@ class TestWorkerManagerWiring:
             assert worker._input_queue is download_q
             assert worker._output_queue is merge_q
             assert worker._notification_queue is notify_q
-            assert worker._semaphore is download_sem
             assert worker._download_client is mock_download_client
 
     def test_merge_workers_wired_correctly(self):
@@ -196,8 +180,6 @@ class TestWorkerManagerWiring:
             merge_queue=merge_q,
             upload_queue=upload_q,
             notification_queue=notify_q,
-            resolve_semaphore=Semaphore(5),
-            download_semaphore=Semaphore(10),
             num_resolve_workers=1,
             num_download_workers=1,
             num_merge_workers=2,
@@ -226,8 +208,6 @@ class TestWorkerManagerWiring:
             merge_queue=Queue(),
             upload_queue=upload_q,
             notification_queue=notify_q,
-            resolve_semaphore=Semaphore(5),
-            download_semaphore=Semaphore(10),
             num_resolve_workers=1,
             num_download_workers=1,
             num_merge_workers=1,
@@ -258,8 +238,6 @@ class TestWorkerManagerWiring:
             merge_queue=merge_q,
             upload_queue=Queue(),
             notification_queue=notify_q,
-            resolve_semaphore=Semaphore(5),
-            download_semaphore=Semaphore(10),
             num_resolve_workers=1,
             num_download_workers=1,
             num_merge_workers=1,

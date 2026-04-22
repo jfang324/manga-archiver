@@ -1,6 +1,7 @@
 import time
-from asyncio import Queue, Semaphore
+from asyncio import Queue
 
+from ..integrations.content_providers import ContentProviderManager
 from ..integrations.content_providers.constants import CDN_HEADERS
 from ..utils import DownloadClient
 from .base import Worker, WorkerConfig
@@ -8,11 +9,7 @@ from .jobs import DownloadingJob, Job, JobStatus, MergingJob, NotificationJob
 
 
 class DownloadWorker(Worker):
-    """Downloads images from content provider URLs and prepares them for merging.
-
-    Uses an async download client and semaphore-based rate limiting to fetch
-    images for a chapter from provider URLs.
-    """
+    """Downloads images from content provider URLs and prepares them for merging."""
 
     def __init__(
         self,
@@ -22,7 +19,7 @@ class DownloadWorker(Worker):
         notification_queue: Queue[NotificationJob],
         config: WorkerConfig,
         download_client: DownloadClient,
-        semaphore: Semaphore,
+        provider_manager: ContentProviderManager,
     ):
         """Initialize the worker.
 
@@ -33,12 +30,12 @@ class DownloadWorker(Worker):
             notification_queue: The queue for notification jobs
             config: The configuration for the worker
             download_client: The client for downloading images
-            semaphore: The semaphore to use for global rate limiting
+            provider_manager: The content provider manager (provides download rate limiting)
         """
         super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
 
         self._download_client = download_client
-        self._semaphore = semaphore
+        self._provider_manager = provider_manager
 
     async def _do_work(self, job: DownloadingJob) -> MergingJob:
         """Download resources from URLs and enqueue them for merging.
@@ -80,8 +77,10 @@ class DownloadWorker(Worker):
         download_start = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.DOWNLOADING, download_start)
 
-        async with self._semaphore:
-            image_data: list[bytes] = await self._download_client.download_images(urls, headers)
+        semaphore = self._provider_manager.get_download_semaphore(source)
+        image_data: list[bytes] = await self._download_client.download_images(
+            urls, headers, semaphore
+        )
 
         download_end = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.DOWNLOADING, download_start, download_end)
