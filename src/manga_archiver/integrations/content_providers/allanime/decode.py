@@ -35,7 +35,12 @@ def decode_tobeparsed(encoded: str) -> dict:
         decryptor = cipher.decryptor()
         plaintext = decryptor.update(ciphertext) + decryptor.finalize()
 
-        return json.loads(plaintext.decode("utf-8"))
+        result = json.loads(plaintext.decode("utf-8"))
+
+        if not isinstance(result, dict):
+            raise ValueError("Invalid response: not a dict")
+
+        return result
 
     except Exception as e:
         raise ValueError(f"Failed to decode response: {e}") from e
