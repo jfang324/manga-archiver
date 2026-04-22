@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-04-22
+
+- Improved performance of backlog processing when multiple sources are used
+- Fixed AllManga integration
+
 ## [1.1.4] - 2025-04-22
 
 - Fixed issue where 502 Bad Gateway errors would cause immediate fails instead of correctly retrying
