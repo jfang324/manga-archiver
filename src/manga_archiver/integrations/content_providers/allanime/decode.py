@@ -1,48 +1,46 @@
-"""AllManga response decoding utilities."""
-
 import base64
+import hashlib
 import json
 
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-
-from ...exceptions import ApiError
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 
 def _derive_key() -> bytes:
-    """Derive AES key from AllManga's secret string.
-
-    Secret string extracted from AllManga's JavaScript bundle.
-    """
-    # Secret extracted from reverse-engineered JS: "P7K2RGbFgauVtmiS"
-    s = "P7K2RGbFgauVtmiS"[::-1]  # Reverse to "SimtvauFgBR2K7P"
-    digest = hashes.Hash(hashes.SHA256())
-    digest.update(s.encode("utf-8"))
-
-    return digest.finalize()
+    # New key
+    return hashlib.sha256(b"Xot36i3lK3:v1").digest()
 
 
 def decode_tobeparsed(encoded: str) -> dict:
-    """Decode AllManga's encrypted API response.
-
-    Args:
-        encoded: The base64-encoded encrypted string from API
-
-    Returns:
-        dict: Decoded JSON response as dict
-
-    Raises:
-        ApiError: If decryption fails
-    """
     try:
         raw = base64.b64decode(encoded)
-        iv = raw[:12]
-        ciphertext_and_tag = raw[12:]
+
+        if len(raw) < 29:
+            raise ValueError(f"Payload too short: {len(raw)} bytes, expected at least 29 bytes")
+
+        # Structure:
+        # [0]        = 1 byte header
+        # [1:13]     = 12 byte IV
+        # [13:-16]   = ciphertext
+        # [-16:]     = tag (ignored)
+
+        iv_12 = raw[1:13]
+        ciphertext = raw[13:-16]
+
+        # Build CTR IV (16 bytes total)
+        ctr_iv = iv_12 + b"\x00\x00\x00\x02"
 
         key = _derive_key()
-        aesgcm = AESGCM(key)
-        decrypted = aesgcm.decrypt(iv, ciphertext_and_tag, None)
 
-        return json.loads(decrypted.decode("utf-8"))
+        cipher = Cipher(algorithms.AES(key), modes.CTR(ctr_iv))
+        decryptor = cipher.decryptor()
+        plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+
+        result = json.loads(plaintext.decode("utf-8"))
+
+        if not isinstance(result, dict):
+            raise ValueError("Invalid response: not a dict")
+
+        return result
+
     except Exception as e:
-        raise ApiError(f"Failed to decode response: {e}") from e
+        raise ValueError(f"Failed to decode response: {e}") from e
