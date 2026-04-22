@@ -77,8 +77,10 @@ class DownloadWorker(Worker):
         download_start = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.DOWNLOADING, download_start)
 
-        async with self._provider_manager.get_download_semaphore(source):
-            image_data: list[bytes] = await self._download_client.download_images(urls, headers)
+        semaphore = self._provider_manager.get_download_semaphore(source)
+        image_data: list[bytes] = await self._download_client.download_images(
+            urls, headers, semaphore
+        )
 
         download_end = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.DOWNLOADING, download_start, download_end)
