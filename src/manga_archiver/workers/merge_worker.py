@@ -39,7 +39,7 @@ class MergeWorker(Worker):
 
         self._multi_format_exporter = multi_format_exporter
 
-    async def _do_work(self, job: MergingJob) -> Job:
+    async def _do_work(self, job: Job) -> Job:
         """Merge the downloaded images into a single PDF or CBZ.
 
         Args:
@@ -48,6 +48,9 @@ class MergeWorker(Worker):
         Returns:
             UploadJob: The output job containing the related data, complete_file_data will be empty if output_queue is None
         """
+        if not isinstance(job, MergingJob):
+            raise ValueError(f"Invalid job type: {type(job).__name__}")
+
         (
             job_id,
             manga_title,

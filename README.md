@@ -29,7 +29,7 @@ A terminal-based tool that makes it easy to search for and download manga from s
 
 ### Installation
 
-install the package with pip:
+Install the package with pip:
 
 ```sh
 pip install manga-archiver

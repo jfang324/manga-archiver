@@ -143,3 +143,25 @@ class TestResolveWorkerDoWork:
 
         with pytest.raises(ValueError, match="Invalid FetchingResourcesJob missing chapter_id"):
             await worker._do_work(job)
+
+    @pytest.mark.asyncio
+    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job):
+        mock_provider_manager = MagicMock()
+        mock_provider_manager.get_download_resource = AsyncMock(
+            return_value=DownloadResource(
+                urls=["http://example.com/1.jpg"],
+                source=ContentSource.MANGADEX,
+            )
+        )
+
+        worker = ResolveWorker(
+            provider_manager=mock_provider_manager,
+            worker_id="resolve_worker_0",
+            input_queue=MagicMock(),
+            output_queue=MagicMock(),
+            notification_queue=AsyncMock(),
+            config=MagicMock(),
+        )
+
+        with pytest.raises(ValueError, match="Invalid job type"):
+            await worker._do_work(mock_job)

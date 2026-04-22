@@ -37,7 +37,7 @@ class DownloadWorker(Worker):
         self._download_client = download_client
         self._provider_manager = provider_manager
 
-    async def _do_work(self, job: DownloadingJob) -> MergingJob:
+    async def _do_work(self, job: Job) -> MergingJob:
         """Download resources from URLs and enqueue them for merging.
 
         Args:
@@ -49,6 +49,9 @@ class DownloadWorker(Worker):
         Raises:
             ValueError: If the job is missing URLs
         """
+        if not isinstance(job, DownloadingJob):
+            raise ValueError(f"Invalid job type: {type(job).__name__}")
+
         (
             job_id,
             manga_title,

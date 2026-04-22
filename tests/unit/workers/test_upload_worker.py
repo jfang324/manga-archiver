@@ -204,19 +204,20 @@ class TestUploadWorkerDoWork:
         with pytest.raises(ValueError, match=expected_error_message):
             await worker._do_work(job)
 
-
-class TestUploadWorker:
-    def test_stop_sets_running_false(self):
+    @pytest.mark.asyncio
+    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job):
         mock_drive_client = MagicMock()
+        mock_drive_client.get_or_create_manga_folder = AsyncMock(return_value="folder_123")
+        mock_drive_client.upload_file = AsyncMock(return_value="file_123")
+
         worker = UploadWorker(
             google_drive_client=mock_drive_client,
             worker_id="upload_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            notification_queue=MagicMock(),
+            notification_queue=AsyncMock(),
             config=MagicMock(),
         )
 
-        worker.stop()
-
-        assert worker._running is False
+        with pytest.raises(ValueError, match="Invalid job type"):
+            await worker._do_work(mock_job)

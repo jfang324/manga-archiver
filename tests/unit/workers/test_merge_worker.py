@@ -190,3 +190,19 @@ class TestMergeWorkerDoWork:
 
         with pytest.raises(ValueError, match=expected_error_message):
             await worker._do_work(job)
+
+    @pytest.mark.asyncio
+    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job):
+        mock_multi_format_exporter = MagicMock()
+
+        worker = MergeWorker(
+            multi_format_exporter=mock_multi_format_exporter,
+            worker_id="merge_worker_0",
+            input_queue=MagicMock(),
+            output_queue=MagicMock(),
+            notification_queue=AsyncMock(),
+            config=MagicMock(),
+        )
+
+        with pytest.raises(ValueError, match="Invalid job type"):
+            await worker._do_work(mock_job)
