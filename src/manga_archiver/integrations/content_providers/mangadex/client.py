@@ -1,7 +1,7 @@
 from aiohttp import ClientSession
 
 from ....models import Chapter, ContentSource, DownloadResource, Manga
-from ...exceptions import ApiError, NotFoundError, RateLimitError
+from ...exceptions import ApiError, BadGatewayError, NotFoundError, RateLimitError
 from ..base import Provider
 from ..constants import API_HEADERS, DEFAULT_REQUEST_TIMEOUT
 from .constants import MANGADEX_RESOURCE_LINKS_URL, MANGADEX_ROOT_URL
@@ -40,6 +40,7 @@ class MangaDexApiClient(Provider):
         Raises:
             NotFoundError: If the resource is not found (404)
             RateLimitError: If rate limited (429)
+            BadGatewayError: If the API is temporarily unavailable (502)
             ApiError: For other API errors
         """
         headers = API_HEADERS.get(ContentSource.MANGADEX, {})
@@ -52,6 +53,9 @@ class MangaDexApiClient(Provider):
 
             if response.status == 429:
                 raise RateLimitError(f"Rate limit exceeded for: {url}")
+
+            if response.status == 502:
+                raise BadGatewayError(f"Bad gateway error: {url}")
 
             if response.status != 200:
                 raise ApiError(f"API error: {url} returned status {response.status}")
@@ -119,6 +123,7 @@ class MangaDexApiClient(Provider):
         Raises:
             NotFoundError: If the resource is not found (404)
             RateLimitError: If rate limited (429)
+            BadGatewayError: If the API is temporarily unavailable (502)
             ApiError: If the API returns any other error
         """
         url: str = f"{MANGADEX_ROOT_URL}/{manga_id}/feed"

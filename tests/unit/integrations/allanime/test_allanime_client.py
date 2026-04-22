@@ -4,7 +4,12 @@ import pytest
 
 from src.manga_archiver.integrations.content_providers.allanime.client import AllMangaClient
 from src.manga_archiver.integrations.content_providers.allanime.constants import CDN_BASE_URL
-from src.manga_archiver.integrations.exceptions import ApiError, NotFoundError, RateLimitError
+from src.manga_archiver.integrations.exceptions import (
+    ApiError,
+    BadGatewayError,
+    NotFoundError,
+    RateLimitError,
+)
 from src.manga_archiver.models import ContentSource
 from tests.conftest import AsyncContextManagerMock
 from tests.unit.integrations.allanime.mock_allanime_api_data import (
@@ -48,9 +53,10 @@ class TestAllMangaClientRequest:
             ((404, {}), NotFoundError),
             ((429, {}), RateLimitError),
             ((500, {}), ApiError),
+            ((502, {}), BadGatewayError),
         ],
         indirect=["mock_api_response"],
-        ids=["not_found", "rate_limit", "server_error"],
+        ids=["not_found", "rate_limit", "server_error", "bad_gateway"],
     )
     async def test_failed_request_raises_custom_errors(
         self, mock_session, mock_api_response, expected_error
@@ -162,6 +168,26 @@ class TestAllMangaClientGetChapters:
 
         assert len(result) == 2
 
+    @pytest.mark.parametrize(
+        "mock_api_response, expected_error",
+        [
+            ((404, {}), NotFoundError),
+            ((429, {}), RateLimitError),
+            ((500, {}), ApiError),
+            ((502, {}), BadGatewayError),
+        ],
+        indirect=["mock_api_response"],
+        ids=["not_found", "rate_limit", "server_error", "bad_gateway"],
+    )
+    async def test_get_chapters_raises_api_errors(
+        self, mock_session, mock_api_response, expected_error
+    ):
+        mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
+        client = AllMangaClient(mock_session)
+
+        with pytest.raises(expected_error):
+            await client.get_chapters("test")
+
 
 class TestAllMangaClientGetDownloadResource:
     @pytest.mark.parametrize(
@@ -192,9 +218,10 @@ class TestAllMangaClientGetDownloadResource:
             ((404, {}), NotFoundError),
             ((429, {}), RateLimitError),
             ((500, {}), ApiError),
+            ((502, {}), BadGatewayError),
         ],
         indirect=["mock_api_response"],
-        ids=["not_found", "rate_limit", "server_error"],
+        ids=["not_found", "rate_limit", "server_error", "bad_gateway"],
     )
     async def test_get_download_resource_raises_api_errors(
         self, mock_session, mock_api_response, expected_error
@@ -285,8 +312,10 @@ class TestAllMangaClientErrorPropagation:
             ((404, {}), NotFoundError),
             ((429, {}), RateLimitError),
             ((500, {}), ApiError),
+            ((502, {}), BadGatewayError),
         ],
         indirect=["mock_api_response"],
+        ids=["not_found", "rate_limit", "server_error", "bad_gateway"],
     )
     async def test_error_propagates(
         self, mock_session, mock_api_response, method_name, method_args, expected_error

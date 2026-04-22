@@ -3,7 +3,7 @@ import json
 from aiohttp import ClientSession
 
 from ....models import Chapter, ContentSource, DownloadResource, Manga
-from ...exceptions import ApiError, NotFoundError, RateLimitError
+from ...exceptions import ApiError, BadGatewayError, NotFoundError, RateLimitError
 from ..base import Provider
 from ..constants import API_HEADERS, DEFAULT_REQUEST_TIMEOUT
 from .constants import (
@@ -45,6 +45,7 @@ class AllMangaClient(Provider):
         Raises:
             NotFoundError: 404 response
             RateLimitError: 429 response
+            BadGatewayError: 502 response
             ApiError: Other error status codes
         """
         headers = API_HEADERS.get(ContentSource.ALLMANGA, {})
@@ -57,6 +58,9 @@ class AllMangaClient(Provider):
 
             if response.status == 429:
                 raise RateLimitError(f"Rate limit exceeded for: {url}")
+
+            if response.status == 502:
+                raise BadGatewayError(f"Bad gateway error: {url}")
 
             if response.status != 200:
                 raise ApiError(f"API error: {url} returned status {response.status}")
@@ -128,6 +132,7 @@ class AllMangaClient(Provider):
         Raises:
             NotFoundError: If the resource is not found (404)
             RateLimitError: If rate limited (429)
+            BadGatewayError: If the API is temporarily unavailable (502)
             ApiError: If the API returns any other error
         """
         variables = MANGA_DETAILS_QUERY.format(manga_id=manga_id)
