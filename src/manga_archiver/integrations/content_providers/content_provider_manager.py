@@ -1,8 +1,10 @@
 import asyncio
+from asyncio import Semaphore
 from typing import TypeAlias
 
 from aiohttp import ClientSession
 
+from ...constants.defaults import DEFAULT_DOWNLOAD_RATE_LIMIT, DEFAULT_RESOLVE_RATE_LIMIT
 from ...models import Chapter, ContentSource, DownloadResource, Manga
 from .allanime.client import AllMangaClient
 from .mangadex.client import MangaDexApiClient
@@ -13,16 +15,29 @@ SearchResults: TypeAlias = tuple[list[Manga], list[tuple[ContentSource, Exceptio
 class ContentProviderManager:
     """Aggregates content from multiple manga providers."""
 
-    def __init__(self, session: ClientSession) -> None:
+    def __init__(
+        self,
+        session: ClientSession,
+        resolve_rate_limit: int = DEFAULT_RESOLVE_RATE_LIMIT,
+        download_rate_limit: int = DEFAULT_DOWNLOAD_RATE_LIMIT,
+    ) -> None:
         """Initialize the content provider manager.
 
         Args:
             session: aiohttp ClientSession for HTTP requests
+            resolve_rate_limit: Per-provider rate limit for resolve operations
+            download_rate_limit: Per-provider rate limit for download operations
         """
         self._session = session
         self._providers = {
             ContentSource.MANGADEX: MangaDexApiClient(session),
             ContentSource.ALLMANGA: AllMangaClient(session),
+        }
+        self._resolve_semaphores: dict[ContentSource, Semaphore] = {
+            source: Semaphore(resolve_rate_limit) for source in ContentSource
+        }
+        self._download_semaphores: dict[ContentSource, Semaphore] = {
+            source: Semaphore(download_rate_limit) for source in ContentSource
         }
 
     async def search_manga(self, query: str, page: int, page_size: int) -> SearchResults:
@@ -81,11 +96,13 @@ class ContentProviderManager:
             RateLimitError: On rate limit
         """
         provider = self._providers.get(source)
+        semaphore = self._resolve_semaphores.get(source)
 
-        if provider is None:
+        if provider is None or semaphore is None:
             raise ValueError(f"Unsupported content source: {source}")
 
-        return await provider.get_chapters(manga_id)
+        async with semaphore:
+            return await provider.get_chapters(manga_id)
 
     async def get_download_resource(
         self, source: ContentSource, chapter_id: str
@@ -106,8 +123,10 @@ class ContentProviderManager:
             RateLimitError: On rate limit
         """
         provider = self._providers.get(source)
+        semaphore = self._resolve_semaphores.get(source)
 
-        if provider is None:
+        if provider is None or semaphore is None:
             raise ValueError(f"Unsupported content source: {source}")
 
-        return await provider.get_download_resource(chapter_id)
+        async with semaphore:
+            return await provider.get_download_resource(chapter_id)
