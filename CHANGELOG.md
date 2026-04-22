@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.4] - 2025-04-22
 
 - Fixed issue where 502 Bad Gateway errors would cause immediate fails instead of correctly retrying
-- Improved backlog processing performance by adding per-provider rate limits and round-robin style scheduling
+- Improved backlog processing performance by adding per-provider rate limits and round-robin-style scheduling
 
 ## [1.1.3] - 2025-04-21
 

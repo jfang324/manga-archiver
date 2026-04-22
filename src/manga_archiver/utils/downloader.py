@@ -28,7 +28,13 @@ class DownloadClient:
         Args:
             session: The aiohttp ClientSession to use for requests
             max_concurrent: Maximum concurrent downloads (default 40)
+
+        Raises:
+            ValueError: If max_concurrent is less than 1
         """
+        if max_concurrent < 1:
+            raise ValueError("max_concurrent must be greater than 0")
+
         self._session = session
         self._semaphore = Semaphore(max_concurrent)
 
@@ -90,10 +96,9 @@ class DownloadClient:
             bytes: The binary data of the image
 
         Raises:
-            RateLimitError: If rate limited
-            BadGatewayError: If bad API is temporarily unavailable
             NotFoundError: If the image is not found
             DownloadError: If download fails with a non-retryable error
+            RuntimeError: If download fails after all retries
         """
         last_error: Exception | None = None
         for attempt in range(MAX_RETRIES):
@@ -128,9 +133,6 @@ class DownloadClient:
             list[bytes]: List of binary data for each image
 
         Raises:
-            NotFoundError: If the image is not found
-            RateLimitError: If the API rate limit is exceeded
-            BadGatewayError: If the API is temporarily unavailable
             DownloadError: If the download fails
         """
         sem = semaphore or self._semaphore
@@ -139,9 +141,9 @@ class DownloadClient:
 
         try:
             return await asyncio.gather(*tasks)
-        except Exception as e:
+        except Exception:
             for task in tasks:
                 task.cancel()
 
             await asyncio.gather(*tasks, return_exceptions=True)
-            raise DownloadError("Download failed after all retries") from e
+            raise
