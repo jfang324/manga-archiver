@@ -90,8 +90,8 @@ class DownloadClient:
             bytes: The binary data of the image
 
         Raises:
-            RateLimitError: If rate limited after all retries
-            BadGatewayError: If bad gateway after all retries
+            RateLimitError: If rate limited
+            BadGatewayError: If bad API is temporarily unavailable
             NotFoundError: If the image is not found
             DownloadError: If download fails with a non-retryable error
         """
@@ -109,9 +109,7 @@ class DownloadClient:
             except DownloadError:
                 raise
 
-        raise DownloadError(
-            f"Failed to download image from {url} after {MAX_RETRIES} attempts"
-        ) from last_error
+        raise RuntimeError(f"Download failed after {MAX_RETRIES} attempts") from last_error
 
     async def download_images(
         self,
@@ -141,9 +139,9 @@ class DownloadClient:
 
         try:
             return await asyncio.gather(*tasks)
-        except Exception:
+        except Exception as e:
             for task in tasks:
                 task.cancel()
 
             await asyncio.gather(*tasks, return_exceptions=True)
-            raise
+            raise DownloadError("Download failed after all retries") from e

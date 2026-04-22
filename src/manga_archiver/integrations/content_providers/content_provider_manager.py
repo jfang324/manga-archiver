@@ -28,6 +28,12 @@ class ContentProviderManager:
             resolve_rate_limit: Per-provider rate limit for resolve operations
             download_rate_limit: Per-provider rate limit for download operations
         """
+        if resolve_rate_limit < 1:
+            raise ValueError("resolve_rate_limit must be greater than 0")
+
+        if download_rate_limit < 1:
+            raise ValueError("download_rate_limit must be greater than 0")
+
         self._session = session
         self._providers = {
             ContentSource.MANGADEX: MangaDexApiClient(session),
