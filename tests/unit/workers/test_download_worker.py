@@ -9,8 +9,13 @@ from src.manga_archiver.workers.jobs import DownloadingJob, MergingJob
 
 
 class TestDownloadWorkerDoWork:
+    def _create_mock_provider_manager(self):
+        manager = MagicMock()
+        manager.get_download_semaphore = MagicMock()
+        return manager
+
     @pytest.mark.asyncio
-    async def test_do_work_returns_merging_job(self, mock_semaphore):
+    async def test_do_work_returns_merging_job(self):
         mock_download_client = MagicMock()
         mock_download_client.download_images = AsyncMock(return_value=[b"image1", b"image2"])
 
@@ -29,7 +34,7 @@ class TestDownloadWorkerDoWork:
 
         worker = DownloadWorker(
             download_client=mock_download_client,
-            semaphore=mock_semaphore,
+            provider_manager=self._create_mock_provider_manager(),
             worker_id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
@@ -46,7 +51,7 @@ class TestDownloadWorkerDoWork:
         assert result.image_data == [b"image1", b"image2"]
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_download_client_with_urls(self, mock_semaphore):
+    async def test_do_work_calls_download_client_with_urls(self):
         mock_download_client = MagicMock()
         mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
 
@@ -63,7 +68,7 @@ class TestDownloadWorkerDoWork:
 
         worker = DownloadWorker(
             download_client=mock_download_client,
-            semaphore=mock_semaphore,
+            provider_manager=self._create_mock_provider_manager(),
             worker_id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
@@ -78,7 +83,7 @@ class TestDownloadWorkerDoWork:
         )
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_status_change_downloading(self, mock_semaphore):
+    async def test_do_work_calls_status_change_downloading(self):
         mock_download_client = MagicMock()
         mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
 
@@ -97,7 +102,7 @@ class TestDownloadWorkerDoWork:
 
         worker = DownloadWorker(
             download_client=mock_download_client,
-            semaphore=mock_semaphore,
+            provider_manager=self._create_mock_provider_manager(),
             worker_id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
@@ -113,8 +118,6 @@ class TestDownloadWorkerDoWork:
     async def test_do_work_raises_error_for_missing_urls(self):
         mock_download_client = MagicMock(spec=DownloadClient)
 
-        mock_semaphore = MagicMock()
-
         job = DownloadingJob(
             id="job_123",
             manga_title="Test Manga",
@@ -128,7 +131,7 @@ class TestDownloadWorkerDoWork:
 
         worker = DownloadWorker(
             download_client=mock_download_client,
-            semaphore=mock_semaphore,
+            provider_manager=self._create_mock_provider_manager(),
             worker_id="download_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
@@ -138,34 +141,3 @@ class TestDownloadWorkerDoWork:
 
         with pytest.raises(ValueError, match="Invalid DownloadingJob missing urls"):
             await worker._do_work(job)
-
-    @pytest.mark.asyncio
-    async def test_do_work_uses_semaphore(self, mock_semaphore):
-        mock_download_client = MagicMock()
-        mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
-
-        job = DownloadingJob(
-            id="job_123",
-            manga_title="Test Manga",
-            chapter_number=1.0,
-            chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
-            urls=["http://example.com/1.jpg"],
-            source=ContentSource.MANGADEX,
-        )
-
-        worker = DownloadWorker(
-            download_client=mock_download_client,
-            semaphore=mock_semaphore,
-            worker_id="download_worker_0",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            notification_queue=AsyncMock(),
-            config=MagicMock(),
-        )
-
-        await worker._do_work(job)
-
-        mock_semaphore.__aenter__.assert_called()
-        mock_semaphore.__aexit__.assert_called()

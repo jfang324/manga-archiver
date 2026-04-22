@@ -4,7 +4,7 @@ from typing import TypeAlias
 
 from aiohttp import ClientSession
 
-from ...constants.defaults import DEFAULT_DOWNLOAD_RATE_LIMIT, DEFAULT_RESOLVE_RATE_LIMIT
+from ...constants.defaults import DEFAULT_DOWNLOAD_RATE_LIMIT, DEFAULT_PROVIDER_RATE_LIMIT
 from ...models import Chapter, ContentSource, DownloadResource, Manga
 from .allanime.client import AllMangaClient
 from .mangadex.client import MangaDexApiClient
@@ -18,7 +18,7 @@ class ContentProviderManager:
     def __init__(
         self,
         session: ClientSession,
-        resolve_rate_limit: int = DEFAULT_RESOLVE_RATE_LIMIT,
+        resolve_rate_limit: int = DEFAULT_PROVIDER_RATE_LIMIT,
         download_rate_limit: int = DEFAULT_DOWNLOAD_RATE_LIMIT,
     ) -> None:
         """Initialize the content provider manager.
@@ -130,3 +130,22 @@ class ContentProviderManager:
 
         async with semaphore:
             return await provider.get_download_resource(chapter_id)
+
+    def get_download_semaphore(self, source: ContentSource) -> Semaphore:
+        """Get the download semaphore for a specific provider.
+
+        Args:
+            source: Which provider to get semaphore for
+
+        Returns:
+            Semaphore for rate limiting download operations
+
+        Raises:
+            ValueError: If source is not supported
+        """
+        semaphore = self._download_semaphores.get(source)
+
+        if semaphore is None:
+            raise ValueError(f"Unsupported content source: {source}")
+
+        return semaphore

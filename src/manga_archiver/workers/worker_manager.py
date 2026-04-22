@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from asyncio import Queue, Semaphore
+from asyncio import Queue
 from collections.abc import Callable
 
 from ..integrations.content_providers import ContentProviderManager
@@ -36,8 +36,6 @@ class WorkerManager:
         merge_queue: Queue[Job],
         upload_queue: Queue[Job],
         notification_queue: Queue[NotificationJob],
-        resolve_semaphore: Semaphore,
-        download_semaphore: Semaphore,
         num_resolve_workers: int,
         num_download_workers: int,
         num_merge_workers: int,
@@ -56,8 +54,6 @@ class WorkerManager:
             merge_queue: Queue for merge jobs
             upload_queue: Queue for upload jobs
             notification_queue: Queue for notification jobs
-            resolve_semaphore: Rate limiter for resolve workers
-            download_semaphore: Rate limiter for download workers
             num_resolve_workers: Number of resolve workers to create
             num_download_workers: Number of download workers to create
             num_merge_workers: Number of merge workers to create
@@ -76,7 +72,6 @@ class WorkerManager:
                 notification_queue=notification_queue,
                 config=WorkerConfig(),
                 provider_manager=provider_manager,
-                semaphore=resolve_semaphore,
             )
             for index in range(num_resolve_workers)
         ]
@@ -89,7 +84,7 @@ class WorkerManager:
                 notification_queue=notification_queue,
                 config=WorkerConfig(),
                 download_client=download_client,
-                semaphore=download_semaphore,
+                provider_manager=provider_manager,
             )
             for index in range(num_download_workers)
         ]

@@ -4,7 +4,7 @@ from ..constants.defaults import (
     DEFAULT_DOWNLOAD_RATE_LIMIT,
     DEFAULT_DOWNLOAD_WORKERS,
     DEFAULT_MERGE_WORKERS,
-    DEFAULT_RESOLVE_RATE_LIMIT,
+    DEFAULT_PROVIDER_RATE_LIMIT,
     DEFAULT_RESOLVE_WORKERS,
 )
 from .subcommands import add_auth_parser, add_migrate_parser
@@ -46,15 +46,15 @@ def _build_parser() -> tuple[ArgumentParser, ArgumentParser, ArgumentParser]:
     parser.add_argument(
         "--resolve-rate-limit",
         type=positive_int,
-        default=DEFAULT_RESOLVE_RATE_LIMIT,
-        help=f"Global rate limit for resolve workers (default: {DEFAULT_RESOLVE_RATE_LIMIT})",
+        default=DEFAULT_PROVIDER_RATE_LIMIT,
+        help=f"Per-provider rate limit for resolve operations (default: {DEFAULT_PROVIDER_RATE_LIMIT})",
     )
 
     parser.add_argument(
         "--download-rate-limit",
         type=positive_int,
         default=DEFAULT_DOWNLOAD_RATE_LIMIT,
-        help=f"Global rate limit for download workers (default: {DEFAULT_DOWNLOAD_RATE_LIMIT})",
+        help=f"Per-provider rate limit for download operations (default: {DEFAULT_DOWNLOAD_RATE_LIMIT})",
     )
 
     parser.add_argument(
