@@ -23,11 +23,21 @@ repos:
             language: system
             pass_filenames: false
             always_run: true
+
     - repo: local
       hooks:
           - id: pytest
             name: pytest
             entry: poetry run pytest
+            language: system
+            pass_filenames: false
+            always_run: true
+
+    - repo: local
+      hooks:
+          - id: pip-audit
+            name: pip-audit
+            entry: poetry run pip-audit
             language: system
             pass_filenames: false
             always_run: true
