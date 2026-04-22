@@ -4,7 +4,6 @@ htmlcov
 .coverage
 *.egg-info
 build
-poetry.lock
 src/manga_archiver/__pycache__/*
 .env
 .venv
