@@ -13,9 +13,9 @@ This project uses Poetry for dependency management:
 
 ### Running Tests
 - Run all tests: `coverage run -m pytest -v`
-- Run a single test file: `coverage run -m pytest tests/unit/test_api_access_services.py -v`
-- Run a specific test class: `coverage run -m pytest tests/unit/test_api_access_services.py::TestFetch -v`
-- Run a specific test method: `coverage run -m pytest tests/unit/test_api_access_services.py::TestFetch::test_fetch_success_returns_json -v`
+- Run a single test file: `coverage run -m pytest tests/unit/workers/test_download_worker.py -v`
+- Run a specific test class: `coverage run -m pytest tests/unit/workers/test_download_worker.py::TestDownload -v`
+- Run a specific test method: `coverage run -m pytest tests/unit/workers/test_download_worker.py::TestDownload::test_fetch_success_returns_json -v`
 - Run tests matching a pattern: `coverage run -m pytest -k "test_retrieve" -v`
 - Run with detailed output: `coverage run -m pytest -vv`
 - Generate coverage report: `coverage report -m`
@@ -49,42 +49,35 @@ manga-archiver/
 │   ├── __init__.py
 │   ├── main.py                 # Entry point
 │   ├── app.py                  # Main Textual application
-│   ├── constants.py            # API URLs
-│   │   └── menu_options.py    # Menu option definitions
-│   ├── workers/                # Async worker pipeline
-│   │   ├── base.py           # Base worker class
-│   │   ├── manager.py        # Pipeline manager
-│   │   ├── resolve_worker.py # MangaDex API worker
-│   │   ├── download_worker.py # Image download worker
-│   │   ├── merge_worker.py   # PDF/CBZ generation worker
-│   │   ├── benchmark_worker.py # Timing tracker
-│   │   └── jobs.py           # Job dataclasses
-│   ├── screens/                # Textual screens
-│   │   ├── menu_screen.py
-│   │   ├── search_screen.py
-│   │   └── selection_screen.py
-│   ├── widgets/                # Custom Textual widgets
-│   │   ├── menu_selector.py
-│   │   ├── search_panel.py
-│   │   └── selection_panel.py
-│   ├── utils/                  # Utilities
-│   │   ├── downloader.py      # Image download client
-│   │   ├── multi_format_exporter.py # PDF/CBZ generation
-│   │   ├── session_manager.py # aiohttp.ClientSession
-│   │   └── logger.py         # Logging setup
-│   ├── models/                 # Data models
-│   │   └── app_config.py
-│   └── integrations/           # API clients
-│       ├── base.py            # Provider interface
-│       ├── exceptions.py      # Custom exceptions
-│       └── mangadex/         # MangaDex API
-│           └── client.py
+│   ├── backlog_sync.py
+│   ├── pipeline_manager.py
+│   ├── cli/
+│   ├── constants/
+│   ├── db/
+│   │   └── migrations/
+│   ├── integrations/
+│   │   ├── exceptions.py
+│   │   ├── content_providers/  # MangaDex, AnimeLab
+│   │   └── storage_providers/ # Google Drive
+│   ├── models/
+│   ├── repositories/
+│   ├── screens/
+│   ├── utils/
+│   │   └── auth/
+│   ├── widgets/
+│   └── workers/
 ├── tests/
-│   └── unit/
-│       ├── workers/           # Worker unit tests
-│       ├── widgets/           # Widget unit tests
-│       ├── utils/             # Utility tests
-│       └── integrations/      # API client tests
+│   └── unit/                   # Mirrors source structure
+│       ├── workers/
+│       ├── widgets/
+│       ├── utils/
+│       │   └── auth/
+│       ├── integrations/
+│       │   ├── mangadex/
+│       │   ├── Allanime/
+│       │   └── storage_providers/
+│       ├── db/
+│       └── test_pipeline_manager.py
 ├── pyproject.toml
 └── README.md
 ```
@@ -94,7 +87,7 @@ manga-archiver/
 ### Imports
 - Source files: use relative imports (e.g., `from .mangadex.client import ...`)
 - Test files: use absolute imports (e.g., `from src.manga_archiver...`)
-- Service modules use `from module import *` pattern (as in main.py)
+- When importing from external modules, prefer barrel imports unless being explicit makes sense
 - Order: standard library → third-party → local imports
 - Multiple imports per line are fine as long as they are from the same module/file
 
@@ -190,6 +183,18 @@ class ContentProviderManager:
 - Collection types: `list[str]`, `dict[str, int]`, `set[str]`
 - Optional parameters: use `None` explicitly, e.g., `param: str | None = None`
 - Return types required for all functions
+- Use TypeAlias for complex types (e.g., tuple return types)
+- Explicitly annotate `__init__` with `-> None`
+
+```python
+from typing import TypeAlias
+
+SearchResults: TypeAlias = tuple[list[Manga], list[tuple[ContentSource, Exception]]]
+
+
+def __init__(self, session: ClientSession) -> None:
+    """Initialize the client."""
+```
 
 ### Formatting
 - Indentation: 4 spaces (no tabs)
@@ -239,15 +244,35 @@ logger.error(f"Failed to process: {e}")   # Extra string interpolation
 
 ### Error Handling
 
-**Core Principle: Low-level modules raise, consumers handle logging.**
+**Core Principle: Low-level modules raise, don't log.**
 
-Low-level modules (API clients, utilities, data access) should raise exceptions without logging. Consumers (workers, UI, entry points) handle errors appropriately for their context.
+Modules should be self-contained and not log — consumers handle logging appropriately for their context.
+
+**Exception hierarchy:**
+
+```python
+# integrations/exceptions.py
+class ApiError(Exception):
+    """Raised for general API errors."""
+
+
+class NotFoundError(ApiError):
+    """Raised when a requested resource is not found (404)."""
+
+
+class RateLimitError(ApiError):
+    """Raised when the API rate limit is exceeded (429)."""
+
+
+class BadGatewayError(ApiError):
+    """Raised when the API returns a 502 Bad Gateway error."""
+```
 
 ```python
 # In low-level modules - raise exceptions, don't log
 try:
     response = await self._request(url, params)
-except (NotFoundError, RateLimitError, ApiError) as e:
+except (NotFoundError, RateLimitError, BadGatewayError) as e:
     raise  # Bare raise preserves traceback
 ```
 
@@ -276,6 +301,22 @@ except RateLimitError:
 except (NotFoundError, ApiError):
     self.notify("Error searching for manga")
 ```
+
+### Defensive Type Narrowing
+
+When working with unreliable external data (APIs, user input), be highly defensive:
+
+```python
+# Use isinstance() for runtime validation
+if isinstance(job, ResolveJob):
+    manga_feed = job.manga_feed
+    if manga_feed is None:
+        raise ValueError("Job missing manga_feed")
+    # Now type checker knows manga_feed is not None
+    chapters = [c for c in manga_feed if isinstance(c, Chapter)]
+```
+
+Use `isinstance()` over casts — provides runtime validation with clear error messages.
 
 ### Logging at Boundaries Only
 
@@ -310,12 +351,32 @@ class SearchResult:
         return cls(_id=data["_id"])
 ```
 
+**Dataclass patterns:**
+- Use `frozen=True` for immutable data models
+- Use `from_dict` class methods for parsing external data (API responses, config files)
+- Fail-fast with clear error messages in validation
+
+```python
+@dataclass(frozen=True)
+class Chapter:
+    id: str
+    number: float
+    title: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Chapter:
+        if "id" not in data:
+            raise ValueError("Chapter missing required field: id")
+        return cls(
+            id=data["id"],
+            number=data.get("number", 0.0),
+            title=data.get("title"),
+        )
+```
+
 ## Code Quality Standards
 
-Target quality level for new code:
-- Code Quality: 8/10
-- Maintainability: 8/10
-- Best Practices: 8/10
+Target quality level for new code: **9/10**
 
 This means:
 - Build UI in `compose()`, not in `on_mount()`
@@ -324,6 +385,8 @@ This means:
 - Minimal, focused methods with single responsibility
 - Proper message-based communication (widgets emit messages, parent handles actions)
 - No redundant validation (e.g., don't manually check if `query_one()` found widgets - it throws `NoMatches`)
+- Be highly defensive with type narrowing when working with unreliable external data (APIs, user input)
+- Remove all dead code when making sweeping revisions
 
 ## Async/Await Patterns
 - All I/O operations use async/await
@@ -332,7 +395,7 @@ This means:
 - Never block the event loop with synchronous operations
 
 ## Service Architecture
-- All services in `src/mangadex_downloader/` (grouped by function)
+- All services in `src/manga_archiver/` (grouped by function)
 - Workers in `workers/` - each worker has single responsibility
 - Workers communicate via asyncio Queues
 - Use dependency injection (pass sessions, managers as parameters)
@@ -349,6 +412,8 @@ This means:
 **Test behavior, not infrastructure.** Focus on what the code *does* (callback invoked
 with correct data, file written with correct content) rather than *how* it does it
 (queue processing, thread management).
+
+**Never adjust tests to make new code pass.** Only change tests if the expected behavior is supposed to have changed.
 
 **No fake tests.** A test that doesn't actually run the code being tested is worthless:
 - Manually invoking a callback instead of letting the worker invoke it
@@ -406,7 +471,9 @@ assert config.quality == default_config.quality
 
 - Tests in `tests/unit/` mirror the module structure
 - Test classes named after the module/function being tested
-- Test methods: `test_<operation>_<expected_result>`
+- Test methods: `test_<operation>_<expected_result>` (e.g., `test_fetch_success_returns_json`)
+- Use fixtures from `tests/conftest.py` where available (e.g., `mock_job`, `mock_session`)
+- Parameterize tests with `@pytest.mark.parametrize` when testing multiple inputs
 - For retry logic: test `_process_job()` directly, not full `run()` loop
 - Use `unittest.mock.AsyncMock` for async functions, `MagicMock` for sync
 - Use `@patch` decorator for mocking module-level functions
@@ -422,9 +489,9 @@ assert config.quality == default_config.quality
 - Screen dimensions may vary - use dynamic sizing
 
 ### API Integration
-- Uses MangaDex API (https://api.mangadex.org)
-- Endpoints: `/manga`, `/manga/{id}/feed`, `/at-home/server`
-- Base URLs defined in `src/mangadex_downloader/constants.py`
+- Content Providers: MangaDex, AnimeLab
+- Storage Providers: Google Drive
+- Base URLs defined in `src/manga_archiver/constants.py`
 - Rate limiting implemented via bounded worker pools and semaphores
 - Retry logic with exponential backoff and jitter
 
@@ -435,8 +502,8 @@ assert config.quality == default_config.quality
 
 ## Environment Requirements
 - Python 3.10+
-- Dependencies: aiohttp (speedups), Pillow, windows-curses (Windows), textual
-- Dev dependencies: pytest, pytest-asyncio, coverage, ruff, pyright
+- Dependencies: aiohttp (speedups), Pillow, textual, google-auth, google-api-python-client, ebooklib, cryptography
+- Dev dependencies: pytest, pytest-asyncio, coverage, ruff, pyright, pre-commit
 
 ## Development Workflow
 1. Run existing tests to establish baseline
@@ -445,3 +512,10 @@ assert config.quality == default_config.quality
 4. Run `ruff check .` and `ruff format .`
 5. Run `poetry run pyright` for type checking
 6. Run `coverage report -m` to ensure no regressions
+
+## Collaboration
+
+When working together on a task:
+1. **Always outline a plan first** — never jump straight to implementation
+2. **Iterate on the plan** — we'll fine-tune until you're confident it will produce the desired result
+3. **Implement incrementally** — small, verifiable commits rather than large sweeping changes

@@ -210,41 +210,7 @@ https://github.com/user-attachments/assets/f07d5eb4-91d3-4fa1-b90f-23f9f24bfbed
 
 ## Development
 
-### Activate Virtual Environment
-
-```sh
-poetry shell
-```
-
-### Running Tests
-
-```sh
-coverage run -m pytest -v
-```
-
-### Generating Coverage Report
-
-```sh
-coverage report -m
-```
-
-### Linting
-
-```sh
-ruff check .
-```
-
-### Formatting
-
-```sh
-ruff format .
-```
-
-### Type Checking
-
-```sh
-pyright
-```
+See [docs/development.md](docs/development.md) for setup and development commands.
 
 ## Tools & Technologies
 

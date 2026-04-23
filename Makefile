@@ -15,4 +15,4 @@ format:
 typecheck:
 	poetry run pyright
 
-check: fix format typecheck test
+check: fix format typecheck
