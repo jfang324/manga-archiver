@@ -25,7 +25,7 @@ class MangaChaptersDetail:
                 continue
             try:
                 valid_sub.append(float(chapter_str))
-            except ValueError:  # noqa: PERF203 - skip invalid chapter strings
+            except ValueError:
                 pass
 
         return cls(sub=valid_sub)

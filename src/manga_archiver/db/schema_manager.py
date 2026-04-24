@@ -68,9 +68,9 @@ class SchemaManager:
                 (system,),
             )
             row = cursor.fetchone()
-            current_version = row[0] if row else None
 
-            return current_version
+            return row[0] if row else None
+
         except Exception as e:
             raise MigrationError(f"Failed to get current {system} version: {e}") from e
 

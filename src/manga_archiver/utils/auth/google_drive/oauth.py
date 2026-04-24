@@ -250,9 +250,8 @@ def handle_auth_logout() -> int:
             delete_token()
             print("Successfully logged out.")
             return EXIT_SUCCESS
-        else:
-            print(f"Failed to revoke token: {response.text}")
-            return EXIT_AUTH_LOGOUT_FAILED
+        print(f"Failed to revoke token: {response.text}")
+        return EXIT_AUTH_LOGOUT_FAILED
     except requests.HTTPError as e:
         print(f"Failed to send revocation request: {e}")
         return EXIT_AUTH_LOGOUT_FAILED

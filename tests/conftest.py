@@ -44,9 +44,7 @@ def mock_session() -> MagicMock:
     Usage in tests:
         mock_session.get.return_value = AsyncContextManagerMock(mock_response)
     """
-    session = MagicMock()
-    # Don't set return_value here - let tests set it explicitly
-    return session
+    return MagicMock()
 
 
 @pytest.fixture

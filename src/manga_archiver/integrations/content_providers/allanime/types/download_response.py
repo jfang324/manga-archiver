@@ -47,7 +47,7 @@ class ChapterPageEdge:
                 continue
             try:
                 picture_urls.append(PictureUrl.from_dict(p))
-            except ValueError:  # noqa: PERF203 - skip invalid picture URLs
+            except ValueError:
                 pass
 
         return cls(picture_urls=picture_urls)
@@ -75,7 +75,7 @@ class ChapterPagesData:
                 continue
             try:
                 edges.append(ChapterPageEdge.from_dict(e))
-            except ValueError:  # noqa: PERF203 - skip invalid chapter edges
+            except ValueError:
                 pass
 
         return cls(edges=edges)

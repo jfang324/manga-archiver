@@ -71,7 +71,7 @@ class MangaDexSearchResponse:
 
             try:
                 results.append(SearchResult.from_dict(result))
-            except ValueError:  # noqa: PERF203 - try catch is required to skip invalid results
+            except ValueError:
                 pass
 
         return cls(data=results)
