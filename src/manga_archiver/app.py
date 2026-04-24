@@ -217,8 +217,6 @@ class MangaArchiverApp(App):
         if self._pipeline_manager:
             self._pipeline_manager.stop()
 
-        # Session is closed by the caller (main.py), not by the app
-
         benchmark_results = None
 
         if self._pipeline_manager and self._pipeline_config.benchmark_enabled:

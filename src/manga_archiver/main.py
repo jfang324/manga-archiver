@@ -153,7 +153,6 @@ async def _async_main() -> None:
         app_config = load_settings()
         favorite_repository = FavoriteRepository()
 
-        # Create session and shared dependencies inside async context
         async with aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
         ) as _session:
