@@ -31,7 +31,7 @@ class TestVersionKey:
             "four_components",
         ],
     )
-    def test_version_key_parses_correctly(self, version: str, expected: tuple[int, ...]):
+    def test_version_key_parses_correctly(self, version: str, expected: tuple[int, ...]) -> None:
         assert _version_key(version) == expected
 
 
@@ -69,7 +69,7 @@ class TestVersionCompare:
             "three_with_zeros_equal_two",
         ],
     )
-    def test_version_compare_returns_correct_result(self, a: str, b: str, expected: int):
+    def test_version_compare_returns_correct_result(self, a: str, b: str, expected: int) -> None:
         assert _version_compare(a, b) == expected
 
     @pytest.mark.parametrize(
@@ -85,12 +85,12 @@ class TestVersionCompare:
             "v0_0_1_greater_than_none",
         ],
     )
-    def test_version_compare_greater_than_none(self, a: str, expected: int):
+    def test_version_compare_greater_than_none(self, a: str, expected: int) -> None:
         assert _version_compare(a, None) == expected
 
 
 class TestSchemaManager:
-    def test_insert_version_record_does_not_consume_id_for_duplicate_record(self):
+    def test_insert_version_record_does_not_consume_id_for_duplicate_record(self) -> None:
         conn = connect(":memory:")
         manager = SchemaManager(conn)
 
@@ -109,7 +109,7 @@ class TestSchemaManager:
             (3, "google_drive", "v1.1.0"),
         ]
 
-    def test_init_schema_version_table_does_not_consume_id_on_repeat_initialization(self):
+    def test_init_schema_version_table_does_not_consume_id_on_repeat_initialization(self) -> None:
         conn = connect(":memory:")
 
         init_schema_version_table(conn)

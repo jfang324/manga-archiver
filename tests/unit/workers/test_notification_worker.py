@@ -11,7 +11,7 @@ from src.manga_archiver.workers.types import JobMetadata, JobStatus
 
 class TestNotificationWorkerDoWork:
     @pytest.mark.asyncio
-    async def test_do_work_passes_callback_args(self):
+    async def test_do_work_passes_callback_args(self) -> None:
         mock_callback = MagicMock()
         worker = NotificationWorker(
             worker_id="test_notification_worker",
@@ -52,7 +52,7 @@ class TestNotificationWorkerDoWork:
     ],
 )
 @pytest.mark.asyncio
-async def test_do_work_completed_at_based_on_status(status, should_set_completed_at):
+async def test_do_work_completed_at_based_on_status(status, should_set_completed_at) -> None:
     mock_callback = MagicMock()
     worker = NotificationWorker(
         worker_id="test_notification_worker",
@@ -87,7 +87,7 @@ async def test_do_work_completed_at_based_on_status(status, should_set_completed
 
 @pytest.mark.parametrize("status", [JobStatus.COMPLETED, JobStatus.DOWNLOADING, JobStatus.MERGING])
 @pytest.mark.asyncio
-async def test_do_work_records_benchmark_timing(status):
+async def test_do_work_records_benchmark_timing(status) -> None:
     benchmark = MagicMock()
     mock_callback = MagicMock()
     worker = NotificationWorker(
@@ -119,7 +119,7 @@ async def test_do_work_records_benchmark_timing(status):
 
 
 class TestNotificationWorker:
-    def test_stop_sets_running_false(self):
+    def test_stop_sets_running_false(self) -> None:
         worker = NotificationWorker(
             worker_id="test_notification_worker",
             input_queue=MagicMock(),

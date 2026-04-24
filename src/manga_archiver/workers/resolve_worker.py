@@ -28,7 +28,7 @@ class ResolveWorker(Worker):
         notification_queue: Queue[NotificationJob],
         config: WorkerConfig,
         provider_manager: ContentProviderManager,
-    ):
+    ) -> None:
         """Initialize the worker.
 
         Args:

@@ -40,7 +40,7 @@ class SettingsPanelTestApp(App):
 
 
 class TestSettingsPanel:
-    async def test_settings_panel_get_settings(self):
+    async def test_settings_panel_get_settings(self) -> None:
         app = SettingsPanelTestApp()
 
         async with app.run_test():
@@ -52,7 +52,7 @@ class TestSettingsPanel:
             assert settings["quality"] == DEFAULT_QUALITY
             assert settings["optimize"] == DEFAULT_OPTIMIZE
 
-    async def test_toggle_optimize_switch(self):
+    async def test_toggle_optimize_switch(self) -> None:
         app = SettingsPanelTestApp()
 
         async with app.run_test() as pilot:
@@ -65,7 +65,7 @@ class TestSettingsPanel:
 
             assert settings_panel._optimize != initial_value
 
-    async def test_select_output_format(self):
+    async def test_select_output_format(self) -> None:
         app = SettingsPanelTestApp()
 
         async with app.run_test() as pilot:
@@ -92,7 +92,7 @@ class TestSettingsPanel:
     )
     async def test_input_quality_various_inputs(
         self, input_value, validation_result, expected_quality
-    ):
+    ) -> None:
         app = SettingsPanelTestApp()
 
         async with app.run_test() as pilot:

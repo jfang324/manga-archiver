@@ -183,7 +183,7 @@ class PipelineManager:
         if not job.output_directory or not job.output_directory.exists():
             raise ValueError(f"Job {job.id} output_directory does not exist")
 
-    async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]):
+    async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]) -> None:
         # Sequential to maintain ordering; parallel would save negligible time
         for job in jobs:
             try:
@@ -209,7 +209,7 @@ class PipelineManager:
                 ]
             )
 
-    async def start(self, jobs: list[FetchingResourcesJob] | None = None):
+    async def start(self, jobs: list[FetchingResourcesJob] | None = None) -> None:
         """Start all workers in the pipeline.
 
         Args:

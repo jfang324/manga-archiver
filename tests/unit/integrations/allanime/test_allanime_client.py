@@ -39,7 +39,7 @@ class TestAllMangaClientRequest:
     )
     async def test_request_success_returns_json(
         self, mock_session, mock_api_response, expected_result
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = AllMangaClient(mock_session)
@@ -60,7 +60,7 @@ class TestAllMangaClientRequest:
     )
     async def test_failed_request_raises_custom_errors(
         self, mock_session, mock_api_response, expected_error
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = AllMangaClient(mock_session)
@@ -79,7 +79,9 @@ class TestAllMangaClientSearchManga:
         indirect=["mock_api_response"],
         ids=["full_response", "empty_response"],
     )
-    async def test_search_manga_success(self, mock_session, mock_api_response, expected_result):
+    async def test_search_manga_success(
+        self, mock_session, mock_api_response, expected_result
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = AllMangaClient(mock_session)
@@ -92,7 +94,7 @@ class TestAllMangaClientSearchManga:
         [(200, mock_search_response_no_english_name)],
         indirect=["mock_api_response"],
     )
-    async def test_search_manga_prefers_english_name(self, mock_session, mock_api_response):
+    async def test_search_manga_prefers_english_name(self, mock_session, mock_api_response) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
         result = await client.search_manga("test", 1, 20)
@@ -104,7 +106,7 @@ class TestAllMangaClientSearchManga:
         [(200, mock_search_response_missing_ids)],
         indirect=["mock_api_response"],
     )
-    async def test_search_manga_filters_missing_ids(self, mock_session, mock_api_response):
+    async def test_search_manga_filters_missing_ids(self, mock_session, mock_api_response) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
         result = await client.search_manga("test", 1, 20)
@@ -120,7 +122,9 @@ class TestAllMangaClientGetChapters:
         indirect=["mock_api_response"],
         ids=["full_response"],
     )
-    async def test_get_chapters_success(self, mock_session, mock_api_response, expected_result):
+    async def test_get_chapters_success(
+        self, mock_session, mock_api_response, expected_result
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = AllMangaClient(mock_session)
@@ -133,7 +137,9 @@ class TestAllMangaClientGetChapters:
         [(200, mock_manga_details_empty_chapters)],
         indirect=["mock_api_response"],
     )
-    async def test_get_chapters_empty_returns_empty_list(self, mock_session, mock_api_response):
+    async def test_get_chapters_empty_returns_empty_list(
+        self, mock_session, mock_api_response
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
 
@@ -145,7 +151,7 @@ class TestAllMangaClientGetChapters:
         [(200, mock_manga_details_unsorted_chapters)],
         indirect=["mock_api_response"],
     )
-    async def test_get_chapters_sorts_by_chapter_num(self, mock_session, mock_api_response):
+    async def test_get_chapters_sorts_by_chapter_num(self, mock_session, mock_api_response) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
         result = await client.get_chapters("test")
@@ -161,7 +167,7 @@ class TestAllMangaClientGetChapters:
         [(200, mock_manga_details_empty_strings)],
         indirect=["mock_api_response"],
     )
-    async def test_get_chapters_skips_empty_strings(self, mock_session, mock_api_response):
+    async def test_get_chapters_skips_empty_strings(self, mock_session, mock_api_response) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
         result = await client.get_chapters("test")
@@ -181,7 +187,7 @@ class TestAllMangaClientGetChapters:
     )
     async def test_get_chapters_raises_api_errors(
         self, mock_session, mock_api_response, expected_error
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
 
@@ -198,7 +204,7 @@ class TestAllMangaClientGetDownloadResource:
     )
     async def test_get_download_resource_success(
         self, mock_session, mock_api_response, expected_result
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
         result = await client.get_download_resource("PBouNk6dWWBuswfX7:25")
@@ -206,7 +212,7 @@ class TestAllMangaClientGetDownloadResource:
         assert result == expected_result
         assert result.source == ContentSource.ALLMANGA
 
-    async def test_get_download_resource_invalid_chapter_id_format(self):
+    async def test_get_download_resource_invalid_chapter_id_format(self) -> None:
         client = AllMangaClient(MagicMock())
 
         with pytest.raises(ValueError):
@@ -225,7 +231,7 @@ class TestAllMangaClientGetDownloadResource:
     )
     async def test_get_download_resource_raises_api_errors(
         self, mock_session, mock_api_response, expected_error
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
 
@@ -243,7 +249,7 @@ class TestAllMangaClientGetDownloadResource:
     )
     async def test_get_download_resource_raises_api_error_when_no_pages(
         self, mock_session, mock_api_response
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
 
@@ -255,7 +261,9 @@ class TestAllMangaClientGetDownloadResource:
         [(200, mock_chapter_pages_response)],
         indirect=["mock_api_response"],
     )
-    async def test_get_download_resource_builds_full_urls(self, mock_session, mock_api_response):
+    async def test_get_download_resource_builds_full_urls(
+        self, mock_session, mock_api_response
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
         result = await client.get_download_resource("manga:1")
@@ -269,7 +277,9 @@ class TestAllMangaClientGetDownloadResource:
         [(200, mock_chapter_pages_missing_urls)],
         indirect=["mock_api_response"],
     )
-    async def test_get_download_resource_skips_missing_urls(self, mock_session, mock_api_response):
+    async def test_get_download_resource_skips_missing_urls(
+        self, mock_session, mock_api_response
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
 
@@ -281,7 +291,9 @@ class TestAllMangaClientGetDownloadResource:
         [(200, {"data": {"tobeparsed": "encrypted_data_string"}})],
         indirect=["mock_api_response"],
     )
-    async def test_get_download_resource_decrypts_tobeparsed(self, mock_session, mock_api_response):
+    async def test_get_download_resource_decrypts_tobeparsed(
+        self, mock_session, mock_api_response
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         with patch(
             "src.manga_archiver.integrations.content_providers.allanime.client.decode_tobeparsed"
@@ -319,7 +331,7 @@ class TestAllMangaClientErrorPropagation:
     )
     async def test_error_propagates(
         self, mock_session, mock_api_response, method_name, method_args, expected_error
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = AllMangaClient(mock_session)
         method = getattr(client, method_name)

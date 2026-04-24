@@ -5,7 +5,7 @@ from src.manga_archiver.workers import WorkerManager
 
 
 class TestWorkerManagerInit:
-    def test_creates_resolve_pool_with_correct_size(self):
+    def test_creates_resolve_pool_with_correct_size(self) -> None:
         mock_provider_manager = MagicMock()
         mock_download_client = MagicMock()
         mock_callback = MagicMock()
@@ -32,7 +32,7 @@ class TestWorkerManagerInit:
         assert len(manager.merge_pool) == 2
         assert len(manager.upload_pool) == 0
 
-    def test_creates_upload_pool_when_google_drive_provided(self):
+    def test_creates_upload_pool_when_google_drive_provided(self) -> None:
         mock_provider_manager = MagicMock()
         mock_download_client = MagicMock()
         mock_google_drive = MagicMock()
@@ -57,7 +57,7 @@ class TestWorkerManagerInit:
 
         assert len(manager.upload_pool) == 2
 
-    def test_creates_notification_worker(self):
+    def test_creates_notification_worker(self) -> None:
         mock_provider_manager = MagicMock()
         mock_download_client = MagicMock()
         mock_callback = MagicMock()
@@ -81,7 +81,7 @@ class TestWorkerManagerInit:
 
         assert manager.notification_worker is not None
 
-    def test_creates_benchmark_when_enabled(self):
+    def test_creates_benchmark_when_enabled(self) -> None:
         mock_provider_manager = MagicMock()
         mock_download_client = MagicMock()
         mock_callback = MagicMock()
@@ -107,7 +107,7 @@ class TestWorkerManagerInit:
 
 
 class TestWorkerManagerWiring:
-    def test_resolve_workers_wired_correctly(self):
+    def test_resolve_workers_wired_correctly(self) -> None:
         resolve_q = Queue()
         download_q = Queue()
         notify_q = Queue()
@@ -138,7 +138,7 @@ class TestWorkerManagerWiring:
             assert worker._notification_queue is notify_q
             assert worker._provider_manager is mock_provider_manager
 
-    def test_download_workers_wired_correctly(self):
+    def test_download_workers_wired_correctly(self) -> None:
         download_q = Queue()
         merge_q = Queue()
         notify_q = Queue()
@@ -168,7 +168,7 @@ class TestWorkerManagerWiring:
             assert worker._notification_queue is notify_q
             assert worker._download_client is mock_download_client
 
-    def test_merge_workers_wired_correctly(self):
+    def test_merge_workers_wired_correctly(self) -> None:
         merge_q = Queue()
         upload_q = Queue()
         notify_q = Queue()
@@ -196,7 +196,7 @@ class TestWorkerManagerWiring:
             assert worker._output_queue is None
             assert worker._notification_queue is notify_q
 
-    def test_upload_workers_wired_correctly_when_google_drive_enabled(self):
+    def test_upload_workers_wired_correctly_when_google_drive_enabled(self) -> None:
         upload_q = Queue()
         notify_q = Queue()
         mock_gdrive = MagicMock()
@@ -225,7 +225,7 @@ class TestWorkerManagerWiring:
             assert worker._notification_queue is notify_q
             assert worker._google_drive_client is mock_gdrive
 
-    def test_notification_worker_receives_all_notifications(self):
+    def test_notification_worker_receives_all_notifications(self) -> None:
         resolve_q = Queue()
         download_q = Queue()
         merge_q = Queue()

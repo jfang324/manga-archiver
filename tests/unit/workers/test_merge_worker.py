@@ -10,7 +10,7 @@ from src.manga_archiver.workers.merge_worker import MergeWorker
 
 class TestMergeWorkerDoWork:
     @pytest.mark.asyncio
-    async def test_do_work_returns_upload_job(self, tmp_path):
+    async def test_do_work_returns_upload_job(self, tmp_path) -> None:
         mock_multi_format_exporter = MagicMock()
         mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
 
@@ -48,7 +48,7 @@ class TestMergeWorkerDoWork:
         assert result.full_name == "test.pdf"
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_multi_format_exporter(self, tmp_path):
+    async def test_do_work_calls_multi_format_exporter(self, tmp_path) -> None:
         mock_multi_format_exporter = MagicMock()
         mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
 
@@ -83,7 +83,7 @@ class TestMergeWorkerDoWork:
         )
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_status_change_merging(self, tmp_path):
+    async def test_do_work_calls_status_change_merging(self, tmp_path) -> None:
         mock_multi_format_exporter = MagicMock()
         mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
 
@@ -114,7 +114,7 @@ class TestMergeWorkerDoWork:
         assert mock_notification_queue.put.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_do_work_uses_chapter_number_from_job(self, tmp_path):
+    async def test_do_work_uses_chapter_number_from_job(self, tmp_path) -> None:
         mock_multi_format_exporter = MagicMock()
         mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
 
@@ -161,7 +161,7 @@ class TestMergeWorkerDoWork:
     )
     async def test_do_work_raises_value_error_for_invalid_job(
         self, tmp_path, invalid_fields, expected_error_message
-    ):
+    ) -> None:
         mock_multi_format_exporter = MagicMock()
         mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
 
@@ -192,7 +192,7 @@ class TestMergeWorkerDoWork:
             await worker._do_work(job)
 
     @pytest.mark.asyncio
-    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job):
+    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job) -> None:
         mock_multi_format_exporter = MagicMock()
 
         worker = MergeWorker(

@@ -11,7 +11,7 @@ from src.manga_archiver.workers.resolve_worker import ResolveWorker
 
 
 class TestResolveWorkerDoWork:
-    def _create_mock_provider_manager(self, urls: list[str] | None = None):
+    def _create_mock_provider_manager(self, urls: list[str] | None = None) -> MagicMock:
         manager = MagicMock()
         manager.get_download_resource = AsyncMock(
             return_value=DownloadResource(
@@ -22,7 +22,7 @@ class TestResolveWorkerDoWork:
         return manager
 
     @pytest.mark.asyncio
-    async def test_do_work_returns_downloading_job(self):
+    async def test_do_work_returns_downloading_job(self) -> None:
         mock_provider_manager = self._create_mock_provider_manager(
             ["http://example.com/1.jpg", "http://example.com/2.jpg"]
         )
@@ -58,7 +58,7 @@ class TestResolveWorkerDoWork:
         assert result.urls == ["http://example.com/1.jpg", "http://example.com/2.jpg"]
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_provider_manager_with_source_and_chapter_id(self):
+    async def test_do_work_calls_provider_manager_with_source_and_chapter_id(self) -> None:
         mock_provider_manager = self._create_mock_provider_manager()
 
         job = FetchingResourcesJob(
@@ -88,7 +88,7 @@ class TestResolveWorkerDoWork:
         )
 
     @pytest.mark.asyncio
-    async def test_do_work_sends_notification(self):
+    async def test_do_work_sends_notification(self) -> None:
         mock_provider_manager = self._create_mock_provider_manager()
 
         mock_notification_queue = AsyncMock()
@@ -118,7 +118,7 @@ class TestResolveWorkerDoWork:
         assert mock_notification_queue.put.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_do_work_raises_error_for_missing_chapter_id(self):
+    async def test_do_work_raises_error_for_missing_chapter_id(self) -> None:
         mock_provider_manager = AsyncMock()
 
         job = FetchingResourcesJob(
@@ -145,7 +145,7 @@ class TestResolveWorkerDoWork:
             await worker._do_work(job)
 
     @pytest.mark.asyncio
-    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job):
+    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job) -> None:
         mock_provider_manager = MagicMock()
         mock_provider_manager.get_download_resource = AsyncMock(
             return_value=DownloadResource(
