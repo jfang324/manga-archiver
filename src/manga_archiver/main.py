@@ -77,11 +77,7 @@ def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[
 
 
 async def _async_main() -> None:
-    """Async CLI entry point for Manga Archiver.
-
-    Parses command-line arguments, handles auth/migrations if needed,
-    runs backlog sync, and launches the Textual UI application.
-    """
+    """Run the application with a shared event loop."""
     setup_logging()
     args = parse_args()
     schema_manager = SchemaManager()
@@ -153,15 +149,16 @@ async def _async_main() -> None:
         app_config = load_settings()
         favorite_repository = FavoriteRepository()
 
+        # Session needs TCPConnector with ThreadedResolver for aiodns (avoids 443 errors)
         async with aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
-        ) as _session:
-            _provider_manager = ContentProviderManager(
-                _session,
+        ) as session:
+            provider_manager = ContentProviderManager(
+                session,
                 resolve_rate_limit=args.resolve_rate_limit,
                 download_rate_limit=args.download_rate_limit,
             )
-            _download_client = DownloadClient(_session)
+            download_client = DownloadClient(session)
 
             backlog = None
             if args.backlog:
@@ -172,7 +169,7 @@ async def _async_main() -> None:
                 backlog_sync = BacklogSync(
                     favorite_repository=favorite_repository,
                     google_drive_client=google_drive_client,
-                    provider_manager=_provider_manager,
+                    provider_manager=provider_manager,
                     output_directory=app_config.output_path,
                     output_format=app_config.output_format,
                 )
@@ -184,8 +181,8 @@ async def _async_main() -> None:
                 favorite_repository=favorite_repository,
                 google_drive_client=google_drive_client,
                 backlog=backlog,
-                provider_manager=_provider_manager,
-                download_client=_download_client,
+                provider_manager=provider_manager,
+                download_client=download_client,
                 auto_exit=args.auto_exit,
             )
             await app.run_async()
