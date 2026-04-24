@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -6,6 +7,10 @@ from textual import on, work
 from textual.app import App
 from textual.reactive import reactive
 
+from .constants.defaults import (
+    DEFAULT_AUTO_EXIT_CONFIRM_COUNT,
+    DEFAULT_AUTO_EXIT_POLL_INTERVAL,
+)
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .models.app_config import AppConfig
@@ -27,13 +32,6 @@ from .workers.jobs import FetchingResourcesJob
 
 if TYPE_CHECKING:
     from .screens.selection_screen import PartialJob
-
-import asyncio
-
-from .constants.defaults import (
-    DEFAULT_AUTO_EXIT_CONFIRM_COUNT,
-    DEFAULT_AUTO_EXIT_POLL_INTERVAL,
-)
 
 logger = logging.getLogger(__name__)
 

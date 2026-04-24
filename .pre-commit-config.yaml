@@ -1,6 +1,6 @@
 repos:
     - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v4.5.0
+      rev: v6.0.0
       hooks:
           - id: trailing-whitespace
           - id: end-of-file-fixer
@@ -9,7 +9,7 @@ repos:
           - id: check-toml
 
     - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.15.7
+      rev: v0.15.11
       hooks:
           - id: ruff
             args: [--fix]
@@ -41,3 +41,10 @@ repos:
             language: system
             pass_filenames: false
             always_run: true
+
+    - repo: https://github.com/PyCQA/bandit
+      rev: 1.9.4
+      hooks:
+          - id: bandit
+            name: bandit
+            entry: bandit -r ./src
