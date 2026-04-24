@@ -153,12 +153,12 @@ async def _async_main() -> None:
         app_config = load_settings()
         favorite_repository = FavoriteRepository()
 
-        # Create session inside async context (providers will be created/used by BacklogSync and app)
+        # Create session inside async context
         async with aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
         ) as _session:
-            # ContentProviderManager is created here but not passed to app/BacklogSync yet
-            # (Phase 2 - just instantiate shared deps, Phase 3 - inject them)
+            # ContentProviderManager created here and injected into BacklogSync (Phase 3)
+            # Will be injected into app in next phase
             _provider_manager = ContentProviderManager(
                 _session,
                 resolve_rate_limit=args.resolve_rate_limit,
@@ -174,6 +174,7 @@ async def _async_main() -> None:
                 backlog_sync = BacklogSync(
                     favorite_repository=favorite_repository,
                     google_drive_client=google_drive_client,
+                    provider_manager=_provider_manager,
                     output_directory=app_config.output_path,
                     output_format=app_config.output_format,
                 )
