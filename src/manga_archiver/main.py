@@ -3,6 +3,8 @@ import logging
 import sys
 from argparse import Namespace
 
+import aiohttp
+
 from .app import MangaArchiverApp
 from .backlog_sync import BacklogSync
 from .cli import parse_args
@@ -15,10 +17,11 @@ from .constants.exit_codes import (
 )
 from .db.migrations import DEFAULT_GOOGLE_DRIVE_VERSION
 from .db.schema_manager import MigrationError, SchemaManager
+from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .pipeline_manager import PipelineConfig
 from .repositories import FavoriteRepository
-from .utils import setup_logging
+from .utils import DownloadClient, setup_logging
 from .utils.auth.google_drive import handle_auth_login, handle_auth_logout, load_token
 from .utils.settings_manager import load_settings
 
@@ -73,12 +76,8 @@ def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[
         return True, EXIT_MIGRATION_ERROR
 
 
-def main() -> None:
-    """Provide CLI entry point for MangaDex Downloader.
-
-    Parses command-line arguments, initializes the Google Drive client
-    if in archive mode, and launches the Textual UI application.
-    """
+async def _async_main() -> None:
+    """Run the application with a shared event loop."""
     setup_logging()
     args = parse_args()
     schema_manager = SchemaManager()
@@ -150,33 +149,52 @@ def main() -> None:
         app_config = load_settings()
         favorite_repository = FavoriteRepository()
 
-        backlog = None
-        if args.backlog:
-            if not google_drive_client:
-                print("--backlog requires a Google Drive client, try running with --archive")
-                sys.exit(EXIT_INIT_ERROR)
+        # Session needs TCPConnector with ThreadedResolver for aiodns (avoids 443 errors)
+        async with aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
+        ) as session:
+            provider_manager = ContentProviderManager(
+                session,
+                resolve_rate_limit=args.resolve_rate_limit,
+                download_rate_limit=args.download_rate_limit,
+            )
+            download_client = DownloadClient(session)
 
-            backlog_sync = BacklogSync(
+            backlog = None
+            if args.backlog:
+                if not google_drive_client:
+                    print("--backlog requires a Google Drive client, try running with --archive")
+                    sys.exit(EXIT_INIT_ERROR)
+
+                backlog_sync = BacklogSync(
+                    favorite_repository=favorite_repository,
+                    google_drive_client=google_drive_client,
+                    provider_manager=provider_manager,
+                    output_directory=app_config.output_path,
+                    output_format=app_config.output_format,
+                )
+                backlog = await backlog_sync.run()
+
+            app = MangaArchiverApp(
+                pipeline_config=pipeline_config,
+                app_config=app_config,
                 favorite_repository=favorite_repository,
                 google_drive_client=google_drive_client,
-                output_directory=app_config.output_path,
-                output_format=app_config.output_format,
+                backlog=backlog,
+                provider_manager=provider_manager,
+                download_client=download_client,
+                auto_exit=args.auto_exit,
             )
-            backlog = asyncio.run(backlog_sync.run())
+            await app.run_async()
 
     except Exception as e:
         logger.error("Failed to initialize: %s", e)
         sys.exit(EXIT_INIT_ERROR)
 
-    app = MangaArchiverApp(
-        pipeline_config=pipeline_config,
-        app_config=app_config,
-        favorite_repository=favorite_repository,
-        google_drive_client=google_drive_client,
-        backlog=backlog,
-        auto_exit=args.auto_exit,
-    )
-    app.run()
+
+def main() -> None:
+    """CLI entry point wrapper for MangaArchiver."""
+    asyncio.run(_async_main())
 
 
 if __name__ == "__main__":

@@ -2,8 +2,6 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-import aiohttp
-
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .integrations.storage_providers.google_drive.types import GoogleDriveFile
@@ -35,6 +33,7 @@ class BacklogSync:
         self,
         favorite_repository: FavoriteRepository,
         google_drive_client: GoogleDriveClient,
+        provider_manager: ContentProviderManager,
         output_directory: Path,
         output_format: OutputFormat,
     ) -> None:
@@ -43,11 +42,13 @@ class BacklogSync:
         Args:
             favorite_repository: Repository for favorites
             google_drive_client: Google Drive client (must be initialized)
+            provider_manager: Content provider manager
             output_directory: Where to save downloads
             output_format: Output format (pdf, cbz, epub)
         """
         self._favorite_repository = favorite_repository
         self._google_drive_client = google_drive_client
+        self._provider_manager = provider_manager
         self._output_directory = output_directory
         self._output_format = output_format
         self._mangas: list[Manga] = []
@@ -55,59 +56,48 @@ class BacklogSync:
     async def run(self) -> list[FetchingResourcesJob]:
         """Run the backlog sync process.
 
-        Note: We create the aiohttp ClientSession here instead of passing it in
-        because this method runs in its own event loop (via asyncio.run()) in main.py.
-        The CLI entry point doesn't have an active event loop, so we can't create
-        the session there - we create it here where we have an active loop.
-
         Returns:
             list[FetchingResourcesJob]: Jobs to enqueue (missing chapters)
         """
         print("=== Backlog Sync ===")
 
-        # This config is necessary to handle aiohttp auto use of aiodns, without it we get 443 errors
-        async with aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
-        ) as session:
-            provider_manager = ContentProviderManager(session)
+        favorites = self._favorite_repository.get_all()
+        print(f"Found {len(favorites)} favorites")
 
-            favorites = self._favorite_repository.get_all()
-            print(f"Found {len(favorites)} favorites")
+        if not favorites:
+            print("No favorites to sync")
+            return []
 
-            if not favorites:
-                print("No favorites to sync")
-                return []
+        for favorite in favorites:
+            manga_id = favorite.id
+            manga_title = favorite.title
+            source = favorite.source
 
-            for favorite in favorites:
-                manga_id = favorite.id
-                manga_title = favorite.title
-                source = favorite.source
+            print(f"Fetching chapters for '{manga_title}'...")
 
-                print(f"Fetching chapters for '{manga_title}'...")
+            api_chapters = await self._fetch_api_chapters(
+                self._provider_manager, source, manga_id, manga_title
+            )
+            if api_chapters is None:
+                continue
 
-                api_chapters = await self._fetch_api_chapters(
-                    provider_manager, source, manga_id, manga_title
+            google_drive_chapters = self._fetch_google_drive_chapters(manga_title, source.value)
+
+            print(
+                f"  {manga_title}: {len(api_chapters)} from API, "
+                f"{len(google_drive_chapters)} in Google Drive"
+            )
+
+            self._mangas.append(
+                Manga(
+                    manga_title=manga_title,
+                    source=source,
+                    api_chapters=api_chapters,
+                    google_drive_chapters=google_drive_chapters,
                 )
-                if api_chapters is None:
-                    continue
+            )
 
-                google_drive_chapters = self._fetch_google_drive_chapters(manga_title, source.value)
-
-                print(
-                    f"  {manga_title}: {len(api_chapters)} from API, "
-                    f"{len(google_drive_chapters)} in Google Drive"
-                )
-
-                self._mangas.append(
-                    Manga(
-                        manga_title=manga_title,
-                        source=source,
-                        api_chapters=api_chapters,
-                        google_drive_chapters=google_drive_chapters,
-                    )
-                )
-
-            print(f"\nScanned {len(self._mangas)} manga")
+        print(f"\nScanned {len(self._mangas)} manga")
 
         return self._create_jobs()
 
