@@ -73,11 +73,11 @@ def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[
         return True, EXIT_MIGRATION_ERROR
 
 
-def main() -> None:
-    """Provide CLI entry point for MangaDex Downloader.
+async def _async_main() -> None:
+    """Async CLI entry point for Manga Archiver.
 
-    Parses command-line arguments, initializes the Google Drive client
-    if in archive mode, and launches the Textual UI application.
+    Parses command-line arguments, handles auth/migrations if needed,
+    runs backlog sync, and launches the Textual UI application.
     """
     setup_logging()
     args = parse_args()
@@ -162,7 +162,7 @@ def main() -> None:
                 output_directory=app_config.output_path,
                 output_format=app_config.output_format,
             )
-            backlog = asyncio.run(backlog_sync.run())
+            backlog = await backlog_sync.run()
 
     except Exception as e:
         logger.error("Failed to initialize: %s", e)
@@ -176,7 +176,12 @@ def main() -> None:
         backlog=backlog,
         auto_exit=args.auto_exit,
     )
-    app.run()
+    await app.run_async()
+
+
+def main() -> None:
+    """CLI entry point wrapper for MangaArchiver."""
+    asyncio.run(_async_main())
 
 
 if __name__ == "__main__":
