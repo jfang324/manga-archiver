@@ -24,6 +24,7 @@ class DirectoryExplorerApp(App):
         self.directory_records.append(message)
 
 
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 class TestFilteredDirectoryTree:
     def _create_item(self, parent_directory: Path, name: str, is_file: bool = False) -> Path:
         full_path: Path = parent_directory / name
