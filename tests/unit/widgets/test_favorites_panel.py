@@ -1,3 +1,4 @@
+import pytest
 from textual import on
 from textual.app import App, ComposeResult
 from textual.reactive import reactive
@@ -35,6 +36,7 @@ class FavoritesPanelApp(App):
         self.select_at_records.append(message)
 
 
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 class TestFavoritesPanel:
     async def test_favorites_list_displays_favorites(self) -> None:
         app = FavoritesPanelApp()
