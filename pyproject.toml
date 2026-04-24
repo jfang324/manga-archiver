@@ -9,22 +9,22 @@ repository = "https://github.com/jfang324/manga-archiver"
 [tool.poetry.dependencies]
 python = ">=3.10 ,<4.0"
 aiohttp = {extras = ["speedups"], version = "^3.10.5"}
-pillow = "^10.4.0"
+pillow = "^12.2.0"
 textual = "^8.1.1"
 google-auth = "^2.35.0"
 google-auth-oauthlib = "^1.2.1"
 google-api-python-client = "^2.100.0"
 requests = "^2.33.1"
 ebooklib = "^0.20"
-cryptography = "^43.0.0"
+cryptography = "^46.0.7"
 
 [tool.poetry.scripts]
 manga-archiver = "manga_archiver.main:main"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3.3"
+pytest = "^9.0.3"
 coverage = "^7.6.1"
-pytest-asyncio = "^0.24.0"
+pytest-asyncio = "^1.3.0"
 ruff = "^0.15.7"
 pyright = "^1.1.408"
 pre-commit = "^4.5.1"
