@@ -21,7 +21,7 @@ from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .pipeline_manager import PipelineConfig
 from .repositories import FavoriteRepository
-from .utils import setup_logging
+from .utils import DownloadClient, setup_logging
 from .utils.auth.google_drive import handle_auth_login, handle_auth_logout, load_token
 from .utils.settings_manager import load_settings
 
@@ -153,17 +153,16 @@ async def _async_main() -> None:
         app_config = load_settings()
         favorite_repository = FavoriteRepository()
 
-        # Create session inside async context
+        # Create session and shared dependencies inside async context
         async with aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
         ) as _session:
-            # ContentProviderManager created here and injected into BacklogSync (Phase 3)
-            # Will be injected into app in next phase
             _provider_manager = ContentProviderManager(
                 _session,
                 resolve_rate_limit=args.resolve_rate_limit,
                 download_rate_limit=args.download_rate_limit,
             )
+            _download_client = DownloadClient(_session)
 
             backlog = None
             if args.backlog:
@@ -180,14 +179,14 @@ async def _async_main() -> None:
                 )
                 backlog = await backlog_sync.run()
 
-            # Note: provider_manager will be injected into app in Phase 3
-            # For now, we let app create its own provider
             app = MangaArchiverApp(
                 pipeline_config=pipeline_config,
                 app_config=app_config,
                 favorite_repository=favorite_repository,
                 google_drive_client=google_drive_client,
                 backlog=backlog,
+                provider_manager=_provider_manager,
+                download_client=_download_client,
                 auto_exit=args.auto_exit,
             )
             await app.run_async()

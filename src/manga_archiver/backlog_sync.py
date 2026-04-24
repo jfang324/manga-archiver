@@ -56,8 +56,6 @@ class BacklogSync:
     async def run(self) -> list[FetchingResourcesJob]:
         """Run the backlog sync process.
 
-        Uses the injected ContentProviderManager instead of creating its own.
-
         Returns:
             list[FetchingResourcesJob]: Jobs to enqueue (missing chapters)
         """

@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import aiohttp
 from textual import on, work
 from textual.app import App
 from textual.reactive import reactive
@@ -47,7 +46,6 @@ class MangaArchiverApp(App):
         _pipeline_manager (PipelineManager | None): The pipeline manager instance
         _favorite_repository (FavoriteRepository): The favorite repository
         _google_drive_client (GoogleDriveClient | None): The Google Drive client
-        _session (aiohttp.ClientSession): The aiohttp session
         _provider_manager (ContentProviderManager): The content provider manager
         _download_client (DownloadClient): The download client
         _backlog (list[FetchingResourcesJob] | None): The backlog of missing chapters
@@ -75,7 +73,9 @@ class MangaArchiverApp(App):
         pipeline_config: PipelineConfig,
         app_config: AppConfig,
         favorite_repository: FavoriteRepository,
-        google_drive_client: GoogleDriveClient | None,
+        provider_manager: ContentProviderManager,
+        download_client: DownloadClient,
+        google_drive_client: GoogleDriveClient | None = None,
         backlog: list[FetchingResourcesJob] | None = None,
         auto_exit: bool = False,
         **kwargs,
@@ -88,6 +88,8 @@ class MangaArchiverApp(App):
             favorite_repository: The favorite repository
             google_drive_client: The Google Drive client
             backlog: Pre-fetched jobs to enqueue when pipeline starts
+            provider_manager: Content provider manager (injected)
+            download_client: Download client (injected)
             auto_exit: Whether to automatically exit the application
         """
         super().__init__(**kwargs)
@@ -100,6 +102,8 @@ class MangaArchiverApp(App):
         self._pipeline_manager: PipelineManager | None = None
         self._favorite_repository = favorite_repository
         self._google_drive_client = google_drive_client
+        self._provider_manager = provider_manager
+        self._download_client = download_client
 
         try:
             self._favorites = self._favorite_repository.get_all()
@@ -182,18 +186,7 @@ class MangaArchiverApp(App):
         await self._pipeline_manager.enqueue_jobs(jobs)
 
     async def on_mount(self) -> None:
-        """On mount, initialize api and download clients before injecting into screens."""
-        # This config is necessary to handle aiohttp auto use of aiodns, without it we get 443 errors
-        self._session = aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
-        )
-        self._provider_manager = ContentProviderManager(
-            self._session,
-            resolve_rate_limit=self._pipeline_config.resolve_rate_limit,
-            download_rate_limit=self._pipeline_config.download_rate_limit,
-        )
-        self._download_client = DownloadClient(self._session)
-
+        """On mount, install screens and start pipeline manager."""
         self.install_screen(MenuScreen(), name="menu_screen")
         self.install_screen(SearchScreen(self._provider_manager), name="search_screen")
         self.install_screen(
@@ -224,8 +217,7 @@ class MangaArchiverApp(App):
         if self._pipeline_manager:
             self._pipeline_manager.stop()
 
-        if self._session:
-            await self._session.close()
+        # Session is closed by the caller (main.py), not by the app
 
         benchmark_results = None
 
