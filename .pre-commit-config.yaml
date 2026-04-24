@@ -46,3 +46,5 @@ repos:
       rev: 1.9.4
       hooks:
           - id: bandit
+            name: bandit
+            entry: bandit -r ./src
