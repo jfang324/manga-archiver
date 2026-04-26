@@ -218,15 +218,12 @@ See [docs/development.md](docs/development.md) for setup and development command
 ### Core
 
 - Python 3.10+
+- Textual
 - aiohttp
 - asyncio
 - Pillow
 - ebooklib
 - SQLite
-
-### UI
-
-- Textual
 
 ### Google Drive
 
@@ -240,7 +237,7 @@ See [docs/development.md](docs/development.md) for setup and development command
 
 ### Testing
 
-- Pytest
+- pytest
 - Coverage
 - pytest-asyncio
 

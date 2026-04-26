@@ -19,7 +19,7 @@ class TestDownloadClientDownloadImage:
     )
     async def test_download_image_success_returns_bytes(
         self, mock_session, mock_api_response, expected_result
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = DownloadClient(mock_session)
@@ -40,7 +40,7 @@ class TestDownloadClientDownloadImage:
     )
     async def test_failed_download_raises_error(
         self, mock_session, mock_api_response, expected_error
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = DownloadClient(mock_session)
@@ -65,7 +65,7 @@ class TestDownloadClientDownloadImages:
     )
     async def test_download_images_success_returns_bytes(
         self, mock_session, mock_api_response, urls, expected_result
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = DownloadClient(mock_session)
@@ -87,7 +87,7 @@ class TestDownloadClientDownloadImages:
     )
     async def test_download_images_various_results(
         self, mock_session, mock_api_response_list, expect_error, task_tracker
-    ):
+    ) -> None:
         mock_session.get.side_effect = mock_api_response_list
 
         client = DownloadClient(mock_session)

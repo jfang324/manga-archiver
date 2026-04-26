@@ -1,3 +1,5 @@
+import asyncio
+from collections.abc import Callable
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -8,31 +10,43 @@ from src.manga_archiver.workers.jobs import Job
 class AsyncContextManagerMock:
     """Helper class to create async context manager mocks."""
 
-    def __init__(self, response):
+    def __init__(self, response) -> None:
         self.response = response
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> MagicMock:
         return self.response
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         return None
 
 
+class TaskTracker:
+    """Track created asyncio tasks and provide side_effect for patching."""
+
+    def __init__(self) -> None:
+        self._original_create_task = asyncio.create_task
+        self.tasks: list[asyncio.Task] = []
+
+    def __call__(self, coro) -> asyncio.Task:
+        task = self._original_create_task(coro)
+        task.cancel = MagicMock(wraps=task.cancel)
+        self.tasks.append(task)
+        return task
+
+
 @pytest.fixture
-def mock_session():
+def mock_session() -> MagicMock:
     """
     Create a mock aiohttp ClientSession.
 
     Usage in tests:
         mock_session.get.return_value = AsyncContextManagerMock(mock_response)
     """
-    session = MagicMock()
-    # Don't set return_value here - let tests set it explicitly
-    return session
+    return MagicMock()
 
 
 @pytest.fixture
-def mock_api_response(request):
+def mock_api_response(request) -> MagicMock:
     status_code, return_value = request.param
     response = MagicMock()
     response.status = status_code
@@ -44,27 +58,13 @@ def mock_api_response(request):
 
 
 @pytest.fixture
-def task_tracker():
+def task_tracker() -> TaskTracker:
     """Track created asyncio tasks and provide side_effect for patching."""
-    import asyncio
-
-    original_create_task = asyncio.create_task
-
-    class TaskTracker:
-        def __init__(self):
-            self.tasks = []
-
-        def __call__(self, coro):
-            task = original_create_task(coro)
-            task.cancel = MagicMock(wraps=task.cancel)
-            self.tasks.append(task)
-            return task
-
     return TaskTracker()
 
 
 @pytest.fixture
-def mock_api_response_list(request):
+def mock_api_response_list(request) -> Callable:
     """Fixture for tests that need multiple responses (e.g., download_images)."""
     responses_list = request.param
     mock_responses = [
@@ -80,7 +80,7 @@ def mock_api_response_list(request):
 
 
 @pytest.fixture
-def mock_job():
+def mock_job() -> MagicMock:
     """Create a mock Job for testing workers."""
     job = MagicMock(spec=Job)
     job.id = "test_job"
@@ -93,7 +93,7 @@ def mock_job():
 
 
 @pytest.fixture
-def mock_semaphore():
+def mock_semaphore() -> MagicMock:
     """Create a mock asyncio Semaphore for testing workers."""
     semaphore = MagicMock()
     semaphore.__aenter__ = AsyncMock()

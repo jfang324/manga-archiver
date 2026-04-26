@@ -70,7 +70,7 @@ class SearchEdges:
                 continue
             try:
                 results.append(SearchResult.from_dict(edge))
-            except ValueError:  # noqa: PERF203 - skip invalid entries
+            except ValueError:
                 pass
 
         return cls(edges=results)

@@ -25,7 +25,7 @@ class TestSanitize:
             "empty_returns_untitled",
         ],
     )
-    def test_sanitize_various_inputs(self, input_str: str, expected: str):
+    def test_sanitize_various_inputs(self, input_str: str, expected: str) -> None:
         exporter = MultiFormatExporter()
         result = exporter._sanitize(input_str)
 
@@ -50,13 +50,13 @@ class TestValidateInputs:
     )
     def test_validate_inputs_raises_errors(
         self, image_data_list, output_name, quality, expected_error, tmp_path
-    ):
+    ) -> None:
         exporter = MultiFormatExporter()
 
         with pytest.raises(ValueError, match=expected_error):
             exporter._validate_inputs(image_data_list, tmp_path, output_name, quality)
 
-    def test_validate_inputs_invalid_directory_path(self, tmp_path):
+    def test_validate_inputs_invalid_directory_path(self, tmp_path) -> None:
         exporter = MultiFormatExporter()
         file_path = tmp_path / "file.txt"
         file_path.write_text("not a directory")
@@ -64,14 +64,14 @@ class TestValidateInputs:
         with pytest.raises(ValueError, match="Output directory must be a valid directory"):
             exporter._validate_inputs([b"data"], file_path, "test", 75)
 
-    def test_validate_inputs_nonexistent_directory(self, tmp_path):
+    def test_validate_inputs_nonexistent_directory(self, tmp_path) -> None:
         exporter = MultiFormatExporter()
         nonexistent = tmp_path / "nonexistent"
 
         with pytest.raises(ValueError, match="Output directory must be a valid directory"):
             exporter._validate_inputs([b"data"], nonexistent, "test", 75)
 
-    def test_validate_inputs_valid_inputs(self, tmp_path):
+    def test_validate_inputs_valid_inputs(self, tmp_path) -> None:
         exporter = MultiFormatExporter()
         exporter._validate_inputs([b"data"], tmp_path, "test", 75)
 
@@ -82,13 +82,13 @@ class TestLoadImages:
         [(b"invalid",), (b"",)],
         ids=["corrupted_bytes", "empty_bytes"],
     )
-    def test_load_images_invalid_data_raises(self, image_bytes):
+    def test_load_images_invalid_data_raises(self, image_bytes) -> None:
         exporter = MultiFormatExporter()
 
         with pytest.raises(ValueError, match="Invalid image data"):
             exporter._load_images([image_bytes])
 
-    def test_load_images_empty_list_raises(self):
+    def test_load_images_empty_list_raises(self) -> None:
         exporter = MultiFormatExporter()
 
         with pytest.raises(ValueError, match="No valid images to generate output"):
@@ -99,7 +99,7 @@ class TestLoadImages:
         [("RGB",), ("RGBA",), ("P",)],
         ids=["rgb", "rgba", "palette"],
     )
-    def test_load_images_converts_modes(self, mode):
+    def test_load_images_converts_modes(self, mode) -> None:
         exporter = MultiFormatExporter()
 
         img = Image.new(mode, (100, 100))
@@ -111,7 +111,7 @@ class TestLoadImages:
 
         assert images[0].mode == "RGB"
 
-    def test_load_images_single_valid_image(self):
+    def test_load_images_single_valid_image(self) -> None:
         exporter = MultiFormatExporter()
 
         img = Image.new("RGB", (100, 100), color="red")
@@ -123,7 +123,7 @@ class TestLoadImages:
 
         assert images[0].mode == "RGB"
 
-    def test_load_images_multiple_valid_images(self):
+    def test_load_images_multiple_valid_images(self) -> None:
         exporter = MultiFormatExporter()
 
         image_bytes_list = []
@@ -139,7 +139,7 @@ class TestLoadImages:
 
 
 class TestGeneratePdf:
-    def test_generate_pdf_to_path(self, tmp_path):
+    def test_generate_pdf_to_path(self, tmp_path) -> None:
         exporter = MultiFormatExporter()
         images = [Image.new("RGB", (100, 100), color="red")]
 
@@ -149,7 +149,7 @@ class TestGeneratePdf:
         assert output_file.exists()
         assert output_file.stat().st_size > 0
 
-    def test_generate_pdf_to_buffer(self):
+    def test_generate_pdf_to_buffer(self) -> None:
         exporter = MultiFormatExporter()
         images = [Image.new("RGB", (100, 100), color="red")]
 
@@ -158,13 +158,13 @@ class TestGeneratePdf:
 
         assert buffer.tell() > 0
 
-    def test_generate_pdf_empty_images_raises(self):
+    def test_generate_pdf_empty_images_raises(self) -> None:
         exporter = MultiFormatExporter()
 
         with pytest.raises(IndexError):
             exporter._generate_pdf([], BytesIO())
 
-    def test_generate_pdf_with_quality_and_optimize(self, tmp_path):
+    def test_generate_pdf_with_quality_and_optimize(self, tmp_path) -> None:
         exporter = MultiFormatExporter()
         images = [Image.new("RGB", (100, 100), color="red")]
 
@@ -176,7 +176,7 @@ class TestGeneratePdf:
 
 
 class TestGenerateCbz:
-    def test_generate_cbz_to_path(self, tmp_path):
+    def test_generate_cbz_to_path(self, tmp_path) -> None:
         exporter = MultiFormatExporter()
         images = [Image.new("RGB", (100, 100), color="red")]
 
@@ -186,7 +186,7 @@ class TestGenerateCbz:
         assert output_file.exists()
         assert output_file.stat().st_size > 0
 
-    def test_generate_cbz_to_buffer(self):
+    def test_generate_cbz_to_buffer(self) -> None:
         exporter = MultiFormatExporter()
         images = [Image.new("RGB", (100, 100), color="red")]
 
@@ -198,13 +198,13 @@ class TestGenerateCbz:
 
 class TestMultiFormatExporterGenerate:
     @pytest.fixture
-    def _image_bytes(self):
+    def _image_bytes(self) -> bytes:
         img = Image.new("RGB", (100, 100), color="red")
         buf = BytesIO()
         img.save(buf, format="PNG")
         return buf.getvalue()
 
-    def test_generate_pdf_to_path(self, tmp_path, _image_bytes):
+    def test_generate_pdf_to_path(self, tmp_path, _image_bytes) -> None:
         exporter = MultiFormatExporter()
         full_name, file_data = exporter.generate([_image_bytes], tmp_path, "test", OutputFormat.PDF)
 
@@ -212,7 +212,7 @@ class TestMultiFormatExporterGenerate:
         assert (tmp_path / "test.pdf").exists()
         assert file_data == b""
 
-    def test_generate_pdf_to_buffer(self, tmp_path, _image_bytes):
+    def test_generate_pdf_to_buffer(self, tmp_path, _image_bytes) -> None:
         exporter = MultiFormatExporter()
         full_name, file_data = exporter.generate(
             [_image_bytes], tmp_path, "test", OutputFormat.PDF, return_bytes=True
@@ -221,7 +221,7 @@ class TestMultiFormatExporterGenerate:
         assert full_name == "test.pdf"
         assert len(file_data) > 0
 
-    def test_generate_cbz_to_path(self, tmp_path, _image_bytes):
+    def test_generate_cbz_to_path(self, tmp_path, _image_bytes) -> None:
         exporter = MultiFormatExporter()
         full_name, file_data = exporter.generate([_image_bytes], tmp_path, "test", OutputFormat.CBZ)
 
@@ -229,7 +229,7 @@ class TestMultiFormatExporterGenerate:
         assert (tmp_path / "test.cbz").exists()
         assert file_data == b""
 
-    def test_generate_cbz_to_buffer(self, tmp_path, _image_bytes):
+    def test_generate_cbz_to_buffer(self, tmp_path, _image_bytes) -> None:
         exporter = MultiFormatExporter()
         full_name, file_data = exporter.generate(
             [_image_bytes], tmp_path, "test", OutputFormat.CBZ, return_bytes=True
@@ -238,7 +238,7 @@ class TestMultiFormatExporterGenerate:
         assert full_name == "test.cbz"
         assert len(file_data) > 0
 
-    def test_generate_epub_to_path(self, tmp_path, _image_bytes):
+    def test_generate_epub_to_path(self, tmp_path, _image_bytes) -> None:
         exporter = MultiFormatExporter()
         full_name, file_data = exporter.generate(
             [_image_bytes], tmp_path, "test", OutputFormat.EPUB
@@ -248,7 +248,7 @@ class TestMultiFormatExporterGenerate:
         assert (tmp_path / "test.epub").exists()
         assert file_data == b""
 
-    def test_generate_epub_to_buffer(self, tmp_path, _image_bytes):
+    def test_generate_epub_to_buffer(self, tmp_path, _image_bytes) -> None:
         exporter = MultiFormatExporter()
         full_name, file_data = exporter.generate(
             [_image_bytes], tmp_path, "test", OutputFormat.EPUB, return_bytes=True

@@ -24,7 +24,7 @@ class MergeWorker(Worker):
         notification_queue: Queue[NotificationJob],
         config: WorkerConfig,
         multi_format_exporter: MultiFormatExporter,
-    ):
+    ) -> None:
         """Initialize the worker.
 
         Args:

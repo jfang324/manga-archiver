@@ -10,13 +10,13 @@ from src.manga_archiver.workers.jobs import DownloadingJob, MergingJob
 
 
 class TestDownloadWorkerDoWork:
-    def _create_mock_provider_manager(self, semaphore):
+    def _create_mock_provider_manager(self, semaphore) -> MagicMock:
         manager = MagicMock()
         manager.get_download_semaphore = MagicMock(return_value=semaphore)
         return manager
 
     @pytest.mark.asyncio
-    async def test_do_work_returns_merging_job(self):
+    async def test_do_work_returns_merging_job(self) -> None:
         mock_download_client = MagicMock()
         mock_download_client.download_images = AsyncMock(return_value=[b"image1", b"image2"])
         test_semaphore = asyncio.Semaphore(5)
@@ -52,7 +52,7 @@ class TestDownloadWorkerDoWork:
         assert result.image_data == [b"image1", b"image2"]
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_download_client_with_urls(self):
+    async def test_do_work_calls_download_client_with_urls(self) -> None:
         mock_download_client = MagicMock()
         mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
         test_semaphore = asyncio.Semaphore(5)
@@ -85,7 +85,7 @@ class TestDownloadWorkerDoWork:
         )
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_status_change_downloading(self):
+    async def test_do_work_calls_status_change_downloading(self) -> None:
         mock_download_client = MagicMock()
         mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
         test_semaphore = asyncio.Semaphore(5)
@@ -117,7 +117,7 @@ class TestDownloadWorkerDoWork:
         assert mock_notification_queue.put.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_do_work_raises_error_for_missing_urls(self):
+    async def test_do_work_raises_error_for_missing_urls(self) -> None:
         mock_download_client = MagicMock(spec=DownloadClient)
         test_semaphore = asyncio.Semaphore(5)
 
@@ -146,7 +146,7 @@ class TestDownloadWorkerDoWork:
             await worker._do_work(job)
 
     @pytest.mark.asyncio
-    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job):
+    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job) -> None:
         mock_download_client = MagicMock(spec=DownloadClient)
         test_semaphore = asyncio.Semaphore(5)
 

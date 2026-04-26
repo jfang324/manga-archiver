@@ -53,7 +53,7 @@ class GoogleDriveClient:
         self,
         stored_token: GoogleApiStoredToken,
         max_retries: int = DEFAULT_MAX_RETRIES,
-    ):
+    ) -> None:
         """Initialize the Google Drive client.
 
         Args:

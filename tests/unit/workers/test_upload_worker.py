@@ -9,14 +9,14 @@ from src.manga_archiver.workers.upload_worker import UploadWorker
 
 
 class TestUploadWorkerDoWork:
-    def _create_mock_drive_client(self, uploaded_id: str | None = "folder_123"):
+    def _create_mock_drive_client(self, uploaded_id: str | None = "folder_123") -> MagicMock:
         client = MagicMock()
         client.get_or_create_manga_folder = AsyncMock(return_value="folder_123")
         client.upload_file = AsyncMock(return_value=uploaded_id)
         return client
 
     @pytest.mark.asyncio
-    async def test_do_work_uploads_file_successfully(self):
+    async def test_do_work_uploads_file_successfully(self) -> None:
         mock_drive_client = self._create_mock_drive_client()
         mock_notification_queue = AsyncMock()
 
@@ -59,7 +59,7 @@ class TestUploadWorkerDoWork:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_do_work_sends_completed_notification(self):
+    async def test_do_work_sends_completed_notification(self) -> None:
         mock_drive_client = self._create_mock_drive_client()
         mock_notification_queue = AsyncMock()
 
@@ -92,7 +92,7 @@ class TestUploadWorkerDoWork:
         assert notifications[1][0][0].status == JobStatus.UPLOADING
 
     @pytest.mark.asyncio
-    async def test_do_work_sends_failed_notification_when_upload_returns_none(self):
+    async def test_do_work_sends_failed_notification_when_upload_returns_none(self) -> None:
         mock_drive_client = self._create_mock_drive_client(uploaded_id=None)
         mock_notification_queue = AsyncMock()
 
@@ -126,7 +126,7 @@ class TestUploadWorkerDoWork:
         assert notifications[1][0][0].status == JobStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_do_work_raises_exception(self):
+    async def test_do_work_raises_exception(self) -> None:
         mock_drive_client = self._create_mock_drive_client()
         mock_drive_client.get_or_create_manga_folder = AsyncMock(side_effect=Exception("API error"))
 
@@ -173,7 +173,7 @@ class TestUploadWorkerDoWork:
     @pytest.mark.asyncio
     async def test_do_work_raises_value_error_for_invalid_job(
         self, invalid_fields, expected_error_message
-    ):
+    ) -> None:
         mock_drive_client = MagicMock()
         mock_drive_client.get_or_create_manga_folder.return_value = "folder_id"
 
@@ -205,7 +205,7 @@ class TestUploadWorkerDoWork:
             await worker._do_work(job)
 
     @pytest.mark.asyncio
-    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job):
+    async def test_do_work_raises_error_for_wrong_job_type(self, mock_job) -> None:
         mock_drive_client = MagicMock()
         mock_drive_client.get_or_create_manga_folder = AsyncMock(return_value="folder_123")
         mock_drive_client.upload_file = AsyncMock(return_value="file_123")

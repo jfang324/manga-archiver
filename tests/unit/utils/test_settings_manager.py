@@ -69,7 +69,7 @@ class TestCreateAppConfig:
         ],
         ids=["custom_values", "cbz_format", "missing_fields_uses_defaults"],
     )
-    def test_create_app_config_returns_config(self, settings_data, expected):
+    def test_create_app_config_returns_config(self, settings_data, expected) -> None:
         config = settings_manager._create_app_config(settings_data)
 
         assert config.quality == expected["quality"]
@@ -78,7 +78,7 @@ class TestCreateAppConfig:
         assert config.optimize == expected["optimize"]
         assert config.data_saver == expected["data_saver"]
 
-    def test_create_app_config_invalid_quality_triggers_fallback(self):
+    def test_create_app_config_invalid_quality_triggers_fallback(self) -> None:
         settings_data = SettingsData(
             quality=101,  # invalid - must be 1-100
             output_path=str(Path.cwd()),
@@ -91,7 +91,7 @@ class TestCreateAppConfig:
 
         assert config.quality == DEFAULT_QUALITY
 
-    def test_create_app_config_fallback_on_invalid_path(self):
+    def test_create_app_config_fallback_on_invalid_path(self) -> None:
         settings_data = SettingsData(
             output_path="/nonexistent/path/that/doesnt/exist",
             output_format="pdf",
@@ -106,7 +106,7 @@ class TestCreateAppConfig:
 
 
 class TestLoadSettings:
-    def test_load_settings_creates_file_with_defaults_when_not_exists(self, tmp_path):
+    def test_load_settings_creates_file_with_defaults_when_not_exists(self, tmp_path) -> None:
         settings_file = tmp_path / "settings.json"
 
         with patch.object(settings_manager, "_get_settings_path", return_value=settings_file):
@@ -127,7 +127,7 @@ class TestLoadSettings:
         # If it doesn't exist, falls back to Path.cwd()
         assert config.output_path in (DEFAULT_OUTPUT_PATH, Path.cwd())
 
-    def test_load_settings_returns_defaults_on_parse_error(self, tmp_path):
+    def test_load_settings_returns_defaults_on_parse_error(self, tmp_path) -> None:
         settings_file = tmp_path / "settings.json"
         settings_file.write_text("{ invalid json")
 
@@ -139,7 +139,7 @@ class TestLoadSettings:
         assert config.optimize == DEFAULT_OPTIMIZE
         assert config.data_saver == DEFAULT_DATA_SAVER
 
-    def test_load_settings_returns_valid_config(self, tmp_path):
+    def test_load_settings_returns_valid_config(self, tmp_path) -> None:
         settings_file = tmp_path / "settings.json"
         settings_file.write_text(
             json.dumps(
@@ -164,7 +164,7 @@ class TestLoadSettings:
 
 
 class TestSaveSettings:
-    def test_save_settings_writes_valid_config(self, tmp_path):
+    def test_save_settings_writes_valid_config(self, tmp_path) -> None:
         settings_file = tmp_path / "settings.json"
 
         with patch.object(settings_manager, "_get_settings_path", return_value=settings_file):
@@ -185,7 +185,7 @@ class TestSaveSettings:
         assert data["output_path"] == str(tmp_path)
         assert data["data_saver"] is False
 
-    def test_save_settings_raises_on_write_failure(self, tmp_path):
+    def test_save_settings_raises_on_write_failure(self, tmp_path) -> None:
         mock_path = MagicMock()
         mock_path.write_text.side_effect = OSError("Permission denied")
 
@@ -201,7 +201,7 @@ class TestSaveSettings:
             with pytest.raises(ValueError, match="Failed to save settings"):
                 settings_manager.save_settings(config)
 
-    def test_save_settings_raises_on_invalid_config(self):
+    def test_save_settings_raises_on_invalid_config(self) -> None:
         with patch("src.manga_archiver.utils.settings_manager.AppConfig") as mock_config:
             mock_config.side_effect = ValueError("quality must be between 1 and 100")
 

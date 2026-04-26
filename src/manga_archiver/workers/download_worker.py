@@ -20,7 +20,7 @@ class DownloadWorker(Worker):
         config: WorkerConfig,
         download_client: DownloadClient,
         provider_manager: ContentProviderManager,
-    ):
+    ) -> None:
         """Initialize the worker.
 
         Args:

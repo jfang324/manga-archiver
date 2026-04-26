@@ -36,7 +36,7 @@ class TestMangaDexApiClientRequest:
     )
     async def test_request_success_returns_json(
         self, mock_session, mock_api_response, expected_result
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = MangaDexApiClient(mock_session)
@@ -57,7 +57,7 @@ class TestMangaDexApiClientRequest:
     )
     async def test_failed_request_raises_custom_errors(
         self, mock_session, mock_api_response, expected_error
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = MangaDexApiClient(mock_session)
@@ -76,7 +76,9 @@ class TestMangaDexApiClientSearchManga:
         indirect=["mock_api_response"],
         ids=["full_response", "empty_response"],
     )
-    async def test_search_manga_success(self, mock_session, mock_api_response, expected_result):
+    async def test_search_manga_success(
+        self, mock_session, mock_api_response, expected_result
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = MangaDexApiClient(mock_session)
@@ -96,7 +98,7 @@ class TestMangaDexApiClientSearchManga:
     )
     async def test_search_manga_raises_api_errors(
         self, mock_session, mock_api_response, expected_error
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = MangaDexApiClient(mock_session)
 
@@ -114,7 +116,9 @@ class TestMangaDexApiClientGetChapters:
         indirect=["mock_api_response"],
         ids=["full_response", "empty_response"],
     )
-    async def test_get_chapters_success(self, mock_session, mock_api_response, expected_result):
+    async def test_get_chapters_success(
+        self, mock_session, mock_api_response, expected_result
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = MangaDexApiClient(mock_session)
@@ -135,7 +139,7 @@ class TestMangaDexApiClientGetChapters:
     )
     async def test_get_chapters_raises_api_errors(
         self, mock_session, mock_api_response, expected_error
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
         client = MangaDexApiClient(mock_session)
 
@@ -158,7 +162,7 @@ class TestMangaDexApiClientGetDownloadResource:
     )
     async def test_get_download_resource_success(
         self, mock_session, mock_api_response, expected_result
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = MangaDexApiClient(mock_session)
@@ -179,7 +183,7 @@ class TestMangaDexApiClientGetDownloadResource:
     )
     async def test_get_download_resource_raises_api_errors(
         self, mock_session, mock_api_response, expected_error
-    ):
+    ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = MangaDexApiClient(mock_session)
@@ -205,13 +209,13 @@ class TestMangaDexApiClientProcessDownloadResource:
         ],
         ids=["no_data_saver", "data_saver"],
     )
-    def test_process_with_data_saver_param(self, data_saver, raw_data, expected_result):
+    def test_process_with_data_saver_param(self, data_saver, raw_data, expected_result) -> None:
         client = MangaDexApiClient(MagicMock(), data_saver=data_saver)
         result = client._process_download_resource_data(raw_data)
 
         assert result == expected_result
 
-    def test_process_fallback_to_standard_when_saver_missing(self):
+    def test_process_fallback_to_standard_when_saver_missing(self) -> None:
         client = MangaDexApiClient(MagicMock(), data_saver=True)
         result = client._process_download_resource_data(mock_malformed_download_resource_data)
 

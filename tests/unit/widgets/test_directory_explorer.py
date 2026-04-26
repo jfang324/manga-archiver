@@ -12,7 +12,7 @@ from src.manga_archiver.widgets.directory_explorer import (
 
 
 class DirectoryExplorerApp(App):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.directory_records: list[DirectoryExplorer.DirectoryChanged] = []
 
@@ -36,7 +36,7 @@ class TestFilteredDirectoryTree:
 
         return full_path
 
-    def test_filters_hidden_directories(self):
+    def test_filters_hidden_directories(self) -> None:
         with TemporaryDirectory() as temp_dir:
             hidden_directory = self._create_item(Path(temp_dir), ".hidden")
             visible_directory = self._create_item(Path(temp_dir), "visible")
@@ -47,7 +47,7 @@ class TestFilteredDirectoryTree:
             assert len(result) == 1
             assert result[0] == visible_directory
 
-    def test_filters_files(self):
+    def test_filters_files(self) -> None:
         with TemporaryDirectory() as temp_dir:
             visible_file = self._create_item(Path(temp_dir), "visible.txt", True)
             hidden_file = self._create_item(Path(temp_dir), ".hidden.txt", True)
@@ -57,7 +57,7 @@ class TestFilteredDirectoryTree:
 
             assert len(result) == 0
 
-    def test_passes_through_normal_directories(self):
+    def test_passes_through_normal_directories(self) -> None:
         with TemporaryDirectory() as temp_dir:
             visible_directory_1 = self._create_item(Path(temp_dir), "1")
             visible_directory_2 = self._create_item(Path(temp_dir), "2")

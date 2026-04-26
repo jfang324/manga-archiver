@@ -18,7 +18,7 @@ class ConcreteWorker(Worker):
 
 
 class TestBackoffCalculation:
-    def test_exponential_backoff_no_jitter(self):
+    def test_exponential_backoff_no_jitter(self) -> None:
         config = WorkerConfig(max_retries=5, base_delay=2, jitter=False, await_output_space=False)
         worker = ConcreteWorker(
             worker_id="test_worker",
@@ -34,7 +34,7 @@ class TestBackoffCalculation:
         assert worker._calculate_backoff(3) == 16.0
         assert worker._calculate_backoff(4) == 32.0
 
-    def test_exponential_backoff_with_jitter(self):
+    def test_exponential_backoff_with_jitter(self) -> None:
         config = WorkerConfig(max_retries=5, base_delay=2, jitter=True, await_output_space=False)
         worker = ConcreteWorker(
             worker_id="test_worker",
@@ -50,7 +50,7 @@ class TestBackoffCalculation:
         backoff = worker._calculate_backoff(1)
         assert 4.0 <= backoff <= 4.4
 
-    def test_backoff_uses_config_values(self):
+    def test_backoff_uses_config_values(self) -> None:
         config = WorkerConfig(max_retries=5, base_delay=5, jitter=False, await_output_space=False)
         worker = ConcreteWorker(
             worker_id="test_worker",
@@ -64,7 +64,7 @@ class TestBackoffCalculation:
         assert worker._calculate_backoff(1) == 10.0
         assert worker._calculate_backoff(2) == 20.0
 
-    def test_stop_sets_running_false(self):
+    def test_stop_sets_running_false(self) -> None:
         worker = ConcreteWorker(
             worker_id="test_worker",
             input_queue=MagicMock(),
@@ -80,7 +80,7 @@ class TestBackoffCalculation:
 
 class TestRetryLogic:
     @pytest.mark.asyncio
-    async def test_not_found_error_fails_immediately(self, mock_job):
+    async def test_not_found_error_fails_immediately(self, mock_job) -> None:
         config = WorkerConfig(max_retries=3, base_delay=0)
         mock_notification_queue = AsyncMock()
 
@@ -101,7 +101,7 @@ class TestRetryLogic:
         assert call_args.status == JobStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_rate_limit_error_retries_then_fails(self, mock_job):
+    async def test_rate_limit_error_retries_then_fails(self, mock_job) -> None:
         config = WorkerConfig(max_retries=2, base_delay=0)
         mock_notification_queue = AsyncMock()
 
@@ -115,7 +115,7 @@ class TestRetryLogic:
 
         call_count = 0
 
-        async def mock_do_work(job):  # noqa: ARG001
+        async def mock_do_work(job) -> None:  # noqa: ARG001
             nonlocal call_count
             call_count += 1
             raise RateLimitError("429")
@@ -129,7 +129,7 @@ class TestRetryLogic:
         assert mock_notification_queue.put.call_args[0][0].status == JobStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_backoff_called_between_retries(self, mock_job):
+    async def test_backoff_called_between_retries(self, mock_job) -> None:
         config = WorkerConfig(max_retries=2, base_delay=0)
 
         worker = ConcreteWorker(
@@ -142,7 +142,7 @@ class TestRetryLogic:
 
         call_count = 0
 
-        async def mock_do_work(job):  # noqa: ARG001
+        async def mock_do_work(job) -> None:  # noqa: ARG001
             nonlocal call_count
             call_count += 1
             raise TimeoutError("Simulated timeout")
@@ -160,7 +160,7 @@ class TestRetryLogic:
             assert mock_calculate_backoff.call_count == config.max_retries
 
     @pytest.mark.asyncio
-    async def test_retries_on_transient_errors(self, mock_job):
+    async def test_retries_on_transient_errors(self, mock_job) -> None:
         config = WorkerConfig(max_retries=3, base_delay=0)
 
         worker = ConcreteWorker(
@@ -173,7 +173,7 @@ class TestRetryLogic:
 
         call_count = 0
 
-        async def mock_do_work(job):  # noqa: ARG001
+        async def mock_do_work(job) -> None:  # noqa: ARG001
             nonlocal call_count
             call_count += 1
             raise TimeoutError("Simulated timeout")
@@ -184,7 +184,7 @@ class TestRetryLogic:
         assert call_count == config.max_retries + 1
 
     @pytest.mark.asyncio
-    async def test_posts_failed_status_on_transient_error(self, mock_job):
+    async def test_posts_failed_status_on_transient_error(self, mock_job) -> None:
         config = WorkerConfig(max_retries=3, base_delay=0)
         mock_notification_queue = AsyncMock()
 
@@ -205,7 +205,7 @@ class TestRetryLogic:
         assert call_args.status == JobStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_fails_immediately_on_non_transient_errors(self, mock_job):
+    async def test_fails_immediately_on_non_transient_errors(self, mock_job) -> None:
         config = WorkerConfig(max_retries=3, base_delay=0)
         mock_notification_queue = AsyncMock()
 
@@ -226,7 +226,7 @@ class TestRetryLogic:
         assert call_args.status == JobStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_generic_exception_fails_immediately(self, mock_job):
+    async def test_generic_exception_fails_immediately(self, mock_job) -> None:
         config = WorkerConfig(max_retries=3, base_delay=0)
         mock_notification_queue = AsyncMock()
 

@@ -21,7 +21,7 @@ class UploadWorker(Worker):
         notification_queue: Queue[NotificationJob],
         config: WorkerConfig,
         google_drive_client: GoogleDriveClient,
-    ):
+    ) -> None:
         """Initialize the upload worker.
 
         Args:

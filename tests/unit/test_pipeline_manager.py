@@ -37,7 +37,7 @@ class TestPipelineValidation:
     )
     def test_validate_job_raises_on_invalid_field(
         self, tmp_path, invalid_fields, expected_error_message
-    ):
+    ) -> None:
         job = FetchingResourcesJob(
             id="job_123",
             manga_title="Test Manga",

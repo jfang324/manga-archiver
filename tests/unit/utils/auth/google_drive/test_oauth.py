@@ -1,4 +1,5 @@
-from unittest.mock import MagicMock, patch
+from collections.abc import Generator
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import requests
@@ -29,7 +30,7 @@ MOCK_DEVICE_CODE = {
 
 
 @pytest.fixture
-def mock_auth_pipeline():
+def mock_auth_pipeline() -> Generator[tuple[MagicMock | AsyncMock, MagicMock | AsyncMock]]:
     """Set up the full auth pipeline for login tests."""
     with (
         patch(
@@ -52,7 +53,7 @@ def mock_auth_pipeline():
 
 
 class TestHandleAuthLogin:
-    def test_login_saves_token_and_returns_0_on_success(self, mock_auth_pipeline, capsys):
+    def test_login_saves_token_and_returns_0_on_success(self, mock_auth_pipeline, capsys) -> None:
         mock_fetch, mock_poll = mock_auth_pipeline
         mock_fetch.return_value = MOCK_DEVICE_CODE
         mock_poll.return_value = "test_refresh_token"
@@ -69,7 +70,7 @@ class TestHandleAuthLogin:
         assert saved_token["refresh_token"] == "test_refresh_token"  # noqa: S105
         assert saved_token["client_id"] == "test_client_id"
 
-    def test_login_returns_1_on_network_error(self, mock_auth_pipeline, capsys):
+    def test_login_returns_1_on_network_error(self, mock_auth_pipeline, capsys) -> None:
         mock_fetch, _ = mock_auth_pipeline
         mock_fetch.side_effect = requests.Timeout("Connection timed out")
 
@@ -78,7 +79,7 @@ class TestHandleAuthLogin:
         assert result == EXIT_AUTH_LOGIN_FAILED
         assert "Network error" in capsys.readouterr().out
 
-    def test_login_returns_1_on_http_error(self, mock_auth_pipeline, capsys):
+    def test_login_returns_1_on_http_error(self, mock_auth_pipeline, capsys) -> None:
         mock_fetch, _ = mock_auth_pipeline
         mock_fetch.side_effect = requests.HTTPError("500 Server Error")
 
@@ -89,7 +90,7 @@ class TestHandleAuthLogin:
 
 
 class TestHandleAuthLogout:
-    def test_logout_deletes_token_and_returns_0_on_success(self):
+    def test_logout_deletes_token_and_returns_0_on_success(self) -> None:
         with (
             patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token") as mock_load_token,
             patch("src.manga_archiver.utils.auth.google_drive.oauth.requests.post") as mock_post,
@@ -107,7 +108,7 @@ class TestHandleAuthLogout:
         assert result == EXIT_SUCCESS
         mock_delete_token.assert_called_once()
 
-    def test_logout_returns_1_on_network_error(self, capsys):
+    def test_logout_returns_1_on_network_error(self, capsys) -> None:
         with (
             patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token") as mock_load_token,
             patch("src.manga_archiver.utils.auth.google_drive.oauth.requests.post") as mock_post,

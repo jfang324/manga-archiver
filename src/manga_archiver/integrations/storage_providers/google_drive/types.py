@@ -20,8 +20,7 @@ def _truncate_for_app_properties(key: str, value: str) -> str:
     if len(value_bytes) <= max_value_bytes:
         return value
 
-    truncated = value_bytes[:max_value_bytes].decode("utf-8", errors="ignore")
-    return truncated
+    return value_bytes[:max_value_bytes].decode("utf-8", errors="ignore")
 
 
 class ClientNotInitializedError(Exception):

@@ -38,6 +38,7 @@ repos:
           - id: pip-audit
             name: pip-audit
             entry: poetry run pip-audit
+            args: ['--ignore-vul', 'CVE-2026-3219'] #pip 26.0.1 has vulnerability with no update as of 2026-04-26
             language: system
             pass_filenames: false
             always_run: true
