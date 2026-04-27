@@ -39,11 +39,37 @@ Run linting, type checking, formatting:
 make check
 ```
 
+## Project Layout
+
+```text
+manga-archiver/
+├── src/manga_archiver/
+│   ├── main.py                 # CLI entry point
+│   ├── app.py                  # Textual app root
+│   ├── pipeline_manager.py     # Pipeline orchestration
+│   ├── backlog_sync.py         # Backlog sync workflow
+│   ├── cli/                    # CLI parsing
+│   ├── constants/              # Shared constants
+│   ├── db/                     # SQLite setup and migrations
+│   ├── integrations/           # External providers
+│   ├── models/                 # Domain models
+│   ├── repositories/           # Persistence access
+│   ├── screens/                # Workflow orchestration
+│   ├── widgets/                # UI components
+│   ├── workers/                # Pipeline workers
+│   └── utils/                  # Shared utilities
+├── tests/unit/                 # Unit tests
+├── docs/                       # Documentation
+├── pyproject.toml              # Project config
+├── Makefile                    # Dev commands
+└── README.md                   # User guide
+```
+
 ## Architecture
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                    MangaArchiverApp (TUI)                                │
+│                        MangaArchiverApp (TUI)                            │
 └───────┬──────────────────────────────────────────────────────────────────┘
         │
         ▼
