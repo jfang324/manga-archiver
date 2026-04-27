@@ -18,7 +18,7 @@ class FavoriteRepository:
                 FavoriteManga(id=row[0], title=row[1], source=ContentSource(row[2])) for row in rows
             ]
 
-    def create_one(self, favorite_manga: FavoriteManga) -> None:
+    def create_one(self, favorite_manga: FavoriteManga) -> bool:
         """Add a manga to favorites."""
 
         with get_connection() as conn:
@@ -29,6 +29,7 @@ class FavoriteRepository:
             )
 
             conn.commit()
+            return cursor.rowcount > 0
 
     def delete_by_id(self, manga_id: str) -> None:
         """Remove a manga from favorites by ID."""
