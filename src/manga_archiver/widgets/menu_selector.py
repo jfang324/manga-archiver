@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -12,7 +14,7 @@ class MenuSelector(Widget):
     """A Menu widget for selecting a screen to display.
 
     Attributes:
-        options (list[MenuOption]): List of MenuOption objects to display
+        options (Sequence[MenuOption]): MenuOption objects to display
         title (str): Title of the widget
         description_title (str): Title of the description column
     """
@@ -72,7 +74,7 @@ class MenuSelector(Widget):
 
     def __init__(
         self,
-        menu_options: list[MenuOption],
+        menu_options: Sequence[MenuOption],
         title: str,
         description_title: str,
         **kwargs,
@@ -80,13 +82,13 @@ class MenuSelector(Widget):
         """Initialize the MenuSelector widget.
 
         Args:
-            menu_options: List of MenuOption objects to display
+            menu_options: MenuOption objects to display
             title: Title of the widget
             description_title: Title of the description column
         """
         super().__init__(**kwargs)
 
-        self._menu_options = menu_options or []
+        self._menu_options = menu_options
         self._title = title
         self._description_title = description_title
 
