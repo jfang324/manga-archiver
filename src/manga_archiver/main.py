@@ -40,6 +40,15 @@ class GoogleDriveInitResult:
     message: str | None = None
 
 
+@dataclass(frozen=True)
+class BacklogSyncResult:
+    """Result of backlog sync."""
+
+    backlog: list[FetchingResourcesJob] | None = None
+    exit_code: int | None = None
+    message: str | None = None
+
+
 def main() -> None:
     """CLI entry point - creates an event loop and runs the application."""
     asyncio.run(_async_main())
@@ -87,12 +96,13 @@ async def _async_main() -> None:
                 provider_manager=provider_manager,
                 app_config=app_config,
             )
-            if isinstance(backlog_result, tuple):
-                exit_code, message = backlog_result
+
+            if backlog_result.exit_code is not None:
+                exit_code, message = backlog_result.exit_code, backlog_result.message
                 print(message)
                 sys.exit(exit_code)
 
-            backlog = backlog_result
+            backlog = backlog_result.backlog
 
             app = _build_app(
                 pipeline_config=pipeline_config,
@@ -304,19 +314,19 @@ async def _load_backlog(
     google_drive_client: GoogleDriveClient | None,
     provider_manager: ContentProviderManager,
     app_config: AppConfig,
-) -> tuple[int, str] | list[FetchingResourcesJob]:
+) -> BacklogSyncResult:
     """Load backlog jobs from Google Drive + provider APIs.
 
     Returns:
         tuple[int, str] | list[FetchingResourcesJob]: A tuple containing the exit code and error message on failure, or a list of backlog jobs on success.
     """
     if not args.backlog:
-        return []
+        return BacklogSyncResult(backlog=[])
 
     if not google_drive_client:
-        return (
-            EXIT_INIT_ERROR,
-            "--backlog requires a Google Drive client, try running with --archive",
+        return BacklogSyncResult(
+            exit_code=EXIT_INIT_ERROR,
+            message="--backlog requires a Google Drive client, try running with --archive",
         )
 
     backlog_sync = BacklogSync(
@@ -326,7 +336,9 @@ async def _load_backlog(
         output_directory=app_config.output_path,
         output_format=app_config.output_format,
     )
-    return await backlog_sync.run()
+
+    backlog = await backlog_sync.run()
+    return BacklogSyncResult(backlog=backlog)
 
 
 if __name__ == "__main__":
