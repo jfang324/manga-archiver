@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class MenuOption:
     """Container for menu options with display and navigation data."""
 
@@ -10,7 +10,7 @@ class MenuOption:
     screen: str
 
 
-MENU_OPTIONS = [
+MENU_OPTIONS: tuple[MenuOption, ...] = (
     MenuOption(
         display_name="Search",
         description="Search for manga and download chapters.",
@@ -31,4 +31,4 @@ MENU_OPTIONS = [
         description="Configure the application settings.",
         screen="settings_screen",
     ),
-]
+)
