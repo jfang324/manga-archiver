@@ -76,6 +76,27 @@ class TestParseArgs:
         assert args.migrate_system == migrate_system
 
     @pytest.mark.parametrize(
+        ("argv", "expected_command", "expected_subcommand_name", "expected_subcommand"),
+        [
+            (["--archive", "auth", "login"], "auth", "auth_command", "login"),
+            (["--archive", "migrate", "database"], "migrate", "migrate_system", "database"),
+        ],
+        ids=["archive-auth-login", "archive-migrate-database"],
+    )
+    def test_parses_global_flags_with_subcommands(
+        self,
+        argv: list[str],
+        expected_command: str,
+        expected_subcommand_name: str,
+        expected_subcommand: str,
+    ) -> None:
+        args = parse_args(argv)
+
+        assert args.archive is True
+        assert args.command == expected_command
+        assert getattr(args, expected_subcommand_name) == expected_subcommand
+
+    @pytest.mark.parametrize(
         "argv",
         [["auth"], ["migrate"]],
         ids=["missing-auth-subcommand", "missing-migrate-subcommand"],
@@ -83,6 +104,12 @@ class TestParseArgs:
     def test_requires_nested_subcommands(self, argv: list[str]) -> None:
         with pytest.raises(SystemExit) as exc_info:
             parse_args(argv)
+
+        assert exc_info.value.code == ARGPARSE_USAGE_ERROR
+
+    def test_rejects_unknown_command(self) -> None:
+        with pytest.raises(SystemExit) as exc_info:
+            parse_args(["unknowncmd"])
 
         assert exc_info.value.code == ARGPARSE_USAGE_ERROR
 
