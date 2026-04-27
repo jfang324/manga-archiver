@@ -50,9 +50,10 @@ class NotificationWorker:
             try:
                 job: NotificationJob = await self._input_queue.get()
 
-                await self._do_work(job)
-
-                self._input_queue.task_done()
+                try:
+                    await self._do_work(job)
+                finally:
+                    self._input_queue.task_done()
             except asyncio.CancelledError:  # noqa: PERF203 - required for graceful shutdown of async worker
                 self._running = False
                 break
