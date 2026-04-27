@@ -6,6 +6,7 @@ def add_auth_parser(subparsers: _SubParsersAction) -> ArgumentParser:
     auth_parser = subparsers.add_parser("auth", help="Google Drive authentication")
     auth_subparsers = auth_parser.add_subparsers(
         dest="auth_command",
+        required=True,
         metavar="{login, logout}",
     )
 
@@ -20,6 +21,7 @@ def add_migrate_parser(subparsers: _SubParsersAction) -> ArgumentParser:
     migrate_parser = subparsers.add_parser("migrate", help="Run database migrations")
     migrate_subparsers = migrate_parser.add_subparsers(
         dest="migrate_system",
+        required=True,
         metavar="{database, google-drive}",
     )
 
