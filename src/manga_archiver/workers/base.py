@@ -80,14 +80,15 @@ class Worker(ABC):
                     while self._output_queue.full() and self._running:
                         await asyncio.sleep(0.1)
 
-                    if not self._running:
-                        break
+                if not self._running:
+                    break
 
                 job = await self._input_queue.get()
 
-                await self._process_job(job)
-
-                self._input_queue.task_done()
+                try:
+                    await self._process_job(job)
+                finally:
+                    self._input_queue.task_done()
             except TimeoutError:
                 if job is not None:
                     logger.error("Job timed out: %s", job.id)

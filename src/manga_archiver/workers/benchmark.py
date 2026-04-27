@@ -60,6 +60,9 @@ class BenchmarkManager:
     )
 
     def __init__(self) -> None:
+        if not tracemalloc.is_tracing():
+            tracemalloc.start()
+
         self._metrics: dict[str, BenchmarkMetric] = {}
 
     def record(self, job_id: str, status: JobStatus, start_ns: float, end_ns: float) -> None:
@@ -82,8 +85,8 @@ class BenchmarkManager:
 
     def _get_memory(self) -> float:
         """Get peak memory in MB using tracemalloc."""
-        _, current = tracemalloc.get_traced_memory()
-        return current / (1024 * 1024)
+        _, peak = tracemalloc.get_traced_memory()
+        return peak / (1024 * 1024)
 
     def _calculate_phase_times(
         self,

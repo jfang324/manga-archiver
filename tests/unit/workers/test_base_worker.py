@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -79,6 +80,25 @@ class TestBackoffCalculation:
 
 
 class TestRetryLogic:
+    @pytest.mark.asyncio
+    async def test_run_marks_job_done_when_processing_is_cancelled(self, mock_job) -> None:
+        input_queue = asyncio.Queue()
+        await input_queue.put(mock_job)
+
+        worker = ConcreteWorker(
+            worker_id="test_worker",
+            input_queue=input_queue,
+            output_queue=MagicMock(),
+            config=WorkerConfig(),
+            notification_queue=AsyncMock(),
+        )
+
+        worker._do_work = AsyncMock(side_effect=asyncio.CancelledError)
+
+        await worker.run()
+
+        await asyncio.wait_for(input_queue.join(), timeout=0.1)
+
     @pytest.mark.asyncio
     async def test_not_found_error_fails_immediately(self, mock_job) -> None:
         config = WorkerConfig(max_retries=3, base_delay=0)
