@@ -88,7 +88,7 @@ class MenuSelector(Widget):
         """
         super().__init__(**kwargs)
 
-        self._menu_options = menu_options or []
+        self._menu_options = menu_options
         self._title = title
         self._description_title = description_title
 
