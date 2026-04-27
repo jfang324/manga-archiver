@@ -13,6 +13,7 @@ from .constants.exit_codes import (
     EXIT_AUTH_ERROR,
     EXIT_INIT_ERROR,
     EXIT_MIGRATION_ERROR,
+    EXIT_RUNTIME_ERROR,
     EXIT_SUCCESS,
     EXIT_VALIDATION_ERROR,
 )
@@ -98,9 +99,8 @@ async def _async_main() -> None:
             )
 
             if backlog_result.exit_code is not None:
-                exit_code, message = backlog_result.exit_code, backlog_result.message
-                print(message)
-                sys.exit(exit_code)
+                print(backlog_result.message)
+                sys.exit(backlog_result.exit_code)
 
             backlog = backlog_result.backlog
 
@@ -115,11 +115,14 @@ async def _async_main() -> None:
                 auto_exit=args.auto_exit,
             )
 
+            try:
+                await app.run_async()
+            except Exception as e:
+                logger.error("Runtime error during app execution: %s", e)
+                sys.exit(EXIT_RUNTIME_ERROR)
     except Exception as e:
         logger.error("Failed to initialize: %s", e)
         sys.exit(EXIT_INIT_ERROR)
-
-    await app.run_async()
 
 
 def _handle_subcommands(args: Namespace, schema_manager: SchemaManager) -> int | None:
@@ -318,7 +321,7 @@ async def _load_backlog(
     """Load backlog jobs from Google Drive + provider APIs.
 
     Returns:
-        tuple[int, str] | list[FetchingResourcesJob]: A tuple containing the exit code and error message on failure, or a list of backlog jobs on success.
+        BacklogSyncResult: A tuple containing the exit code and error message on failure, or a list of backlog jobs on success.
     """
     if not args.backlog:
         return BacklogSyncResult(backlog=[])
