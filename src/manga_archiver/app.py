@@ -305,10 +305,13 @@ class MangaArchiverApp(App):
         favorite_manga: FavoriteManga = event.favorited_manga
 
         try:
-            self._favorite_repository.create_one(favorite_manga)
+            was_created = self._favorite_repository.create_one(favorite_manga)
         except Exception as e:
             logger.error("Failed to add %s to favorites: %s", favorite_manga.title, e)
             self.notify("Failed to add favorite", severity="error")
+            return
+
+        if not was_created:
             return
 
         self._favorites.append(favorite_manga)
