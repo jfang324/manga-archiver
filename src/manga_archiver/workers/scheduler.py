@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 class SchedulerConfig:
     """Configuration for rate-limit-aware job scheduling."""
 
-    acceptance_threshold: float = 0.25
+    acceptance_threshold: float = 0.15
     window_size: int = 20
-    expiry_seconds: float = 60.0
-    log_interval_seconds: float = 5.0
+    expiry_seconds: float = 120.0
+    log_interval_seconds: float = 5
     max_skips: int = 2
 
     def __post_init__(self) -> None:
