@@ -12,7 +12,7 @@ from .workers.jobs import FetchingResourcesJob
 
 logger = logging.getLogger(__name__)
 
-# 3 is a reasonable chunk size given the default pool sizes
+# Use a chunk size of 1 to interleave sources and reduce rate-limit hotspots.
 CHUNK_SIZE: int = 1
 
 
@@ -128,7 +128,7 @@ class BacklogSync:
         """Create FetchingResourcesJob for missing chapters.
 
         Jobs are interleaved in chunks to prevent rate limit hotspots.
-        e.g., [M1, M2, M3, A1, A2, A3, M4, M5, M6, A4, A5, A6, ...]
+        e.g., [M1, A1, M2, A2, M3, A3, M4, A4, ...]
 
         Returns:
             list[FetchingResourcesJob]: List of jobs to enqueue

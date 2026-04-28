@@ -171,7 +171,17 @@ class RateLimitAwareScheduler:
             await asyncio.sleep(0)
             return
 
-        await self._output_queue.put(queued_job.job)
+        dispatched = False
+        while self._running and not dispatched:
+            try:
+                await asyncio.wait_for(self._output_queue.put(queued_job.job), timeout=0.5)
+                dispatched = True
+            except asyncio.TimeoutError:  # noqa: PERF203
+                continue
+
+        if not dispatched:
+            return
+
         self._pending_jobs.popleft()
         self._record_dispatch(source)
         # Yield in case queue.put() doesn't have to wait, in which case it wouldn't yield control.
