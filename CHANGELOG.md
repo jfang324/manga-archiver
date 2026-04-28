@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.1] - 2026-04-28
 
-- Improved performance of backlog processing when multiple sources are used
+- Improved performances of large backlogs that use multiple providers
 - Fixed bug in favorites where duplicate entries would display
-- Updated dependencies
+- Updated all dependencies to secure versions based on pip-audit
 
 ## [1.2.0] - 2026-04-22
 
