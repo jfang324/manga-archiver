@@ -55,6 +55,9 @@ class _QueuedJob:
     skip_count: int = 0
 
 
+MAX_DRAIN_PER_TICK = 500
+
+
 class RateLimitAwareScheduler:
     """Soft-prioritizes jobs using recent per-source rate-limit feedback."""
 
@@ -106,7 +109,10 @@ class RateLimitAwareScheduler:
 
     def _drain_input(self) -> None:
         """Drain input queue into in-memory deque."""
-        while self._running:
+        for _ in range(MAX_DRAIN_PER_TICK):
+            if not self._running:
+                break
+
             try:
                 job = self._input_queue.get_nowait()
             except QueueEmpty:
@@ -117,7 +123,10 @@ class RateLimitAwareScheduler:
 
     def _drain_feedback(self) -> None:
         """Drain feedback queue into in-memory history."""
-        while self._running:
+        for _ in range(MAX_DRAIN_PER_TICK):
+            if not self._running:
+                break
+
             try:
                 feedback = self._feedback_queue.get_nowait()
             except QueueEmpty:
