@@ -12,6 +12,7 @@ from .jobs import Job, NotificationJob
 from .merge_worker import MergeWorker
 from .notification_worker import BenchmarkManager, NotificationWorker
 from .resolve_worker import ResolveWorker
+from .scheduler import SchedulerFeedback
 from .types import JobMetadata, JobStatus
 from .upload_worker import UploadWorker
 
@@ -45,6 +46,7 @@ class WorkerManager:
         download_client: DownloadClient,
         google_drive_client: GoogleDriveClient | None,
         on_status_update: Callable[[str, JobStatus, JobMetadata], None],
+        resolve_scheduler_feedback_queue: Queue[SchedulerFeedback] | None = None,
     ) -> None:
         """Initialize the worker manager.
 
@@ -63,6 +65,7 @@ class WorkerManager:
             download_client: Client for downloading images
             google_drive_client: Client for Google Drive uploads
             on_status_update: Callback for status updates
+            resolve_scheduler_feedback_queue: Optional queue for resolve scheduler feedback
         """
         self._resolve_pool: list[ResolveWorker] = [
             ResolveWorker(
@@ -72,6 +75,7 @@ class WorkerManager:
                 notification_queue=notification_queue,
                 config=WorkerConfig(),
                 provider_manager=provider_manager,
+                scheduler_feedback_queue=resolve_scheduler_feedback_queue,
             )
             for index in range(num_resolve_workers)
         ]

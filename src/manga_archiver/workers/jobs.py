@@ -17,6 +17,7 @@ class Job:
         chapter_title (str): The title of the chapter
         output_directory (Path): The directory to save output files
         output_format (OutputFormat): The output format (PDF, CBZ, etc.)
+        source (ContentSource): The content source (provider)
     """
 
     id: str
@@ -25,6 +26,7 @@ class Job:
     chapter_title: str
     output_directory: Path
     output_format: OutputFormat
+    source: ContentSource
 
 
 @dataclass
@@ -48,11 +50,9 @@ class FetchingResourcesJob(Job):
 
     Attributes:
         chapter_id (str): The ID of the chapter to fetch
-        source (ContentSource): The content source (provider)
     """
 
     chapter_id: str
-    source: ContentSource
 
 
 @dataclass
@@ -61,11 +61,9 @@ class DownloadingJob(Job):
 
     Attributes:
         urls (list[str]): List of image URLs to download
-        source (ContentSource): The content source (provider)
     """
 
     urls: list[str]
-    source: ContentSource
 
 
 @dataclass
@@ -74,11 +72,9 @@ class MergingJob(Job):
 
     Attributes:
         image_data (list[bytes]): List of image bytes to merge
-        source (ContentSource): The content source (provider)
     """
 
     image_data: list[bytes]
-    source: ContentSource
 
 
 @dataclass
@@ -88,9 +84,7 @@ class UploadJob(Job):
     Attributes:
         complete_file_data (bytes): The file bytes to upload
         full_name (str): The full name of the file to upload
-        source (ContentSource): The content source (provider)
     """
 
     complete_file_data: bytes
     full_name: str
-    source: ContentSource

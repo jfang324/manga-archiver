@@ -4,7 +4,7 @@ import time
 import tracemalloc
 from asyncio import Queue
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .constants.defaults import (
     DEFAULT_DOWNLOAD_RATE_LIMIT,
@@ -26,6 +26,7 @@ from .workers.jobs import (
     Job,
     NotificationJob,
 )
+from .workers.scheduler import RateLimitAwareScheduler, SchedulerConfig, SchedulerFeedback
 from .workers.types import JobMetadata, JobStatus
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,12 @@ class PipelineConfig:
         num_upload_workers (int): The number of upload workers to use
         resolve_rate_limit (int): Per-provider rate limit for resolve operations
         download_rate_limit (int): Per-provider rate limit for download operations
+        resolve_queue_size (int): Size of the resolve queue
+        download_queue_size (int): Size of the download queue
+        merge_queue_size (int): Size of the merge queue
+        upload_queue_size (int): Size of the upload queue
+        resolve_scheduler_enabled (bool): Whether to schedule resolve jobs before workers
+        resolve_scheduler_config (SchedulerConfig): Configuration for resolve job scheduling
         benchmark_enabled (bool): Whether to enable benchmark metrics collection
     """
 
@@ -53,9 +60,13 @@ class PipelineConfig:
     resolve_rate_limit: int = DEFAULT_PROVIDER_RATE_LIMIT
     download_rate_limit: int = DEFAULT_DOWNLOAD_RATE_LIMIT
 
+    resolve_queue_size: int = DEFAULT_QUEUE_SIZE
     download_queue_size: int = DEFAULT_QUEUE_SIZE
     merge_queue_size: int = DEFAULT_QUEUE_SIZE
     upload_queue_size: int = DEFAULT_QUEUE_SIZE
+
+    resolve_scheduler_enabled: bool = True
+    resolve_scheduler_config: SchedulerConfig = field(default_factory=SchedulerConfig)
 
     benchmark_enabled: bool = False
 
@@ -82,11 +93,30 @@ class PipelineManager:
             config: The configuration for the pipeline
             google_drive_client: The Google Drive client for uploading
         """
-        self._resolve_queue: Queue[Job] = Queue()
+        self._resolve_queue: Queue[Job] = Queue(
+            maxsize=config.resolve_queue_size if config.resolve_scheduler_enabled else 0
+        )
         self._download_queue: Queue[Job] = Queue(maxsize=config.download_queue_size)
         self._merge_queue: Queue[Job] = Queue(maxsize=config.merge_queue_size)
         self._upload_queue: Queue[Job] = Queue(maxsize=config.upload_queue_size)
         self._notification_queue: Queue[NotificationJob] = Queue()
+
+        self._pipeline_entry_queue: Queue[Job] = self._resolve_queue
+
+        self._resolve_scheduler: RateLimitAwareScheduler | None = None
+        self._resolve_scheduler_input_queue: Queue[Job] = Queue()
+        self._resolve_scheduler_feedback_queue: Queue[SchedulerFeedback] | None = None
+
+        if config.resolve_scheduler_enabled:
+            self._pipeline_entry_queue = self._resolve_scheduler_input_queue
+            self._resolve_scheduler_feedback_queue = Queue()
+
+            self._resolve_scheduler = RateLimitAwareScheduler(
+                input_queue=self._resolve_scheduler_input_queue,
+                output_queue=self._resolve_queue,
+                feedback_queue=self._resolve_scheduler_feedback_queue,
+                config=config.resolve_scheduler_config,
+            )
 
         self._job_statuses: dict[str, tuple[JobStatus, JobMetadata]] = {}
         self._job_expiry_queue: deque[tuple[float, str]] = deque()
@@ -107,6 +137,7 @@ class PipelineManager:
             download_client=download_client,
             google_drive_client=google_drive_client,
             on_status_update=self._on_status_update,
+            resolve_scheduler_feedback_queue=self._resolve_scheduler_feedback_queue,
         )
 
         self._benchmark_enabled = config.benchmark_enabled
@@ -199,13 +230,14 @@ class PipelineManager:
                 chapter_title=job.chapter_title,
                 output_directory=job.output_directory,
                 output_format=job.output_format,
+                source=job.source,
                 status=JobStatus.QUEUED,
             )
 
             await asyncio.gather(
                 *[
                     self._notification_queue.put(notification_job),
-                    self._resolve_queue.put(job),
+                    self._pipeline_entry_queue.put(job),
                 ]
             )
 
@@ -223,13 +255,21 @@ class PipelineManager:
         if self._benchmark_enabled:
             tracemalloc.start()
 
-        await self._worker_manager.start()
+        runnables = [self._worker_manager.start()]
+
+        if self._resolve_scheduler is not None:
+            runnables.append(self._resolve_scheduler.run())
+
+        await asyncio.gather(*runnables)
 
     def stop(self) -> None:
         """Stop all workers in the pipeline.
 
         Signals all workers to stop processing.
         """
+        if self._resolve_scheduler is not None:
+            self._resolve_scheduler.stop()
+
         self._worker_manager.stop()
 
     def get_benchmark_results(self) -> dict | None:
