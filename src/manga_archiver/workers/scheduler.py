@@ -86,7 +86,11 @@ class RateLimitAwareScheduler:
                 self._log_snapshot()
 
                 if not self._pending_jobs:
-                    job = await self._input_queue.get()
+                    try:
+                        job = await asyncio.wait_for(self._input_queue.get(), timeout=0.5)
+                    except asyncio.TimeoutError:
+                        continue
+
                     self._pending_jobs.append(_QueuedJob(job))
                     self._input_queue.task_done()
                     continue
