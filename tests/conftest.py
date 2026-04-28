@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.manga_archiver.models import ContentSource
 from src.manga_archiver.workers.jobs import Job
 
 
@@ -89,6 +90,7 @@ def mock_job() -> MagicMock:
     job.chapter_title = "Chapter 1"
     job.output_directory = MagicMock()
     job.output_format = MagicMock()
+    job.source = ContentSource.MANGADEX
     return job
 
 

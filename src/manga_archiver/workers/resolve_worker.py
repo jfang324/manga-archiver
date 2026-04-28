@@ -11,6 +11,7 @@ from .jobs import (
     JobStatus,
     NotificationJob,
 )
+from .scheduler import SchedulerFeedback
 
 
 class ResolveWorker(Worker):
@@ -28,6 +29,7 @@ class ResolveWorker(Worker):
         notification_queue: Queue[NotificationJob],
         config: WorkerConfig,
         provider_manager: ContentProviderManager,
+        scheduler_feedback_queue: Queue[SchedulerFeedback] | None = None,
     ) -> None:
         """Initialize the worker.
 
@@ -38,8 +40,16 @@ class ResolveWorker(Worker):
             notification_queue: The queue for notification jobs
             config: The configuration for the worker
             provider_manager: The content provider manager (handles rate limiting internally)
+            scheduler_feedback_queue: Optional queue for scheduler result feedback
         """
-        super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
+        super().__init__(
+            worker_id,
+            input_queue,
+            output_queue,
+            config,
+            notification_queue,
+            scheduler_feedback_queue,
+        )
 
         self._provider_manager = provider_manager
 

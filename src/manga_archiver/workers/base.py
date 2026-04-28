@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+import time
 from abc import ABC, abstractmethod
 from asyncio import CancelledError, Queue
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from ..integrations.exceptions import (
     RateLimitError,
 )
 from .jobs import Job, JobStatus, NotificationJob
+from .scheduler import SchedulerFeedback
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ class WorkerConfig:
     """
 
     max_retries: int = 5
-    base_delay: int = 2
+    base_delay: int = 5
     jitter: bool = False
     await_output_space: bool = False  # currently no way to set, still testing performance impact
 
@@ -49,6 +51,7 @@ class Worker(ABC):
         output_queue: Queue[Job] | None,
         config: WorkerConfig,
         notification_queue: Queue[NotificationJob],
+        scheduler_feedback_queue: Queue[SchedulerFeedback] | None = None,
     ) -> None:
         """Initialize the worker.
 
@@ -58,11 +61,13 @@ class Worker(ABC):
             output_queue: The output queue for the worker
             config: The configuration for the worker
             notification_queue: The queue for notification jobs
+            scheduler_feedback_queue: Optional queue for scheduler result feedback
         """
         self._id = worker_id
         self._input_queue = input_queue
         self._output_queue = output_queue
         self._notification_queue = notification_queue
+        self._scheduler_feedback_queue = scheduler_feedback_queue
 
         self._config = config
         self._running = False
@@ -113,9 +118,10 @@ class Worker(ABC):
 
             if not self._output_queue or not next_job:
                 await self._send_notification(job, JobStatus.COMPLETED)
-                return
+            else:
+                await self._output_queue.put(next_job)
 
-            await self._output_queue.put(next_job)
+            await self._send_scheduler_feedback(job, was_rate_limited=False)
         except NotFoundError:
             # 404: Fail fast, don't retry
             logger.error(
@@ -126,6 +132,8 @@ class Worker(ABC):
             await self._send_notification(job, JobStatus.FAILED)
             return
         except RateLimitError:
+            await self._send_scheduler_feedback(job, was_rate_limited=True)
+
             # 429: Retry with standard backoff
             if attempt < self._config.max_retries:
                 delay = self._calculate_backoff(attempt)
@@ -194,6 +202,18 @@ class Worker(ABC):
             await self._send_notification(job, JobStatus.FAILED)
             return
 
+    async def _send_scheduler_feedback(self, job: Job, was_rate_limited: bool) -> None:
+        if self._scheduler_feedback_queue is None:
+            return
+
+        await self._scheduler_feedback_queue.put(
+            SchedulerFeedback(
+                source=job.source,
+                was_rate_limited=was_rate_limited,
+                timestamp=time.monotonic(),
+            )
+        )
+
     async def _send_notification(
         self, job: Job, status: JobStatus, start_time: int = -1, end_time: int = -1
     ) -> None:
@@ -211,6 +231,7 @@ class Worker(ABC):
                 chapter_title=job.chapter_title,
                 output_directory=job.output_directory,
                 output_format=job.output_format,
+                source=job.source,
                 status=status,
                 start_time=start_time,
                 end_time=end_time,
