@@ -162,7 +162,7 @@ class RateLimitAwareScheduler:
 
         await self._output_queue.put(queued_job.job)
         self._pending_jobs.popleft()
-        # Yield so repeated skips do not monopolize the event loop.
+        # Yield in case queue.put() doesn't have to wait, in which case it wouldn't yield control.
         await asyncio.sleep(0)
 
         logger.debug(
