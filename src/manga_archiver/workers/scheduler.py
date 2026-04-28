@@ -18,7 +18,7 @@ class SchedulerConfig:
     acceptance_threshold: float = 0.15
     window_size: int = 20
     expiry_seconds: float = 120.0
-    log_interval_seconds: float = 5
+    log_interval_seconds: float = 5.0
     max_skips: int = 2
 
     def __post_init__(self) -> None:
