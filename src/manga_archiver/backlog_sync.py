@@ -13,7 +13,7 @@ from .workers.jobs import FetchingResourcesJob
 logger = logging.getLogger(__name__)
 
 # 3 is a reasonable chunk size given the default pool sizes
-CHUNK_SIZE: int = 3
+CHUNK_SIZE: int = 1
 
 
 @dataclass(frozen=True)

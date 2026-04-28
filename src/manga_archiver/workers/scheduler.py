@@ -20,6 +20,8 @@ class SchedulerConfig:
     expiry_seconds: float = 120.0
     log_interval_seconds: float = 5.0
     max_skips: int = 2
+    dispatch_balance_lead_floor: int = 3
+    dispatch_balance_lead_ratio: float = 0.20
 
     def __post_init__(self) -> None:
         if not 0 < self.acceptance_threshold <= 1:
@@ -36,6 +38,12 @@ class SchedulerConfig:
 
         if self.max_skips < 1:
             raise ValueError("max_skips must be greater than 0")
+
+        if self.dispatch_balance_lead_floor < 0:
+            raise ValueError("dispatch_balance_lead_floor must be greater than or equal to 0")
+
+        if not 0 <= self.dispatch_balance_lead_ratio <= 1:
+            raise ValueError("dispatch_balance_lead_ratio must be between 0 and 1")
 
 
 @dataclass(frozen=True)
@@ -75,6 +83,7 @@ class RateLimitAwareScheduler:
 
         self._pending_jobs: deque[_QueuedJob] = deque()
         self._feedback_history: dict[ContentSource, deque[SchedulerFeedback]] = {}
+        self._dispatched_by_source: dict[ContentSource, int] = {}
         self._running = False
         self._next_log_time = 0.0
 
@@ -145,7 +154,9 @@ class RateLimitAwareScheduler:
         source = queued_job.job.source
         required_skips = self._required_skips(source)
 
-        if queued_job.skip_count < required_skips:
+        if queued_job.skip_count < required_skips and self._has_alternate_source_with_headroom(
+            source
+        ):
             queued_job.skip_count += 1
             logger.debug(
                 "Scheduler requeued job %s for source %s; risk %.2f skip=%d/%d",
@@ -162,6 +173,7 @@ class RateLimitAwareScheduler:
 
         await self._output_queue.put(queued_job.job)
         self._pending_jobs.popleft()
+        self._record_dispatch(source)
         # Yield in case queue.put() doesn't have to wait, in which case it wouldn't yield control.
         await asyncio.sleep(0)
 
@@ -176,6 +188,38 @@ class RateLimitAwareScheduler:
             len(self._pending_jobs),
             self._output_queue.qsize(),
         )
+
+    def _source_has_dispatch_headroom(
+        self, source: ContentSource, baseline_source: ContentSource
+    ) -> bool:
+        """Return whether source can absorb work without getting too far ahead."""
+        total_dispatched = sum(self._dispatched_by_source.values())
+        allowed_lead = max(
+            self._config.dispatch_balance_lead_floor,
+            int(total_dispatched * self._config.dispatch_balance_lead_ratio),
+        )
+
+        source_dispatched = self._dispatched_by_source.get(source, 0)
+        baseline_dispatched = self._dispatched_by_source.get(baseline_source, 0)
+
+        return source_dispatched + 1 <= baseline_dispatched + allowed_lead
+
+    def _has_alternate_source_with_headroom(self, source: ContentSource) -> bool:
+        """Return whether another pending source can absorb a skipped slot."""
+        pending_sources = {
+            queued_job.job.source
+            for queued_job in self._pending_jobs
+            if queued_job.job.source != source
+        }
+
+        return any(
+            self._source_has_dispatch_headroom(alternate_source, source)
+            for alternate_source in pending_sources
+        )
+
+    def _record_dispatch(self, source: ContentSource) -> None:
+        """Record that a job for source was dispatched."""
+        self._dispatched_by_source[source] = self._dispatched_by_source.get(source, 0) + 1
 
     def _required_skips(self, source: ContentSource) -> int:
         """Expire outdated feedback and calculate required skips based on risk."""
