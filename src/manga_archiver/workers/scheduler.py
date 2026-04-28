@@ -160,8 +160,11 @@ class RateLimitAwareScheduler:
             await asyncio.sleep(0)
             return
 
-        self._pending_jobs.popleft()
         await self._output_queue.put(queued_job.job)
+        self._pending_jobs.popleft()
+        # Yield so repeated skips do not monopolize the event loop.
+        await asyncio.sleep(0)
+
         logger.debug(
             "Scheduler dispatched job %s for source %s; risk %.2f skips=%d/%d pending=%d "
             "output_queue=%d",
