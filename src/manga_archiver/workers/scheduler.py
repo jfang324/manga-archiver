@@ -147,6 +147,7 @@ class RateLimitAwareScheduler:
                 required_skips,
             )
             self._pending_jobs.append(self._pending_jobs.popleft())
+            # Yield so repeated skips do not monopolize the event loop.
             await asyncio.sleep(0)
             return
 
