@@ -17,7 +17,7 @@ from .constants.defaults import (
     DEFAULT_UPLOAD_WORKERS,
 )
 from .integrations.content_providers import ContentProviderManager
-from .integrations.storage_providers.google_drive import GoogleDriveClient
+from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from .models.output_format import OutputFormat
 from .utils import DownloadClient
 from .workers import WorkerManager
@@ -61,7 +61,9 @@ class PipelineConfig:
     download_rate_limit: int = DEFAULT_DOWNLOAD_RATE_LIMIT
 
     resolve_queue_size: int = DEFAULT_QUEUE_SIZE
-    download_queue_size: int = DEFAULT_QUEUE_SIZE
+    download_queue_size: int = (
+        DEFAULT_QUEUE_SIZE * 2
+    )  # download jobs are small and don't need much back-pressure; it's better to optimize rate limit usage
     merge_queue_size: int = DEFAULT_QUEUE_SIZE
     upload_queue_size: int = DEFAULT_QUEUE_SIZE
 
@@ -83,7 +85,7 @@ class PipelineManager:
         provider_manager: ContentProviderManager,
         download_client: DownloadClient,
         config: PipelineConfig,
-        google_drive_client: GoogleDriveClient | None = None,
+        google_drive_token: GoogleApiStoredToken | None = None,
     ) -> None:
         """Initialize the pipeline manager.
 
@@ -91,14 +93,12 @@ class PipelineManager:
             provider_manager: The content provider manager
             download_client: The client for downloading images
             config: The configuration for the pipeline
-            google_drive_client: The Google Drive client for uploading
+            google_drive_token: Token for creating Google Drive upload clients
         """
         self._resolve_queue: Queue[Job] = Queue(
             maxsize=config.resolve_queue_size if config.resolve_scheduler_enabled else 0
         )
-        self._download_queue: Queue[Job] = Queue(
-            maxsize=(2 * config.download_queue_size)
-        )  # resolve jobs are small and don't need much back-pressure; it's better to optimize rate limit usage
+        self._download_queue: Queue[Job] = Queue(maxsize=(config.download_queue_size))
         self._merge_queue: Queue[Job] = Queue(maxsize=config.merge_queue_size)
         self._upload_queue: Queue[Job] = Queue(maxsize=config.upload_queue_size)
         self._notification_queue: Queue[NotificationJob] = Queue()
@@ -137,7 +137,7 @@ class PipelineManager:
             benchmark_enabled=config.benchmark_enabled,
             provider_manager=provider_manager,
             download_client=download_client,
-            google_drive_client=google_drive_client,
+            google_drive_token=google_drive_token,
             on_status_update=self._on_status_update,
             resolve_scheduler_feedback_queue=self._resolve_scheduler_feedback_queue,
         )

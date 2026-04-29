@@ -21,6 +21,7 @@ from .db.migrations import DEFAULT_GOOGLE_DRIVE_VERSION
 from .db.schema_manager import MigrationError, SchemaManager
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
+from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from .models.app_config import AppConfig
 from .pipeline_manager import PipelineConfig
 from .repositories import FavoriteRepository
@@ -37,6 +38,7 @@ class GoogleDriveInitResult:
     """Result of Google Drive initialization."""
 
     client: GoogleDriveClient | None = None
+    token: GoogleApiStoredToken | None = None
     exit_code: int | None = None
     message: str | None = None
 
@@ -73,6 +75,7 @@ async def _async_main() -> None:
         sys.exit(exit_code)
 
     google_drive_client = None
+    google_drive_token = None
 
     if google_drive_enabled:
         init_result = _initialize_google_drive(schema_manager)
@@ -83,6 +86,7 @@ async def _async_main() -> None:
             sys.exit(init_result.exit_code)
 
         google_drive_client = init_result.client
+        google_drive_token = init_result.token
 
     try:
         pipeline_config, app_config = _build_configurations(args)
@@ -108,7 +112,7 @@ async def _async_main() -> None:
                 pipeline_config=pipeline_config,
                 app_config=app_config,
                 favorite_repository=favorite_repository,
-                google_drive_client=google_drive_client,
+                google_drive_token=google_drive_token,
                 backlog=backlog,
                 provider_manager=provider_manager,
                 download_client=download_client,
@@ -248,7 +252,7 @@ def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDriveInitRe
             message="Failed to initialize Google Drive. Run: manga-archiver auth logout && auth login",
         )
 
-    return GoogleDriveInitResult(client=google_drive_client)
+    return GoogleDriveInitResult(client=google_drive_client, token=token)
 
 
 def _build_configurations(args: Namespace) -> tuple[PipelineConfig, AppConfig]:
@@ -292,7 +296,7 @@ def _build_app(
     pipeline_config: PipelineConfig,
     app_config: AppConfig,
     favorite_repository: FavoriteRepository,
-    google_drive_client: GoogleDriveClient | None,
+    google_drive_token: GoogleApiStoredToken | None,
     backlog: list[FetchingResourcesJob] | None,
     provider_manager: ContentProviderManager,
     download_client: DownloadClient,
@@ -303,7 +307,7 @@ def _build_app(
         pipeline_config=pipeline_config,
         app_config=app_config,
         favorite_repository=favorite_repository,
-        google_drive_client=google_drive_client,
+        google_drive_token=google_drive_token,
         backlog=backlog,
         provider_manager=provider_manager,
         download_client=download_client,

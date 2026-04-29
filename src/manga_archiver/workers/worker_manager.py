@@ -5,6 +5,7 @@ from collections.abc import Callable
 
 from ..integrations.content_providers import ContentProviderManager
 from ..integrations.storage_providers.google_drive import GoogleDriveClient
+from ..integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
 from .download_worker import DownloadWorker
@@ -44,7 +45,7 @@ class WorkerManager:
         benchmark_enabled: bool,
         provider_manager: ContentProviderManager,
         download_client: DownloadClient,
-        google_drive_client: GoogleDriveClient | None,
+        google_drive_token: GoogleApiStoredToken | None,
         on_status_update: Callable[[str, JobStatus, JobMetadata], None],
         resolve_scheduler_feedback_queue: Queue[SchedulerFeedback] | None = None,
     ) -> None:
@@ -63,7 +64,7 @@ class WorkerManager:
             benchmark_enabled: Whether to enable benchmarking
             provider_manager: Content provider manager
             download_client: Client for downloading images
-            google_drive_client: Client for Google Drive uploads
+            google_drive_token: Token for creating Google Drive upload clients
             on_status_update: Callback for status updates
             resolve_scheduler_feedback_queue: Optional queue for resolve scheduler feedback
         """
@@ -97,7 +98,7 @@ class WorkerManager:
             MergeWorker(
                 worker_id=f"merge_worker_{index}",
                 input_queue=merge_queue,
-                output_queue=upload_queue if google_drive_client else None,
+                output_queue=upload_queue if google_drive_token else None,
                 notification_queue=notification_queue,
                 config=WorkerConfig(),
                 multi_format_exporter=MultiFormatExporter(),
@@ -107,7 +108,7 @@ class WorkerManager:
 
         self._upload_pool: list[UploadWorker] = []
 
-        if google_drive_client:
+        if google_drive_token:
             self._upload_pool = [
                 UploadWorker(
                     worker_id=f"upload_worker_{index}",
@@ -115,7 +116,7 @@ class WorkerManager:
                     output_queue=None,
                     notification_queue=notification_queue,
                     config=WorkerConfig(),
-                    google_drive_client=google_drive_client,
+                    google_drive_client=GoogleDriveClient(google_drive_token),
                 )
                 for index in range(num_upload_workers)
             ]

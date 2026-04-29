@@ -12,7 +12,7 @@ from .constants.defaults import (
     DEFAULT_AUTO_EXIT_POLL_INTERVAL,
 )
 from .integrations.content_providers import ContentProviderManager
-from .integrations.storage_providers.google_drive import GoogleDriveClient
+from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from .models.app_config import AppConfig
 from .pipeline_manager import PipelineConfig, PipelineManager
 from .repositories import FavoriteRepository
@@ -43,7 +43,7 @@ class MangaArchiverApp(App):
         _pipeline_config (PipelineConfig): The pipeline configuration
         _pipeline_manager (PipelineManager | None): The pipeline manager instance
         _favorite_repository (FavoriteRepository): The favorite repository
-        _google_drive_client (GoogleDriveClient | None): The Google Drive client
+        _google_drive_token (GoogleApiStoredToken | None): Token for Google Drive clients
         _provider_manager (ContentProviderManager): The content provider manager
         _download_client (DownloadClient): The download client
         _backlog (list[FetchingResourcesJob] | None): The backlog of missing chapters
@@ -73,7 +73,7 @@ class MangaArchiverApp(App):
         favorite_repository: FavoriteRepository,
         provider_manager: ContentProviderManager,
         download_client: DownloadClient,
-        google_drive_client: GoogleDriveClient | None = None,
+        google_drive_token: GoogleApiStoredToken | None = None,
         backlog: list[FetchingResourcesJob] | None = None,
         auto_exit: bool = False,
         **kwargs,
@@ -84,7 +84,7 @@ class MangaArchiverApp(App):
             pipeline_config: The pipeline configuration
             app_config: The application configuration
             favorite_repository: The favorite repository
-            google_drive_client: The Google Drive client
+            google_drive_token: Token for creating Google Drive clients
             backlog: Pre-fetched jobs to enqueue when pipeline starts
             provider_manager: Content provider manager (injected)
             download_client: Download client (injected)
@@ -99,7 +99,7 @@ class MangaArchiverApp(App):
 
         self._pipeline_manager: PipelineManager | None = None
         self._favorite_repository = favorite_repository
-        self._google_drive_client = google_drive_client
+        self._google_drive_token = google_drive_token
         self._provider_manager = provider_manager
         self._download_client = download_client
 
@@ -143,7 +143,7 @@ class MangaArchiverApp(App):
             self._provider_manager,
             self._download_client,
             self._pipeline_config,
-            google_drive_client=self._google_drive_client,
+            google_drive_token=self._google_drive_token,
         )
 
         if self._backlog:
