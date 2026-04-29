@@ -10,6 +10,8 @@ from .jobs import Job
 
 logger = logging.getLogger(__name__)
 
+MAX_DRAIN_PER_TICK = 500
+
 
 @dataclass(frozen=True)
 class SchedulerConfig:
@@ -18,10 +20,7 @@ class SchedulerConfig:
     acceptance_threshold: float = 0.15
     window_size: int = 20
     expiry_seconds: float = 120.0
-    log_interval_seconds: float = 5.0
     max_skips: int = 2
-    dispatch_balance_lead_floor: int = 3
-    dispatch_balance_lead_ratio: float = 0.20
 
     def __post_init__(self) -> None:
         if not 0 < self.acceptance_threshold <= 1:
@@ -33,17 +32,8 @@ class SchedulerConfig:
         if self.expiry_seconds <= 0:
             raise ValueError("expiry_seconds must be greater than 0")
 
-        if self.log_interval_seconds <= 0:
-            raise ValueError("log_interval_seconds must be greater than 0")
-
         if self.max_skips < 1:
             raise ValueError("max_skips must be greater than 0")
-
-        if self.dispatch_balance_lead_floor < 0:
-            raise ValueError("dispatch_balance_lead_floor must be greater than or equal to 0")
-
-        if not 0 <= self.dispatch_balance_lead_ratio <= 1:
-            raise ValueError("dispatch_balance_lead_ratio must be between 0 and 1")
 
 
 @dataclass(frozen=True)
@@ -53,17 +43,6 @@ class SchedulerFeedback:
     source: ContentSource
     was_rate_limited: bool
     timestamp: float
-
-
-@dataclass
-class _QueuedJob:
-    """Container for queued jobs with skip count."""
-
-    job: Job
-    skip_count: int = 0
-
-
-MAX_DRAIN_PER_TICK = 500
 
 
 class RateLimitAwareScheduler:
@@ -81,9 +60,11 @@ class RateLimitAwareScheduler:
         self._feedback_queue = feedback_queue
         self._config = config
 
-        self._pending_jobs: deque[_QueuedJob] = deque()
+        self._pending_by_source: dict[ContentSource, deque[Job]] = {}
+        self._skip_count_by_source: dict[ContentSource, int] = {}
         self._feedback_history: dict[ContentSource, deque[SchedulerFeedback]] = {}
-        self._dispatched_by_source: dict[ContentSource, int] = {}
+        self._sources: list[ContentSource] = []
+        self._source_index = 0
         self._running = False
         self._next_log_time = 0.0
 
@@ -95,15 +76,14 @@ class RateLimitAwareScheduler:
             try:
                 self._drain_feedback()
                 self._drain_input()
-                self._log_snapshot()
 
-                if not self._pending_jobs:
+                if not self._has_other_pending_source():
                     try:
                         job = await asyncio.wait_for(self._input_queue.get(), timeout=0.5)
                     except asyncio.TimeoutError:
                         continue
 
-                    self._pending_jobs.append(_QueuedJob(job))
+                    self._add_pending_job(job)
                     self._input_queue.task_done()
                     continue
 
@@ -117,7 +97,7 @@ class RateLimitAwareScheduler:
         self._running = False
 
     def _drain_input(self) -> None:
-        """Drain input queue into in-memory deque."""
+        """Drain input queue into per-source pending queues."""
         for _ in range(MAX_DRAIN_PER_TICK):
             if not self._running:
                 break
@@ -127,7 +107,7 @@ class RateLimitAwareScheduler:
             except QueueEmpty:
                 return
 
-            self._pending_jobs.append(_QueuedJob(job))
+            self._add_pending_job(job)
             self._input_queue.task_done()
 
     def _drain_feedback(self) -> None:
@@ -150,31 +130,39 @@ class RateLimitAwareScheduler:
 
     async def _schedule_next_job(self) -> None:
         """Schedule next job based on thresholds and history."""
-        queued_job = self._pending_jobs[0]
-        source = queued_job.job.source
-        required_skips = self._required_skips(source)
-
-        if queued_job.skip_count < required_skips and self._has_alternate_source_with_headroom(
-            source
-        ):
-            queued_job.skip_count += 1
-            logger.debug(
-                "Scheduler requeued job %s for source %s; risk %.2f skip=%d/%d",
-                queued_job.job.id,
-                source,
-                self._rate_limit_percentage(source),
-                queued_job.skip_count,
-                required_skips,
-            )
-            self._pending_jobs.append(self._pending_jobs.popleft())
-            # Yield so repeated skips do not monopolize the event loop.
+        if not self._sources:
             await asyncio.sleep(0)
             return
 
+        source = self._sources[self._source_index]
+        self._source_index = (self._source_index + 1) % len(self._sources)
+
+        source_jobs = self._pending_by_source.get(source)
+        if not source_jobs:
+            await asyncio.sleep(0)
+            return
+
+        required_skips = self._required_skips(source)
+        current_skips = self._skip_count_by_source[source]
+
+        if current_skips < required_skips and self._has_other_pending_source(source):
+            self._skip_count_by_source[source] = current_skips + 1
+            logger.debug(
+                "Scheduler skipped hot source %s; risk %.2f skip=%d/%d pending=%d",
+                source,
+                self._rate_limit_percentage(source),
+                current_skips + 1,
+                required_skips,
+                self._pending_count(),
+            )
+            await asyncio.sleep(0)
+            return
+
+        job = source_jobs[0]
         dispatched = False
         while self._running and not dispatched:
             try:
-                await asyncio.wait_for(self._output_queue.put(queued_job.job), timeout=0.5)
+                await asyncio.wait_for(self._output_queue.put(job), timeout=0.5)
                 dispatched = True
             except asyncio.TimeoutError:  # noqa: PERF203
                 continue
@@ -182,54 +170,45 @@ class RateLimitAwareScheduler:
         if not dispatched:
             return
 
-        self._pending_jobs.popleft()
-        self._record_dispatch(source)
-        # Yield in case queue.put() doesn't have to wait, in which case it wouldn't yield control.
+        source_jobs.popleft()
+        self._skip_count_by_source[source] = 0
+
         await asyncio.sleep(0)
 
         logger.debug(
-            "Scheduler dispatched job %s for source %s; risk %.2f skips=%d/%d pending=%d "
-            "output_queue=%d",
-            queued_job.job.id,
+            "Scheduler dispatched job %s for source %s; risk %.2f skips=%d/%d "
+            "pending=%d output_queue=%d",
+            job.id,
             source,
             self._rate_limit_percentage(source),
-            queued_job.skip_count,
+            current_skips,
             required_skips,
-            len(self._pending_jobs),
+            self._pending_count(),
             self._output_queue.qsize(),
         )
 
-    def _source_has_dispatch_headroom(
-        self, source: ContentSource, baseline_source: ContentSource
-    ) -> bool:
-        """Return whether source can absorb work without getting too far ahead."""
-        total_dispatched = sum(self._dispatched_by_source.values())
-        allowed_lead = max(
-            self._config.dispatch_balance_lead_floor,
-            int(total_dispatched * self._config.dispatch_balance_lead_ratio),
-        )
+    def _add_pending_job(self, job: Job) -> None:
+        """Add job to its source queue and track source."""
+        source_jobs = self._pending_by_source.setdefault(job.source, deque())
+        source_jobs.append(job)
+        self._skip_count_by_source.setdefault(job.source, 0)
 
-        source_dispatched = self._dispatched_by_source.get(source, 0)
-        baseline_dispatched = self._dispatched_by_source.get(baseline_source, 0)
+        if job.source not in self._sources:
+            self._sources.append(job.source)
 
-        return source_dispatched + 1 <= baseline_dispatched + allowed_lead
+    def _has_other_pending_source(self, source: ContentSource | None = None) -> bool:
+        """Check for pending jobs.
 
-    def _has_alternate_source_with_headroom(self, source: ContentSource) -> bool:
-        """Return whether another pending source can absorb a skipped slot."""
-        pending_sources = {
-            queued_job.job.source
-            for queued_job in self._pending_jobs
-            if queued_job.job.source != source
-        }
+        If source is None: return whether ANY source has pending jobs.
+        If source is provided: return whether ANY OTHER source has pending jobs.
+        """
+        if source is None:
+            return any(self._pending_by_source.values())
+        return any(s != source and bool(jobs) for s, jobs in self._pending_by_source.items())
 
-        return any(
-            self._source_has_dispatch_headroom(alternate_source, source)
-            for alternate_source in pending_sources
-        )
-
-    def _record_dispatch(self, source: ContentSource) -> None:
-        """Record that a job for source was dispatched."""
-        self._dispatched_by_source[source] = self._dispatched_by_source.get(source, 0) + 1
+    def _pending_count(self) -> int:
+        """Return total pending job count."""
+        return sum(len(source_jobs) for source_jobs in self._pending_by_source.values())
 
     def _required_skips(self, source: ContentSource) -> int:
         """Expire outdated feedback and calculate required skips based on risk."""
@@ -264,37 +243,3 @@ class RateLimitAwareScheduler:
 
             if not history:
                 del self._feedback_history[source]
-
-    def _log_snapshot(self) -> None:
-        """Log snapshot of pending jobs and skip counts."""
-        now = time.monotonic()
-        if now < self._next_log_time:
-            return
-
-        self._next_log_time = now + self._config.log_interval_seconds
-
-        pending_by_source: dict[ContentSource, int] = {}
-        skipped_count = 0
-
-        for queued_job in self._pending_jobs:
-            pending_by_source[queued_job.job.source] = (
-                pending_by_source.get(queued_job.job.source, 0) + 1
-            )
-            if queued_job.skip_count > 0:
-                skipped_count += 1
-
-        risk_by_source = {
-            source: round(self._rate_limit_percentage(source), 2)
-            for source in sorted(self._feedback_history, key=lambda item: item.value)
-        }
-
-        logger.debug(
-            "Scheduler snapshot: pending=%d by_source=%s skipped=%d output_queue=%d "
-            "feedback_queue=%d risk=%s",
-            len(self._pending_jobs),
-            pending_by_source,
-            skipped_count,
-            self._output_queue.qsize(),
-            self._feedback_queue.qsize(),
-            risk_by_source,
-        )

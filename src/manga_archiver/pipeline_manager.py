@@ -96,7 +96,9 @@ class PipelineManager:
         self._resolve_queue: Queue[Job] = Queue(
             maxsize=config.resolve_queue_size if config.resolve_scheduler_enabled else 0
         )
-        self._download_queue: Queue[Job] = Queue(maxsize=config.download_queue_size)
+        self._download_queue: Queue[Job] = Queue(
+            maxsize=(2 * config.download_queue_size)
+        )  # resolve jobs are small and don't need much back-pressure; it's better to optimize rate limit usage
         self._merge_queue: Queue[Job] = Queue(maxsize=config.merge_queue_size)
         self._upload_queue: Queue[Job] = Queue(maxsize=config.upload_queue_size)
         self._notification_queue: Queue[NotificationJob] = Queue()
