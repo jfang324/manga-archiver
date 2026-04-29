@@ -263,6 +263,10 @@ def _build_configurations(args: Namespace) -> tuple[PipelineConfig, AppConfig]:
         num_merge_workers=args.merge_workers,
         resolve_rate_limit=args.resolve_rate_limit,
         download_rate_limit=args.download_rate_limit,
+        resolve_queue_size=args.queue_size,
+        download_queue_size=args.queue_size * 2,
+        merge_queue_size=args.queue_size,
+        upload_queue_size=args.queue_size,
         benchmark_enabled=args.benchmark,
     )
     app_config = load_settings()
