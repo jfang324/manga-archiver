@@ -1,7 +1,19 @@
 from asyncio import Queue
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
+from src.manga_archiver.integrations.storage_providers.google_drive.types import (
+    GoogleApiStoredToken,
+)
 from src.manga_archiver.workers import WorkerManager
+
+
+def _token() -> GoogleApiStoredToken:
+    return {
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "client_id": "client-id",
+        "client_secret": "client-secret",
+        "refresh_token": "refresh-token",
+    }
 
 
 class TestWorkerManagerInit:
@@ -23,7 +35,7 @@ class TestWorkerManagerInit:
             benchmark_enabled=False,
             provider_manager=mock_provider_manager,
             download_client=mock_download_client,
-            google_drive_client=None,
+            google_drive_token=None,
             on_status_update=mock_callback,
         )
 
@@ -32,10 +44,12 @@ class TestWorkerManagerInit:
         assert len(manager.merge_pool) == 2
         assert len(manager.upload_pool) == 0
 
-    def test_creates_upload_pool_when_google_drive_provided(self) -> None:
+    @patch("src.manga_archiver.workers.worker_manager.GoogleDriveClient")
+    def test_creates_upload_pool_when_google_drive_provided(
+        self, mock_google_drive_client: MagicMock
+    ) -> None:
         mock_provider_manager = MagicMock()
         mock_download_client = MagicMock()
-        mock_google_drive = MagicMock()
         mock_callback = MagicMock()
 
         manager = WorkerManager(
@@ -51,11 +65,12 @@ class TestWorkerManagerInit:
             benchmark_enabled=False,
             provider_manager=mock_provider_manager,
             download_client=mock_download_client,
-            google_drive_client=mock_google_drive,
+            google_drive_token=_token(),
             on_status_update=mock_callback,
         )
 
         assert len(manager.upload_pool) == 2
+        assert mock_google_drive_client.call_count == 2
 
     def test_creates_notification_worker(self) -> None:
         mock_provider_manager = MagicMock()
@@ -75,7 +90,7 @@ class TestWorkerManagerInit:
             benchmark_enabled=False,
             provider_manager=mock_provider_manager,
             download_client=mock_download_client,
-            google_drive_client=None,
+            google_drive_token=None,
             on_status_update=mock_callback,
         )
 
@@ -99,7 +114,7 @@ class TestWorkerManagerInit:
             benchmark_enabled=True,
             provider_manager=mock_provider_manager,
             download_client=mock_download_client,
-            google_drive_client=None,
+            google_drive_token=None,
             on_status_update=mock_callback,
         )
 
@@ -128,7 +143,7 @@ class TestWorkerManagerWiring:
             benchmark_enabled=False,
             provider_manager=mock_provider_manager,
             download_client=mock_download_client,
-            google_drive_client=None,
+            google_drive_token=None,
             on_status_update=mock_callback,
         )
 
@@ -158,7 +173,7 @@ class TestWorkerManagerWiring:
             benchmark_enabled=False,
             provider_manager=MagicMock(),
             download_client=mock_download_client,
-            google_drive_client=None,
+            google_drive_token=None,
             on_status_update=mock_callback,
         )
 
@@ -187,7 +202,7 @@ class TestWorkerManagerWiring:
             benchmark_enabled=False,
             provider_manager=MagicMock(),
             download_client=MagicMock(),
-            google_drive_client=None,
+            google_drive_token=None,
             on_status_update=mock_callback,
         )
 
@@ -196,11 +211,15 @@ class TestWorkerManagerWiring:
             assert worker._output_queue is None
             assert worker._notification_queue is notify_q
 
-    def test_upload_workers_wired_correctly_when_google_drive_enabled(self) -> None:
+    @patch("src.manga_archiver.workers.worker_manager.GoogleDriveClient")
+    def test_upload_workers_wired_correctly_when_google_drive_enabled(
+        self, mock_google_drive_client: MagicMock
+    ) -> None:
         upload_q = Queue()
         notify_q = Queue()
-        mock_gdrive = MagicMock()
         mock_callback = MagicMock()
+        clients = [MagicMock(), MagicMock()]
+        mock_google_drive_client.side_effect = clients
 
         manager = WorkerManager(
             resolve_queue=Queue(),
@@ -215,15 +234,48 @@ class TestWorkerManagerWiring:
             benchmark_enabled=False,
             provider_manager=MagicMock(),
             download_client=MagicMock(),
-            google_drive_client=mock_gdrive,
+            google_drive_token=_token(),
             on_status_update=mock_callback,
         )
+
+        assert mock_google_drive_client.call_count == 2
+        assert manager.upload_pool[0]._google_drive_client is clients[0]
+        assert manager.upload_pool[1]._google_drive_client is clients[1]
 
         for worker in manager.upload_pool:
             assert worker._input_queue is upload_q
             assert worker._output_queue is None
             assert worker._notification_queue is notify_q
-            assert worker._google_drive_client is mock_gdrive
+
+    @patch("src.manga_archiver.workers.worker_manager.GoogleDriveClient")
+    def test_merge_workers_route_to_upload_queue_when_google_drive_enabled(
+        self, mock_google_drive_client: MagicMock
+    ) -> None:
+        merge_q = Queue()
+        upload_q = Queue()
+        notify_q = Queue()
+
+        manager = WorkerManager(
+            resolve_queue=Queue(),
+            download_queue=Queue(),
+            merge_queue=merge_q,
+            upload_queue=upload_q,
+            notification_queue=notify_q,
+            num_resolve_workers=1,
+            num_download_workers=1,
+            num_merge_workers=2,
+            num_upload_workers=1,
+            benchmark_enabled=False,
+            provider_manager=MagicMock(),
+            download_client=MagicMock(),
+            google_drive_token=_token(),
+            on_status_update=MagicMock(),
+        )
+
+        for worker in manager.merge_pool:
+            assert worker._input_queue is merge_q
+            assert worker._output_queue is upload_q
+        mock_google_drive_client.assert_called_once_with(_token())
 
     def test_notification_worker_receives_all_notifications(self) -> None:
         resolve_q = Queue()
@@ -245,7 +297,7 @@ class TestWorkerManagerWiring:
             benchmark_enabled=False,
             provider_manager=MagicMock(),
             download_client=MagicMock(),
-            google_drive_client=None,
+            google_drive_token=None,
             on_status_update=mock_callback,
         )
 

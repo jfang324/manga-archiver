@@ -56,7 +56,7 @@ class TestPipelineValidation:
             provider_manager=MagicMock(),
             download_client=MagicMock(),
             config=PipelineConfig(),
-            google_drive_client=None,
+            google_drive_token=None,
         )
 
         with pytest.raises(ValueError, match=expected_error_message):

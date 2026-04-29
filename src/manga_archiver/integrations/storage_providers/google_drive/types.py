@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypedDict
 
+from ....utils.auth.google_drive.types import GoogleApiStoredToken as GoogleApiStoredToken
+
 MAX_APP_PROPERTY_BYTES = 124
 
 
@@ -25,15 +27,6 @@ def _truncate_for_app_properties(key: str, value: str) -> str:
 
 class ClientNotInitializedError(Exception):
     """Raised when client methods are called before initialize()."""
-
-
-class GoogleApiStoredToken(TypedDict):
-    """Token data for google.oauth2.credentials.Credentials."""
-
-    token_uri: str
-    client_id: str
-    client_secret: str
-    refresh_token: str
 
 
 class GoogleDriveDirectory(TypedDict):

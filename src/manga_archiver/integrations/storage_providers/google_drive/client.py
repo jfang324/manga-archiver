@@ -2,6 +2,7 @@ import asyncio
 import io
 from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -49,6 +50,10 @@ class _MangaFolderKey:
 class GoogleDriveClient:
     """Client for interacting with Google Drive API for cloud storage. Must call initialize() after construction before using other methods."""
 
+    _root_folder_id: ClassVar[str | None] = None
+    _folder_cache: ClassVar[dict[_MangaFolderKey, str]] = {}
+    _folder_cache_lock: ClassVar[asyncio.Lock] = asyncio.Lock()
+
     def __init__(
         self,
         stored_token: GoogleApiStoredToken,
@@ -68,8 +73,6 @@ class GoogleDriveClient:
             token_uri=stored_token["token_uri"],
         )
         self._service = build("drive", "v3", credentials=self._credentials)
-        self._root_folder_id: str | None = None
-        self._folder_cache: dict[_MangaFolderKey, str] = {}
         self._max_retries = max_retries
 
     def initialize(self) -> InitResult:
@@ -87,18 +90,18 @@ class GoogleDriveClient:
         was_created = False
         for folder in root_folders:
             if folder["name"] == ROOT_FOLDER_NAME:
-                self._root_folder_id = folder["id"]
+                GoogleDriveClient._root_folder_id = folder["id"]
                 break
 
-        if not self._root_folder_id:
+        if not GoogleDriveClient._root_folder_id:
             root_metadata = GoogleDriveFolderMetadata(source=SYSTEM_SOURCE)
-            self._root_folder_id = self._create_folder_sync(
+            GoogleDriveClient._root_folder_id = self._create_folder_sync(
                 ROOT_FOLDER_NAME, folder_metadata=root_metadata
             )
             was_created = True
 
         sub_folders = self._get_sub_folders(
-            self._root_folder_id, page_size=DEFAULT_SUB_FOLDER_PAGE_SIZE
+            GoogleDriveClient._root_folder_id, page_size=DEFAULT_SUB_FOLDER_PAGE_SIZE
         )
 
         cached_count = 0
@@ -113,11 +116,11 @@ class GoogleDriveClient:
                 continue
 
             cache_key = _MangaFolderKey(metadata.source, folder["name"])
-            self._folder_cache[cache_key] = folder["id"]
+            GoogleDriveClient._folder_cache[cache_key] = folder["id"]
             cached_count += 1
 
         return InitResult(
-            root_folder_id=self._root_folder_id,
+            root_folder_id=GoogleDriveClient._root_folder_id,
             cached_folder_count=cached_count,
             was_created=was_created,
         )
@@ -244,25 +247,37 @@ class GoogleDriveClient:
         """
         cache_key = _MangaFolderKey(source, manga_title)
 
-        if cache_key in self._folder_cache:
-            return self._folder_cache[cache_key]
+        cached_folder_id = GoogleDriveClient._folder_cache.get(cache_key)
+        if cached_folder_id:
+            return cached_folder_id
 
-        if not self._root_folder_id:
+        if not GoogleDriveClient._root_folder_id:
             raise ClientNotInitializedError("Client not initialized. Call initialize() first.")
 
-        existing_id = await asyncio.to_thread(
-            self._search_folder_by_name, manga_title, self._root_folder_id, source
-        )
+        async with GoogleDriveClient._folder_cache_lock:
+            cached_folder_id = GoogleDriveClient._folder_cache.get(cache_key)
+            if cached_folder_id:
+                return cached_folder_id
 
-        if existing_id:
-            self._folder_cache[cache_key] = existing_id
-            return existing_id
+            existing_id = await asyncio.to_thread(
+                self._search_folder_by_name,
+                manga_title,
+                GoogleDriveClient._root_folder_id,
+                source,
+            )
 
-        folder_metadata = GoogleDriveFolderMetadata(source=source)
-        folder_id = await asyncio.to_thread(
-            self._create_folder_sync, manga_title, folder_metadata, self._root_folder_id
-        )
-        self._folder_cache[cache_key] = folder_id
+            if existing_id:
+                GoogleDriveClient._folder_cache[cache_key] = existing_id
+                return existing_id
+
+            folder_metadata = GoogleDriveFolderMetadata(source=source)
+            folder_id = await asyncio.to_thread(
+                self._create_folder_sync,
+                manga_title,
+                folder_metadata,
+                GoogleDriveClient._root_folder_id,
+            )
+            GoogleDriveClient._folder_cache[cache_key] = folder_id
 
         return folder_id
 
@@ -278,7 +293,7 @@ class GoogleDriveClient:
         """
         cache_key = _MangaFolderKey(source, manga_title)
 
-        return self._folder_cache.get(cache_key)
+        return GoogleDriveClient._folder_cache.get(cache_key)
 
     def _search_folder_by_name(self, name: str, parent_id: str, source: str) -> str | None:
         """Search for a folder by name within a parent folder.
