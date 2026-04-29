@@ -6,6 +6,7 @@ from ..constants.defaults import (
     DEFAULT_DOWNLOAD_WORKERS,
     DEFAULT_MERGE_WORKERS,
     DEFAULT_PROVIDER_RATE_LIMIT,
+    DEFAULT_QUEUE_SIZE,
     DEFAULT_RESOLVE_WORKERS,
 )
 from .subcommands import add_auth_parser, add_migrate_parser
@@ -56,6 +57,13 @@ def _build_parser() -> ArgumentParser:
         type=positive_int,
         default=DEFAULT_DOWNLOAD_RATE_LIMIT,
         help=f"Per-provider rate limit for download operations (default: {DEFAULT_DOWNLOAD_RATE_LIMIT})",
+    )
+
+    parser.add_argument(
+        "--queue-size",
+        type=positive_int,
+        default=DEFAULT_QUEUE_SIZE,
+        help=f"Queue size for data-heavy job queues (default: {DEFAULT_QUEUE_SIZE})",
     )
 
     parser.add_argument(

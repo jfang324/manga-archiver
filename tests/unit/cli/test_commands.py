@@ -6,6 +6,7 @@ from src.manga_archiver.constants.defaults import (
     DEFAULT_DOWNLOAD_WORKERS,
     DEFAULT_MERGE_WORKERS,
     DEFAULT_PROVIDER_RATE_LIMIT,
+    DEFAULT_QUEUE_SIZE,
     DEFAULT_RESOLVE_WORKERS,
 )
 
@@ -22,6 +23,7 @@ class TestParseArgs:
         assert args.merge_workers == DEFAULT_MERGE_WORKERS
         assert args.resolve_rate_limit == DEFAULT_PROVIDER_RATE_LIMIT
         assert args.download_rate_limit == DEFAULT_DOWNLOAD_RATE_LIMIT
+        assert args.queue_size == DEFAULT_QUEUE_SIZE
         assert args.archive is False
         assert args.benchmark is False
         assert args.backlog is False
@@ -40,6 +42,8 @@ class TestParseArgs:
                 "6",
                 "--download-rate-limit",
                 "7",
+                "--queue-size",
+                "8",
                 "--archive",
                 "--benchmark",
                 "--backlog",
@@ -52,6 +56,7 @@ class TestParseArgs:
         assert args.merge_workers == 5
         assert args.resolve_rate_limit == 6
         assert args.download_rate_limit == 7
+        assert args.queue_size == 8
         assert args.archive is True
         assert args.benchmark is True
         assert args.backlog is True
@@ -121,6 +126,7 @@ class TestParseArgs:
             ["--merge-workers", "abc"],
             ["--resolve-rate-limit", "0"],
             ["--download-rate-limit", "0"],
+            ["--queue-size", "0"],
         ],
         ids=[
             "zero-resolve-workers",
@@ -128,6 +134,7 @@ class TestParseArgs:
             "non-integer-merge-workers",
             "zero-resolve-rate-limit",
             "zero-download-rate-limit",
+            "zero-queue-size",
         ],
     )
     def test_rejects_invalid_positive_int_options(self, argv: list[str]) -> None:
