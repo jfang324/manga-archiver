@@ -1,5 +1,7 @@
 from argparse import ArgumentParser, Namespace, RawTextHelpFormatter
 from collections.abc import Sequence
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 
 from ..constants.defaults import (
     DEFAULT_DOWNLOAD_RATE_LIMIT,
@@ -12,6 +14,16 @@ from ..constants.defaults import (
 from .subcommands import add_auth_parser, add_migrate_parser
 from .validators import positive_int
 
+FALLBACK_VERSION = "v0.0.0"
+
+
+def _get_package_version() -> str:
+    """Return the installed package version string."""
+    try:
+        return f"v{package_version('manga-archiver')}"
+    except PackageNotFoundError:
+        return FALLBACK_VERSION
+
 
 def _build_parser() -> ArgumentParser:
     """Create the command-line parser and command-specific subparsers."""
@@ -23,6 +35,13 @@ def _build_parser() -> ArgumentParser:
 
     add_auth_parser(subparsers)
     add_migrate_parser(subparsers)
+
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=_get_package_version(),
+        help="Show the current version and exit",
+    )
 
     parser.add_argument(
         "--resolve-workers",
