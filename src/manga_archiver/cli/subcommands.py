@@ -29,3 +29,17 @@ def add_migrate_parser(subparsers: _SubParsersAction) -> ArgumentParser:
     migrate_subparsers.add_parser("google-drive", help="Migrate Google Drive schema")
 
     return migrate_parser
+
+
+def add_list_parser(subparsers: _SubParsersAction) -> ArgumentParser:
+    """Register list subcommands."""
+    list_parser = subparsers.add_parser("list", help="List available resources")
+    list_subparsers = list_parser.add_subparsers(
+        dest="list_target",
+        required=True,
+        metavar="{presets}",
+    )
+
+    list_subparsers.add_parser("presets", help="List runtime presets")
+
+    return list_parser

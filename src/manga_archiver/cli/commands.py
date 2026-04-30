@@ -11,7 +11,8 @@ from ..constants.defaults import (
     DEFAULT_QUEUE_SIZE,
     DEFAULT_RESOLVE_WORKERS,
 )
-from .subcommands import add_auth_parser, add_migrate_parser
+from .presets import get_preset_names
+from .subcommands import add_auth_parser, add_list_parser, add_migrate_parser
 from .validators import positive_int
 
 FALLBACK_VERSION = "v0.0.0"
@@ -35,12 +36,19 @@ def _build_parser() -> ArgumentParser:
 
     add_auth_parser(subparsers)
     add_migrate_parser(subparsers)
+    add_list_parser(subparsers)
 
     parser.add_argument(
         "--version",
         action="version",
         version=_get_package_version(),
         help="Show the current version and exit",
+    )
+
+    parser.add_argument(
+        "--preset",
+        choices=get_preset_names(),
+        help="Run with a preset configuration",
     )
 
     parser.add_argument(

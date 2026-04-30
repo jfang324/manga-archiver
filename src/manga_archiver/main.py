@@ -9,6 +9,7 @@ import aiohttp
 from .app import MangaArchiverApp
 from .backlog_sync import BacklogSync
 from .cli import parse_args
+from .cli.presets import RuntimePreset, format_presets, get_preset
 from .constants.exit_codes import (
     EXIT_AUTH_ERROR,
     EXIT_INIT_ERROR,
@@ -59,8 +60,13 @@ def main() -> None:
 
 async def _async_main() -> None:
     """Set up dependencies and run the application."""
-    setup_logging()
     args = parse_args()
+
+    exit_code = _handle_subcommands(args)
+    if exit_code is not None:
+        sys.exit(exit_code)
+
+    setup_logging()
     schema_manager = SchemaManager()
 
     exit_code = _handle_subcommands(args, schema_manager)
@@ -129,21 +135,44 @@ async def _async_main() -> None:
         sys.exit(EXIT_INIT_ERROR)
 
 
-def _handle_subcommands(args: Namespace, schema_manager: SchemaManager) -> int | None:
+def _handle_subcommands(args: Namespace, schema_manager: SchemaManager | None = None) -> int | None:
     """Handle CLI subcommands before normal app startup.
 
     Returns:
         int | None: An exit code if the command was handled, None if not
     """
+    handled, exit_code = _handle_list(args)
+    if handled:
+        return exit_code
+
     handled, exit_code = _handle_auth(args)
     if handled:
         return exit_code
+
+    if schema_manager is None:
+        return None
 
     handled, exit_code = _handle_migrations(args, schema_manager)
     if handled:
         return exit_code
 
     return None
+
+
+def _handle_list(args: Namespace) -> tuple[bool, int]:
+    """Handle list subcommands.
+
+    Returns:
+        tuple[bool, int]: Tuple of (handled, exit_code). If handled is False, caller should continue.
+    """
+    if args.command != "list":
+        return False, EXIT_SUCCESS
+
+    if args.list_target == "presets":
+        print(format_presets())
+        return True, EXIT_SUCCESS
+
+    return True, EXIT_INIT_ERROR
 
 
 def _handle_auth(args: Namespace) -> tuple[bool, int]:
@@ -257,21 +286,30 @@ def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDriveInitRe
 
 def _build_configurations(args: Namespace) -> tuple[PipelineConfig, AppConfig]:
     """Build startup configuration objects."""
+    preset = _get_runtime_preset(args)
     pipeline_config = PipelineConfig(
-        num_resolve_workers=args.resolve_workers,
-        num_download_workers=args.download_workers,
-        num_merge_workers=args.merge_workers,
-        resolve_rate_limit=args.resolve_rate_limit,
-        download_rate_limit=args.download_rate_limit,
-        resolve_queue_size=args.queue_size,
-        download_queue_size=args.queue_size * 2,
-        merge_queue_size=args.queue_size,
-        upload_queue_size=args.queue_size,
+        num_resolve_workers=preset.resolve_workers if preset else args.resolve_workers,
+        num_download_workers=preset.download_workers if preset else args.download_workers,
+        num_merge_workers=preset.merge_workers if preset else args.merge_workers,
+        resolve_rate_limit=preset.resolve_rate_limit if preset else args.resolve_rate_limit,
+        download_rate_limit=preset.download_rate_limit if preset else args.download_rate_limit,
+        resolve_queue_size=preset.queue_size if preset else args.queue_size,
+        download_queue_size=(preset.queue_size if preset else args.queue_size) * 2,
+        merge_queue_size=preset.queue_size if preset else args.queue_size,
+        upload_queue_size=preset.queue_size if preset else args.queue_size,
         benchmark_enabled=args.benchmark,
     )
     app_config = load_settings()
 
     return pipeline_config, app_config
+
+
+def _get_runtime_preset(args: Namespace) -> RuntimePreset | None:
+    """Return the selected runtime preset, if any."""
+    if args.preset is None:
+        return None
+
+    return get_preset(args.preset)
 
 
 def _create_client_session() -> aiohttp.ClientSession:
@@ -286,10 +324,11 @@ def _build_async_dependencies(
     session: aiohttp.ClientSession, args: Namespace
 ) -> tuple[ContentProviderManager, DownloadClient]:
     """Build session-bound async dependencies."""
+    preset = _get_runtime_preset(args)
     provider_manager = ContentProviderManager(
         session,
-        resolve_rate_limit=args.resolve_rate_limit,
-        download_rate_limit=args.download_rate_limit,
+        resolve_rate_limit=preset.resolve_rate_limit if preset else args.resolve_rate_limit,
+        download_rate_limit=preset.download_rate_limit if preset else args.download_rate_limit,
     )
     download_client = DownloadClient(session)
 
