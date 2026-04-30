@@ -165,6 +165,7 @@ The following command-line arguments are available:
 | `--backlog`             | flag | false   | Sync favorites with Google Drive and download missing chapters                            |
 | `--benchmark`           | flag | false   | Enable benchmark metrics collection, written to `~/.manga-archiver/benchmark/metrics.txt` |
 | `--auto-exit`           | flag | false   | Automatically exit when all jobs are complete                                             |
+| `--version`             | flag | -       | Show the current version and exit                                                         |
 | `migrate`               | sub  | -       | Run database migrations (subcommands: `database`, `google-drive`)                         |
 | `auth`                  | sub  | -       | Google Drive authentication (subcommands: `login`, `logout`)                              |
 
@@ -182,6 +183,9 @@ manga-archiver --archive --backlog
 
 # Enable benchmark mode to collect performance metrics
 manga-archiver --benchmark
+
+# Show the installed version
+manga-archiver --version
 ```
 
 For more options, run `manga-archiver --help`.

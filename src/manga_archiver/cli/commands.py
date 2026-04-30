@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, Namespace, RawTextHelpFormatter
 from collections.abc import Sequence
+from importlib.metadata import version
 
 from ..constants.defaults import (
     DEFAULT_DOWNLOAD_RATE_LIMIT,
@@ -23,6 +24,13 @@ def _build_parser() -> ArgumentParser:
 
     add_auth_parser(subparsers)
     add_migrate_parser(subparsers)
+
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"v{version('manga-archiver')}",
+        help="Show the current version and exit",
+    )
 
     parser.add_argument(
         "--resolve-workers",
