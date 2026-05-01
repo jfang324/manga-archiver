@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from textual import on, work
@@ -27,6 +26,7 @@ from .screens import (
     SettingsScreen,
 )
 from .utils import DownloadClient
+from .utils.benchmark_report import write_benchmark_report
 from .utils.settings_manager import save_settings
 from .workers.jobs import FetchingResourcesJob
 
@@ -220,28 +220,7 @@ class MangaArchiverApp(App):
         if self._pipeline_manager and self._pipeline_config.benchmark_enabled:
             benchmark_results = self._pipeline_manager.get_benchmark_results()
 
-        if benchmark_results:
-            try:
-                benchmark_dir = Path("~/.manga-archiver/benchmark").expanduser()
-                benchmark_dir.mkdir(parents=True, exist_ok=True)
-                metrics_file = benchmark_dir / "metrics.txt"
-
-                with open(metrics_file, "w") as f:
-                    f.write("Benchmark Results\n")
-                    f.write("=" * 40 + "\n")
-                    for key, value in benchmark_results.items():
-                        if "ms" in key:
-                            f.write(f"{key}: {value:.2f} ms\n")
-                        elif "memory" in key:
-                            f.write(f"{key}: {value:.2f} MB\n")
-                        else:
-                            f.write(f"{key}: {value}\n")
-            except Exception as e:
-                logger.error("Failed to write benchmark file: %s", e)
-
-            logger.info("Aggregate Benchmark Results:")
-            for aggregate in benchmark_results:
-                logger.info("[%s]: %s", aggregate, benchmark_results[aggregate])
+        write_benchmark_report(benchmark_results)
 
         self.exit()
 

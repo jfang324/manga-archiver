@@ -73,6 +73,14 @@ class PipelineConfig:
     benchmark_enabled: bool = False
 
 
+@dataclass(frozen=True)
+class EnqueueJobsResult:
+    """Summary of jobs accepted into or skipped before the pipeline."""
+
+    accepted_count: int = 0
+    skipped_count: int = 0
+
+
 class PipelineManager:
     """Controls the multi-stage processing pipeline, managing workers, queues, and job lifecycle.
 
@@ -216,13 +224,17 @@ class PipelineManager:
         if not job.output_directory or not job.output_directory.exists():
             raise ValueError(f"Job {job.id} output_directory does not exist")
 
-    async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]) -> None:
+    async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]) -> EnqueueJobsResult:
+        accepted_count = 0
+        skipped_count = 0
+
         # Sequential to maintain ordering; parallel would save negligible time
         for job in jobs:
             try:
                 self._validate_job(job)
             except ValueError as e:
                 logger.error("Skipping invalid job: %s", e)
+                skipped_count += 1
                 continue
 
             notification_job = NotificationJob(
@@ -242,6 +254,9 @@ class PipelineManager:
                     self._pipeline_entry_queue.put(job),
                 ]
             )
+            accepted_count += 1
+
+        return EnqueueJobsResult(accepted_count=accepted_count, skipped_count=skipped_count)
 
     async def start(self, jobs: list[FetchingResourcesJob] | None = None) -> None:
         """Start all workers in the pipeline.

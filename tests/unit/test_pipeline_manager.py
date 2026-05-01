@@ -61,3 +61,38 @@ class TestPipelineValidation:
 
         with pytest.raises(ValueError, match=expected_error_message):
             pm._validate_job(job)
+
+
+class TestPipelineEnqueue:
+    async def test_enqueue_jobs_reports_accepted_and_skipped_jobs(self, tmp_path) -> None:
+        valid_job = FetchingResourcesJob(
+            id="job_123",
+            manga_title="Test Manga",
+            chapter_number=1.0,
+            chapter_title="Chapter 1",
+            chapter_id="chapter_123",
+            output_directory=tmp_path,
+            output_format=OutputFormat.PDF,
+            source=ContentSource.MANGADEX,
+        )
+        invalid_job = FetchingResourcesJob(
+            id="job_456",
+            manga_title="Test Manga",
+            chapter_number=2.0,
+            chapter_title="Chapter 2",
+            chapter_id="chapter_456",
+            output_directory=Path("/nonexistent/path"),
+            output_format=OutputFormat.PDF,
+            source=ContentSource.MANGADEX,
+        )
+        pm = PipelineManager(
+            provider_manager=MagicMock(),
+            download_client=MagicMock(),
+            config=PipelineConfig(resolve_scheduler_enabled=False),
+            google_drive_token=None,
+        )
+
+        result = await pm.enqueue_jobs([valid_job, invalid_job])
+
+        assert result.accepted_count == 1
+        assert result.skipped_count == 1

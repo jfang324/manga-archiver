@@ -29,6 +29,7 @@ class TestParseArgs:
         assert args.archive is False
         assert args.benchmark is False
         assert args.backlog is False
+        assert args.headless is False
         assert args.auto_exit is False
 
     @pytest.mark.parametrize("preset", get_preset_names(), ids=get_preset_names())
@@ -61,6 +62,7 @@ class TestParseArgs:
                 "--archive",
                 "--benchmark",
                 "--backlog",
+                "--headless",
                 "--auto-exit",
             ]
         )
@@ -74,6 +76,7 @@ class TestParseArgs:
         assert args.archive is True
         assert args.benchmark is True
         assert args.backlog is True
+        assert args.headless is True
         assert args.auto_exit is True
 
     @pytest.mark.parametrize("auth_command", ["login", "logout"], ids=["login", "logout"])
@@ -185,6 +188,28 @@ class TestParseArgs:
         ],
     )
     def test_rejects_preset_with_manual_tuning_options(self, argv: list[str]) -> None:
+        with pytest.raises(SystemExit) as exc_info:
+            parse_args(argv)
+
+        assert exc_info.value.code == ARGPARSE_USAGE_ERROR
+
+    def test_parses_headless_with_archive_and_backlog(self) -> None:
+        args = parse_args(["--archive", "--backlog", "--headless"])
+
+        assert args.archive is True
+        assert args.backlog is True
+        assert args.headless is True
+
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ["--headless"],
+            ["--archive", "--headless"],
+            ["--backlog", "--headless"],
+        ],
+        ids=["missing-both", "missing-backlog", "missing-archive"],
+    )
+    def test_rejects_headless_without_archive_and_backlog(self, argv: list[str]) -> None:
         with pytest.raises(SystemExit) as exc_info:
             parse_args(argv)
 
