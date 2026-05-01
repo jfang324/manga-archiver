@@ -1,6 +1,7 @@
 import pytest
 
 from src.manga_archiver.cli.commands import parse_args
+from src.manga_archiver.cli.presets import get_preset_names
 from src.manga_archiver.constants.defaults import (
     DEFAULT_DOWNLOAD_RATE_LIMIT,
     DEFAULT_DOWNLOAD_WORKERS,
@@ -24,10 +25,23 @@ class TestParseArgs:
         assert args.resolve_rate_limit == DEFAULT_PROVIDER_RATE_LIMIT
         assert args.download_rate_limit == DEFAULT_DOWNLOAD_RATE_LIMIT
         assert args.queue_size == DEFAULT_QUEUE_SIZE
+        assert args.preset is None
         assert args.archive is False
         assert args.benchmark is False
         assert args.backlog is False
         assert args.auto_exit is False
+
+    @pytest.mark.parametrize("preset", get_preset_names(), ids=get_preset_names())
+    def test_parses_preset_option(self, preset: str) -> None:
+        args = parse_args(["--preset", preset])
+
+        assert args.preset == preset
+
+    def test_rejects_invalid_preset(self) -> None:
+        with pytest.raises(SystemExit) as exc_info:
+            parse_args(["--preset", "balanced"])
+
+        assert exc_info.value.code == ARGPARSE_USAGE_ERROR
 
     def test_parses_application_command_options(self) -> None:
         args = parse_args(
@@ -79,6 +93,12 @@ class TestParseArgs:
 
         assert args.command == "migrate"
         assert args.migrate_system == migrate_system
+
+    def test_parses_list_presets_subcommand(self) -> None:
+        args = parse_args(["list", "presets"])
+
+        assert args.command == "list"
+        assert args.list_target == "presets"
 
     @pytest.mark.parametrize(
         ("argv", "expected_command", "expected_subcommand_name", "expected_subcommand"),
@@ -138,6 +158,33 @@ class TestParseArgs:
         ],
     )
     def test_rejects_invalid_positive_int_options(self, argv: list[str]) -> None:
+        with pytest.raises(SystemExit) as exc_info:
+            parse_args(argv)
+
+        assert exc_info.value.code == ARGPARSE_USAGE_ERROR
+
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ["--preset", "fast", "--resolve-workers", "3"],
+            ["--preset", "fast", "--download-workers", "4"],
+            ["--preset", "fast", "--merge-workers", "5"],
+            ["--preset", "fast", "--resolve-rate-limit", "6"],
+            ["--preset", "fast", "--download-rate-limit", "7"],
+            ["--preset", "fast", "--queue-size", "8"],
+            ["--preset=fast", "--download-workers=4"],
+        ],
+        ids=[
+            "resolve-workers",
+            "download-workers",
+            "merge-workers",
+            "resolve-rate-limit",
+            "download-rate-limit",
+            "queue-size",
+            "equals-syntax",
+        ],
+    )
+    def test_rejects_preset_with_manual_tuning_options(self, argv: list[str]) -> None:
         with pytest.raises(SystemExit) as exc_info:
             parse_args(argv)
 

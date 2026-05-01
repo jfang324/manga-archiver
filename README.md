@@ -166,6 +166,8 @@ The following command-line arguments are available:
 | `--benchmark`           | flag | false   | Enable benchmark metrics collection, written to `~/.manga-archiver/benchmark/metrics.txt` |
 | `--auto-exit`           | flag | false   | Automatically exit when all jobs are complete                                             |
 | `--version`             | flag | -       | Show the current version and exit                                                         |
+| `--preset`              | str  | -       | Apply a built-in runtime tuning preset (`safe`, `slow`, `fast`)                           |
+| `list presets`          | sub  | -       | List built-in runtime tuning presets                                                      |
 | `migrate`               | sub  | -       | Run database migrations (subcommands: `database`, `google-drive`)                         |
 | `auth`                  | sub  | -       | Google Drive authentication (subcommands: `login`, `logout`)                              |
 
