@@ -227,6 +227,7 @@ class PipelineManager:
     async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]) -> EnqueueJobsResult:
         accepted_count = 0
         skipped_count = 0
+        seen_ids: set[str] = set()
 
         # Sequential to maintain ordering; parallel would save negligible time
         for job in jobs:
@@ -234,6 +235,11 @@ class PipelineManager:
                 self._validate_job(job)
             except ValueError as e:
                 logger.error("Skipping invalid job: %s", e)
+                skipped_count += 1
+                continue
+
+            if job.chapter_id in seen_ids:
+                logger.error("Skipping duplicate job id: %s", job.chapter_id)
                 skipped_count += 1
                 continue
 
@@ -254,6 +260,7 @@ class PipelineManager:
                     self._pipeline_entry_queue.put(job),
                 ]
             )
+            seen_ids.add(job.chapter_id)
             accepted_count += 1
 
         return EnqueueJobsResult(accepted_count=accepted_count, skipped_count=skipped_count)

@@ -401,8 +401,7 @@ async def _run_headless_pipeline(
 
     try:
         enqueue_result = await pipeline_manager.enqueue_jobs(jobs)
-        accepted_count = enqueue_result.accepted_count
-        skipped_count = enqueue_result.skipped_count
+        accepted_count, skipped_count = enqueue_result.accepted_count, enqueue_result.skipped_count
 
         with tqdm(total=accepted_count, desc="Processing backlog", unit="chapter") as progress:
             while len(terminal_ids) < accepted_count:
