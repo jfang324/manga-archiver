@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class RuntimePreset:
-    """Curated runtime tuning values for common throughput profiles."""
+    """Runtime tuning values for common throughput profiles."""
 
     name: str
     description: str
@@ -18,7 +18,7 @@ class RuntimePreset:
 PRESETS: dict[str, RuntimePreset] = {
     "safe": RuntimePreset(
         name="safe",
-        description="Near-serial, maximum reliability for weak machines or flaky networks.",
+        description="Near synchronous performance with maximum reliability for weak machines or flaky networks.",
         resolve_workers=1,
         download_workers=1,
         merge_workers=1,
