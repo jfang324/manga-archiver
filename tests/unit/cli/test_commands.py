@@ -163,8 +163,29 @@ class TestParseArgs:
 
         assert exc_info.value.code == ARGPARSE_USAGE_ERROR
 
-    def test_parses_preset_with_manual_tuning_options(self) -> None:
-        args = parse_args(["--preset", "fast", "--download-workers", "4"])
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ["--preset", "fast", "--resolve-workers", "3"],
+            ["--preset", "fast", "--download-workers", "4"],
+            ["--preset", "fast", "--merge-workers", "5"],
+            ["--preset", "fast", "--resolve-rate-limit", "6"],
+            ["--preset", "fast", "--download-rate-limit", "7"],
+            ["--preset", "fast", "--queue-size", "8"],
+            ["--preset=fast", "--download-workers=4"],
+        ],
+        ids=[
+            "resolve-workers",
+            "download-workers",
+            "merge-workers",
+            "resolve-rate-limit",
+            "download-rate-limit",
+            "queue-size",
+            "equals-syntax",
+        ],
+    )
+    def test_rejects_preset_with_manual_tuning_options(self, argv: list[str]) -> None:
+        with pytest.raises(SystemExit) as exc_info:
+            parse_args(argv)
 
-        assert args.preset == "fast"
-        assert args.download_workers == 4
+        assert exc_info.value.code == ARGPARSE_USAGE_ERROR

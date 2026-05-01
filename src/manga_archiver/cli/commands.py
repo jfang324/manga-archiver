@@ -1,3 +1,4 @@
+import sys
 from argparse import ArgumentParser, Namespace, RawTextHelpFormatter
 from collections.abc import Sequence
 from importlib.metadata import PackageNotFoundError
@@ -16,6 +17,14 @@ from .subcommands import add_auth_parser, add_list_parser, add_migrate_parser
 from .validators import positive_int
 
 FALLBACK_VERSION = "v0.0.0"
+MANUAL_TUNING_OPTIONS = (
+    "--resolve-workers",
+    "--download-workers",
+    "--merge-workers",
+    "--resolve-rate-limit",
+    "--download-rate-limit",
+    "--queue-size",
+)
 
 
 def _get_package_version() -> str:
@@ -31,6 +40,7 @@ def _build_parser() -> ArgumentParser:
     parser = ArgumentParser(
         description="Manga Archiver - Download manga from sources like MangaDex and AllManga locally or directly to your Google Drive",
         formatter_class=lambda prog: RawTextHelpFormatter(prog, max_help_position=50),
+        allow_abbrev=False,
     )
     subparsers = parser.add_subparsers(dest="command", title="commands", metavar="")
 
@@ -130,4 +140,16 @@ def parse_args(argv: Sequence[str] | None = None) -> Namespace:
         Namespace: Parsed command-line arguments
     """
     parser = _build_parser()
-    return parser.parse_args(argv)
+    raw_args = sys.argv[1:] if argv is None else argv
+    args = parser.parse_args(argv)
+
+    if args.preset is not None:
+        raw_option_names = {raw_arg.split("=", maxsplit=1)[0] for raw_arg in raw_args}
+        conflicting_options = [
+            option for option in MANUAL_TUNING_OPTIONS if option in raw_option_names
+        ]
+        if conflicting_options:
+            options = ", ".join(conflicting_options)
+            parser.error(f"--preset cannot be combined with manual tuning options: {options}")
+
+    return args
