@@ -29,6 +29,7 @@ class TestResolveWorkerDoWork:
         )
 
         mock_notification_queue = AsyncMock()
+        app_config = AppConfig(optimize=True)
 
         job = FetchingResourcesJob(
             id="job_123",
@@ -36,7 +37,7 @@ class TestResolveWorkerDoWork:
             chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
-            app_config=AppConfig(),
+            app_config=app_config,
             source=ContentSource.MANGADEX,
         )
 
@@ -55,6 +56,7 @@ class TestResolveWorkerDoWork:
         assert result.id == "job_123"
         assert result.manga_title == "Test Manga"
         assert result.chapter_title == "Chapter 1"
+        assert result.app_config is app_config
         assert result.urls == ["http://example.com/1.jpg", "http://example.com/2.jpg"]
 
     @pytest.mark.asyncio

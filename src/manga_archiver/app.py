@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from copy import deepcopy
 from typing import TYPE_CHECKING
 
 from textual import on, work
@@ -147,7 +148,7 @@ class MangaArchiverApp(App):
                 chapter_id=partial_job["chapter_id"],
                 chapter_number=partial_job["chapter_number"],
                 chapter_title=partial_job["chapter_title"],
-                app_config=self._app_config,
+                app_config=deepcopy(self._app_config),
                 source=partial_job["source"],
             )
             for partial_job in partial_jobs
@@ -180,10 +181,13 @@ class MangaArchiverApp(App):
         if not confirmed:
             return
 
-        self._pipeline_manager.stop()
-        write_benchmark_report(self._pipeline_manager.get_benchmark_results())
-
-        self.exit()
+        try:
+            self._pipeline_manager.stop()
+            write_benchmark_report(self._pipeline_manager.get_benchmark_results())
+        except Exception as e:
+            logger.error("Error during shutdown: %s", e)
+        finally:
+            self.exit()
 
     def action_safe_pop_screen(self) -> None:
         """Check current screen safely before popping."""
