@@ -122,6 +122,12 @@ def _build_parser() -> ArgumentParser:
     )
 
     parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="Run backlog processing without launching the Textual UI (requires --archive --backlog)",
+    )
+
+    parser.add_argument(
         "--auto-exit",
         action="store_true",
         help="Automatically exit when all jobs are complete",
@@ -151,5 +157,8 @@ def parse_args(argv: Sequence[str] | None = None) -> Namespace:
         if conflicting_options:
             options = ", ".join(conflicting_options)
             parser.error(f"--preset cannot be combined with manual tuning options: {options}")
+
+    if args.headless and (not args.archive or not args.backlog):
+        parser.error("--headless requires --archive and --backlog")
 
     return args

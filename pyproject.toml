@@ -17,6 +17,7 @@ google-api-python-client = "^2.100.0"
 requests = "^2.33.1"
 ebooklib = "^0.20"
 cryptography = "^46.0.7"
+tqdm = "^4.67.3"
 
 [tool.poetry.scripts]
 manga-archiver = "manga_archiver.main:main"
