@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-from pathlib import Path
 
 from ..models import ContentSource
-from ..models.output_format import OutputFormat
+from ..models.app_config import AppConfig
 from .types import JobStatus
 
 
@@ -15,8 +14,7 @@ class Job:
         manga_title (str): The title of the manga
         chapter_number (float): The chapter number
         chapter_title (str): The title of the chapter
-        output_directory (Path): The directory to save output files
-        output_format (OutputFormat): The output format (PDF, CBZ, etc.)
+        app_config (AppConfig): Output settings for this job
         source (ContentSource): The content source (provider)
     """
 
@@ -24,8 +22,7 @@ class Job:
     manga_title: str
     chapter_number: float
     chapter_title: str
-    output_directory: Path
-    output_format: OutputFormat
+    app_config: AppConfig
     source: ContentSource
 
 

@@ -74,16 +74,14 @@ class ResolveWorker(Worker):
             manga_title,
             chapter_title,
             chapter_number,
-            output_directory,
-            output_format,
+            app_config,
         ) = (
             job.id,
             job.chapter_id,
             job.manga_title,
             job.chapter_title,
             job.chapter_number,
-            job.output_directory,
-            job.output_format,
+            job.app_config,
         )
 
         if not chapter_id:
@@ -104,8 +102,7 @@ class ResolveWorker(Worker):
             manga_title=manga_title,
             chapter_number=chapter_number,
             chapter_title=chapter_title,
-            output_directory=output_directory,
-            output_format=output_format,
+            app_config=app_config,
             urls=resources.urls,
             source=job.source,
         )

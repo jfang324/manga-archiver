@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.manga_archiver.models import ContentSource
+from src.manga_archiver.models.app_config import AppConfig
 from src.manga_archiver.workers.jobs import Job
 
 
@@ -81,17 +82,16 @@ def mock_api_response_list(request) -> Callable:
 
 
 @pytest.fixture
-def mock_job() -> MagicMock:
+def mock_job() -> Job:
     """Create a mock Job for testing workers."""
-    job = MagicMock(spec=Job)
-    job.id = "test_job"
-    job.manga_title = "Test Manga"
-    job.chapter_number = 1.0
-    job.chapter_title = "Chapter 1"
-    job.output_directory = MagicMock()
-    job.output_format = MagicMock()
-    job.source = ContentSource.MANGADEX
-    return job
+    return Job(
+        id="test_job",
+        manga_title="Test Manga",
+        chapter_number=1.0,
+        chapter_title="Chapter 1",
+        app_config=AppConfig(),
+        source=ContentSource.MANGADEX,
+    )
 
 
 @pytest.fixture

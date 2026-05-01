@@ -120,24 +120,26 @@ async def _async_main() -> None:
 
             backlog = backlog_result.backlog
 
+            pipeline_manager = PipelineManager(
+                provider_manager,
+                download_client,
+                pipeline_config,
+                google_drive_token=google_drive_token,
+            )
+
             if args.headless:
                 exit_code = await _run_headless_pipeline(
-                    pipeline_config=pipeline_config,
+                    pipeline_manager=pipeline_manager,
                     backlog=backlog,
-                    provider_manager=provider_manager,
-                    download_client=download_client,
-                    google_drive_token=google_drive_token,
                 )
                 sys.exit(exit_code)
 
             app = _build_app(
-                pipeline_config=pipeline_config,
+                pipeline_manager=pipeline_manager,
                 app_config=app_config,
                 favorite_repository=favorite_repository,
-                google_drive_token=google_drive_token,
                 backlog=backlog,
                 provider_manager=provider_manager,
-                download_client=download_client,
                 auto_exit=args.auto_exit,
             )
 
@@ -352,34 +354,27 @@ def _build_async_dependencies(
 
 
 def _build_app(
-    pipeline_config: PipelineConfig,
+    pipeline_manager: PipelineManager,
     app_config: AppConfig,
     favorite_repository: FavoriteRepository,
-    google_drive_token: GoogleApiStoredToken | None,
     backlog: list[FetchingResourcesJob] | None,
     provider_manager: ContentProviderManager,
-    download_client: DownloadClient,
     auto_exit: bool,
 ) -> MangaArchiverApp:
     """Build the Textual application instance."""
     return MangaArchiverApp(
-        pipeline_config=pipeline_config,
+        pipeline_manager=pipeline_manager,
         app_config=app_config,
         favorite_repository=favorite_repository,
-        google_drive_token=google_drive_token,
         backlog=backlog,
         provider_manager=provider_manager,
-        download_client=download_client,
         auto_exit=auto_exit,
     )
 
 
 async def _run_headless_pipeline(
-    pipeline_config: PipelineConfig,
+    pipeline_manager: PipelineManager,
     backlog: list[FetchingResourcesJob] | None,
-    provider_manager: ContentProviderManager,
-    download_client: DownloadClient,
-    google_drive_token: GoogleApiStoredToken | None,
 ) -> int:
     """Run backlog jobs through the pipeline without launching the Textual app."""
     jobs = backlog or []
@@ -387,12 +382,6 @@ async def _run_headless_pipeline(
         print("No missing chapters to process.")
         return EXIT_SUCCESS
 
-    pipeline_manager = PipelineManager(
-        provider_manager,
-        download_client,
-        pipeline_config,
-        google_drive_token=google_drive_token,
-    )
     pipeline_task = asyncio.create_task(pipeline_manager.start())
 
     completed_ids: set[str] = set()
@@ -468,8 +457,7 @@ async def _load_backlog(
         favorite_repository=favorite_repository,
         google_drive_client=google_drive_client,
         provider_manager=provider_manager,
-        output_directory=app_config.output_path,
-        output_format=app_config.output_format,
+        app_config=app_config,
     )
 
     backlog = await backlog_sync.run()

@@ -1,10 +1,9 @@
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 from src.manga_archiver.models import ContentSource
-from src.manga_archiver.models.output_format import OutputFormat
+from src.manga_archiver.models.app_config import AppConfig
 from src.manga_archiver.workers.jobs import NotificationJob
 from src.manga_archiver.workers.notification_worker import NotificationWorker
 from src.manga_archiver.workers.types import JobMetadata, JobStatus
@@ -25,8 +24,7 @@ class TestNotificationWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=Path("/output"),
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(),
             source=ContentSource.MANGADEX,
             start_time=1000,
             end_time=2000,
@@ -67,8 +65,7 @@ async def test_do_work_completed_at_based_on_status(status, should_set_completed
         manga_title="Test Manga",
         chapter_number=1.0,
         chapter_title="Chapter 1",
-        output_directory=Path("/output"),
-        output_format=OutputFormat.PDF,
+        app_config=AppConfig(),
         source=ContentSource.MANGADEX,
         status=status,
     )
@@ -105,8 +102,7 @@ async def test_do_work_records_benchmark_timing(status) -> None:
         manga_title="Test Manga",
         chapter_number=1.0,
         chapter_title="Chapter 1",
-        output_directory=Path("/output"),
-        output_format=OutputFormat.PDF,
+        app_config=AppConfig(),
         source=ContentSource.MANGADEX,
         status=status,
         start_time=1000,

@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.manga_archiver.models import ContentSource, DownloadResource
+from src.manga_archiver.models.app_config import AppConfig
 from src.manga_archiver.workers.jobs import (
     DownloadingJob,
     FetchingResourcesJob,
@@ -35,8 +36,7 @@ class TestResolveWorkerDoWork:
             chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=AppConfig(),
             source=ContentSource.MANGADEX,
         )
 
@@ -67,8 +67,7 @@ class TestResolveWorkerDoWork:
             chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=AppConfig(),
             source=ContentSource.MANGADEX,
         )
 
@@ -99,8 +98,7 @@ class TestResolveWorkerDoWork:
             chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=AppConfig(),
             source=ContentSource.MANGADEX,
         )
 
@@ -127,8 +125,7 @@ class TestResolveWorkerDoWork:
             chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=AppConfig(),
             source=ContentSource.MANGADEX,
         )
 

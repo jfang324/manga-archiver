@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.manga_archiver.models import ContentSource
+from src.manga_archiver.models.app_config import AppConfig
 from src.manga_archiver.utils.downloader import DownloadClient
 from src.manga_archiver.workers.download_worker import DownloadWorker
 from src.manga_archiver.workers.jobs import DownloadingJob, MergingJob
@@ -27,8 +28,7 @@ class TestDownloadWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=AppConfig(),
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
             source=ContentSource.MANGADEX,
         )
@@ -62,8 +62,7 @@ class TestDownloadWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=AppConfig(),
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
             source=ContentSource.MANGADEX,
         )
@@ -96,8 +95,7 @@ class TestDownloadWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=AppConfig(),
             urls=["http://example.com/1.jpg"],
             source=ContentSource.MANGADEX,
         )
@@ -126,8 +124,7 @@ class TestDownloadWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=AppConfig(),
             urls=[],
             source=ContentSource.MANGADEX,
         )

@@ -18,7 +18,7 @@ from .constants.defaults import (
 )
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
-from .models.output_format import OutputFormat
+from .models.app_config import AppConfig
 from .utils import DownloadClient
 from .workers import WorkerManager
 from .workers.jobs import (
@@ -218,11 +218,8 @@ class PipelineManager:
         if not job.chapter_id:
             raise ValueError(f"Job {job.id} is missing chapter_id")
 
-        if not isinstance(job.output_format, OutputFormat):
-            raise ValueError(f"Job {job.id} output_format must be OutputFormat enum")
-
-        if not job.output_directory or not job.output_directory.exists():
-            raise ValueError(f"Job {job.id} output_directory does not exist")
+        if not isinstance(job.app_config, AppConfig):
+            raise ValueError(f"Job {job.id} app_config must be AppConfig instance")
 
     async def enqueue_jobs(self, jobs: list[FetchingResourcesJob]) -> EnqueueJobsResult:
         accepted_count = 0
@@ -248,8 +245,7 @@ class PipelineManager:
                 manga_title=job.manga_title,
                 chapter_number=job.chapter_number,
                 chapter_title=job.chapter_title,
-                output_directory=job.output_directory,
-                output_format=job.output_format,
+                app_config=job.app_config,
                 source=job.source,
                 status=JobStatus.QUEUED,
             )
