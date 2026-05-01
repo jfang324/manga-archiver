@@ -19,28 +19,16 @@ This project uses Poetry for dependency management:
 - Run tests matching a pattern: `coverage run -m pytest -k "test_retrieve" -v`
 - Run with detailed output: `coverage run -m pytest -vv`
 - Generate coverage report: `coverage report -m`
-- Generate HTML coverage report: `coverage html`
 
 ### Code Quality Tools
 
 #### Ruff (Linting & Formatting)
-The project uses Ruff for linting and formatting:
 - Lint all files: `ruff check .`
-- Lint specific file: `ruff check src/manga_archiver/main.py`
 - Lint with auto-fix: `ruff check --fix .`
 - Format code: `ruff format .`
 
-**Ruff Configuration** (from pyproject.toml):
-- Enabled rules: E, F, W, I, N, UP, B, A, C4, T20, S, PERF, FIX, ARG
-- Ignored rules: E501, B008, PTH110, PTH112, PTH113, PTH118, PTH119, PTH208, PTH109, B904, T201
-- Line length: 100 characters
-- Docstring convention: Google
-- Max function complexity: 10
-
 #### Pyright (Type Checking)
 - Run type checking: `poetry run pyright`
-- Type checking mode: basic
-- Python version: 3.10
 
 ## Project Structure
 ```
@@ -88,21 +76,6 @@ manga-archiver/
 - Source files: use relative imports (e.g., `from .mangadex.client import ...`)
 - Test files: use absolute imports (e.g., `from src.manga_archiver...`)
 - When importing from external modules, prefer barrel imports unless being explicit makes sense
-- Order: standard library → third-party → local imports
-- Multiple imports per line are fine as long as they are from the same module/file
-
-### Barrel Exports
-
-Keep `__init__.py` barrel exports minimal - only expose what is considered the stable public API. This prevents circular dependency issues as the codebase grows.
-
-```python
-# ✅ GOOD - Minimal stable public API
-from .client import MangaDexApiClient  # Main client only
-from .exceptions import NotFoundError, RateLimitError  # Required exceptions
-
-# ❌ BAD - Exposing internal modules
-from .submodule.internal import helper_function  # Leaks internal details
-```
 
 ### Import Patterns and Type Hints
 
@@ -146,25 +119,6 @@ if TYPE_CHECKING:
     from aiohttp import ClientSession  # Redundant
 ```
 
-#### __future__.annotations Guidelines
-
-Use `from __future__ import annotations` only when forward references exist:
-
-```python
-# ✅ GOOD - Forward reference to class defined later
-class A:
-    def method(self) -> "B":  # Forward reference - needs __future__
-        pass
-
-class B:
-    pass
-
-# ❌ BAD - No forward references, unnecessary complexity
-class ContentProviderManager:
-    def __init__(self, session: ClientSession):  # No forward reference needed
-        pass
-```
-
 **Verification steps before committing:**
 1. Run `python -c "import your_module"` - No ImportError
 2. Run `ruff check .` - Passes linting
@@ -196,12 +150,6 @@ def __init__(self, session: ClientSession) -> None:
     """Initialize the client."""
 ```
 
-### Formatting
-- Indentation: 4 spaces (no tabs)
-- Line length: Recommended under 100 characters
-- Use parentheses for line continuation
-- Quote style: double quotes (per ruff format config)
-
 ### Docstrings
 
 Use Google-style docstrings, but be pragmatic:
@@ -209,7 +157,6 @@ Use Google-style docstrings, but be pragmatic:
 - Skip docstrings on test methods (test name is sufficient)
 - Skip docstrings on obvious functions (name explains itself)
 - 1-liner for simple things (exceptions, basic dataclasses)
-- Target: 15-20% comment ratio for this project size
 ```python
 """
 Short description of function purpose.
@@ -229,6 +176,8 @@ Returns:
 - Never use root logger (`logging.error(...)`) — it loses module context
 - Use `%s` formatting, not f-strings: `logger.error("Context: %s", e)`
 
+**Log at boundaries:** Log errors at system boundaries (entry points, workers) but NOT in low-level modules (API clients, managers, utilities). Low-level modules should raise, not log.
+
 ```python
 import logging
 
@@ -244,63 +193,20 @@ logger.error(f"Failed to process: {e}")   # Extra string interpolation
 
 ### Error Handling
 
-**Core Principle: Low-level modules raise, don't log.**
-
-Modules should be self-contained and not log — consumers handle logging appropriately for their context.
+**Core Principle: Low-level modules raise, don't log.** Modules should be self-contained and not log — consumers handle logging appropriately for their context.
 
 **Exception hierarchy:**
-
 ```python
-# integrations/exceptions.py
-class ApiError(Exception):
-    """Raised for general API errors."""
-
-
-class NotFoundError(ApiError):
-    """Raised when a requested resource is not found (404)."""
-
-
-class RateLimitError(ApiError):
-    """Raised when the API rate limit is exceeded (429)."""
-
-
-class BadGatewayError(ApiError):
-    """Raised when the API returns a 502 Bad Gateway error."""
+class ApiError(Exception): ...
+class NotFoundError(ApiError): ...
+class RateLimitError(ApiError): ...
+class BadGatewayError(ApiError): ...
 ```
 
-```python
-# In low-level modules - raise exceptions, don't log
-try:
-    response = await self._request(url, params)
-except (NotFoundError, RateLimitError, BadGatewayError) as e:
-    raise  # Bare raise preserves traceback
-```
-
-**In ContentProviderManager:**
-- Methods return errors in result tuples for parallel operations (e.g., `search_manga` returns `(results, errors)`)
-- Single-provider methods raise exceptions (`ValueError` for invalid source, API errors for failures)
-
-**In Consumers (workers, UI):**
-- Handle errors appropriately for context
-- Workers log errors for audit trail
-- UI shows user-friendly notifications
-
-```python
-# Worker handles background errors - logs for debugging
-try:
-    await self._process_job(job)
-except Exception as e:
-    logger.error("Job failed: %s", e)  # Log in worker
-    await self._send_notification(job, JobStatus.FAILED)
-
-# UI handles foreground errors - shows notification
-try:
-    results = await client.search_manga(query)
-except RateLimitError:
-    self.notify("Too many requests. Please wait.")
-except (NotFoundError, ApiError):
-    self.notify("Error searching for manga")
-```
+**Consumer handling:**
+- Workers: log errors for audit trail
+- UI: show user-friendly notifications
+- ContentProviderManager: return errors in result tuples
 
 ### Defensive Type Narrowing
 
@@ -318,61 +224,13 @@ if isinstance(job, ResolveJob):
 
 Use `isinstance()` over casts — provides runtime validation with clear error messages.
 
-### Logging at Boundaries Only
-
-Log errors at system boundaries where they can be usefully captured:
-- Entry point (startup, shutdown, uncaught errors)
-- Workers (background task audit trail)
-- NOT in low-level modules (API clients, managers, utilities)
-
-```python
-# Entry point - catches unhandled errors
-async def main():
-    try:
-        await app.run()
-    except Exception as e:
-        logger.critical("Fatal error: %s", e)  # Log at boundary
-        raise
-```
-
 ### Validation in Types
 
-Use `from_dict` methods with fail-fast validation:
-
-```python
-@dataclass(frozen=True)
-class SearchResult:
-    _id: str
-
-    @classmethod
-    def from_dict(cls, data: dict) -> SearchResult:
-        if "_id" not in data:
-            raise ValueError("Invalid result: missing _id")
-        return cls(_id=data["_id"])
-```
+Use `from_dict` class methods with fail-fast validation for parsing external data (API responses, config files).
 
 **Dataclass patterns:**
 - Use `frozen=True` for immutable data models
-- Use `from_dict` class methods for parsing external data (API responses, config files)
 - Fail-fast with clear error messages in validation
-
-```python
-@dataclass(frozen=True)
-class Chapter:
-    id: str
-    number: float
-    title: str | None
-
-    @classmethod
-    def from_dict(cls, data: dict) -> Chapter:
-        if "id" not in data:
-            raise ValueError("Chapter missing required field: id")
-        return cls(
-            id=data["id"],
-            number=data.get("number", 0.0),
-            title=data.get("title"),
-        )
-```
 
 ## Code Quality Standards
 
@@ -494,16 +352,6 @@ assert config.quality == default_config.quality
 - Base URLs defined in `src/manga_archiver/constants.py`
 - Rate limiting implemented via bounded worker pools and semaphores
 - Retry logic with exponential backoff and jitter
-
-### Known Issues
-- Only supports English translations
-- Special characters in manga titles may cause PDF generation issues
-- Query parameters in user input may cause unexpected behavior
-
-## Environment Requirements
-- Python 3.10+
-- Dependencies: aiohttp (speedups), Pillow, textual, google-auth, google-api-python-client, ebooklib, cryptography
-- Dev dependencies: pytest, pytest-asyncio, coverage, ruff, pyright, pre-commit
 
 ## Development Workflow
 1. Run existing tests to establish baseline
