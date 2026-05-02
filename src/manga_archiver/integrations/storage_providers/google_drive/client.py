@@ -15,6 +15,7 @@ from .constants import (
     DEFAULT_MAX_RETRIES,
     DEFAULT_ROOT_PAGE_SIZE,
     DEFAULT_SUB_FOLDER_PAGE_SIZE,
+    MULTIPART_UPLOAD_THRESHOLD,
     ROOT_FOLDER_NAME,
     SYSTEM_SOURCE,
 )
@@ -370,7 +371,7 @@ class GoogleDriveClient:
             file_name: The name of the file
             folder_id: The ID of the destination folder
             mimetype: The MIME type of the file
-            chunk_size: The chunk size for resumable upload (default: 5MB)
+            chunk_size: The chunk size for resumable upload (default: 16MB)
             attempts: Current attempt number for recursive retries in name collision (default: 1)
             file_metadata: Metadata for the file
 
@@ -389,15 +390,21 @@ class GoogleDriveClient:
             "appProperties": file_metadata.to_app_properties(),
         }
 
+        should_use_resumable_upload = len(file_data) > MULTIPART_UPLOAD_THRESHOLD
+
         media = MediaIoBaseUpload(
             io.BytesIO(file_data),
             mimetype=mimetype,
-            resumable=True,
+            resumable=should_use_resumable_upload,
             chunksize=chunk_size,
         )
 
         try:
-            file = self._service.files().create(body=upload_metadata, media_body=media).execute()
+            file = (
+                self._service.files()
+                .create(body=upload_metadata, media_body=media, fields="id")
+                .execute()
+            )
 
             return file.get("id")
         except HttpError as e:
@@ -439,7 +446,7 @@ class GoogleDriveClient:
             folder_id: The ID of the destination folder
             mimetype: The MIME type of the file
             file_metadata: Metadata for the file
-            chunk_size: The chunk size for resumable upload (default: 5MB)
+            chunk_size: The chunk size for resumable upload (default: 16MB)
 
         Returns:
             str | None: The ID of the uploaded file, or None if API response missing ID
