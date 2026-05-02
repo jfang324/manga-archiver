@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.manga_archiver.models import ContentSource
+from src.manga_archiver.models.app_config import AppConfig
 from src.manga_archiver.models.output_format import OutputFormat
 from src.manga_archiver.workers.jobs import JobStatus, UploadJob
 from src.manga_archiver.workers.upload_worker import UploadWorker
@@ -25,8 +26,7 @@ class TestUploadWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_format=OutputFormat.PDF),
             complete_file_data=b"fake pdf data",
             full_name="Test Manga [1] - Chapter 1.pdf",
             source=ContentSource.MANGADEX,
@@ -68,8 +68,7 @@ class TestUploadWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_format=OutputFormat.PDF),
             complete_file_data=b"fake pdf data",
             full_name="Test Manga [1] - Chapter 1.pdf",
             source=ContentSource.MANGADEX,
@@ -101,8 +100,7 @@ class TestUploadWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_format=OutputFormat.PDF),
             complete_file_data=b"fake pdf data",
             full_name="Test Manga [1] - Chapter 1.pdf",
             source=ContentSource.MANGADEX,
@@ -135,8 +133,7 @@ class TestUploadWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_format=OutputFormat.PDF),
             complete_file_data=b"fake pdf data",
             full_name="Test Manga [1] - Chapter 1.pdf",
             source=ContentSource.MANGADEX,
@@ -182,8 +179,7 @@ class TestUploadWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_format=OutputFormat.PDF),
             complete_file_data=b"fake pdf data",
             full_name="Test Manga [1] - Chapter 1.pdf",
             source=ContentSource.MANGADEX,

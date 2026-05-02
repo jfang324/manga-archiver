@@ -49,8 +49,7 @@ class UploadWorker(Worker):
             job_id,
             manga_title,
             _,
-            _,
-            output_format,
+            app_config,
             complete_file_data,
             full_name,
             _,
@@ -58,8 +57,7 @@ class UploadWorker(Worker):
             job.id,
             job.manga_title,
             job.chapter_title,
-            job.output_directory,
-            job.output_format,
+            job.app_config,
             job.complete_file_data,
             job.full_name,
             job.source,
@@ -98,7 +96,7 @@ class UploadWorker(Worker):
                 file_data=complete_file_data,
                 file_name=full_name,
                 folder_id=folder_id,
-                mimetype=output_format.mime_type,
+                mimetype=app_config.output_format.mime_type,
                 file_metadata=file_metadata,
             )
 

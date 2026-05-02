@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 - Added `--version` flag to show the current version
-- Added preset configs avaliable with `--preset` flag
+- Added preset configs available with `--preset` flag
+- Added `--headless` flag to run without a TUI
 
 ## [1.2.2] - 2026-04-29
 

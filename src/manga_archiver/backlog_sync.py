@@ -1,12 +1,11 @@
 import logging
 from dataclasses import dataclass
-from pathlib import Path
 
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .integrations.storage_providers.google_drive.types import GoogleDriveFile
 from .models import Chapter, ContentSource
-from .models.output_format import OutputFormat
+from .models.app_config import AppConfig
 from .repositories import FavoriteRepository
 from .workers.jobs import FetchingResourcesJob
 
@@ -31,8 +30,7 @@ class BacklogSync:
         favorite_repository: FavoriteRepository,
         google_drive_client: GoogleDriveClient,
         provider_manager: ContentProviderManager,
-        output_directory: Path,
-        output_format: OutputFormat,
+        app_config: AppConfig,
     ) -> None:
         """Initialize backlog sync.
 
@@ -40,14 +38,12 @@ class BacklogSync:
             favorite_repository: Repository for favorites
             google_drive_client: Google Drive client (must be initialized)
             provider_manager: Content provider manager
-            output_directory: Where to save downloads
-            output_format: Output format (pdf, cbz, epub)
+            app_config: Application settings to pass through queued jobs
         """
         self._favorite_repository = favorite_repository
         self._google_drive_client = google_drive_client
         self._provider_manager = provider_manager
-        self._output_directory = output_directory
-        self._output_format = output_format
+        self._app_config = app_config
         self._mangas: list[Manga] = []
 
     async def run(self) -> list[FetchingResourcesJob]:
@@ -135,8 +131,7 @@ class BacklogSync:
                 chapter_id=chapter.id,
                 chapter_number=chapter.chapter_num,
                 chapter_title=chapter.title,
-                output_directory=self._output_directory,
-                output_format=self._output_format,
+                app_config=self._app_config,
                 source=source,
             )
             for manga_title, source, chapter in missing_chapters

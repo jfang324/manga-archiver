@@ -2,6 +2,7 @@ import asyncio
 import time
 from asyncio import Queue
 
+from ..models.app_config import AppConfig
 from ..utils import MultiFormatExporter
 from .base import Worker, WorkerConfig
 from .jobs import (
@@ -54,16 +55,14 @@ class MergeWorker(Worker):
         (
             job_id,
             manga_title,
-            output_directory,
-            output_format,
+            app_config,
             image_data,
             chapter_number,
             chapter_title,
         ) = (
             job.id,
             job.manga_title,
-            job.output_directory,
-            job.output_format,
+            job.app_config,
             job.image_data,
             job.chapter_number,
             job.chapter_title,
@@ -78,10 +77,8 @@ class MergeWorker(Worker):
 
         if image_data is None:
             raise ValueError("image_data must not be None for merging")
-        if output_directory is None:
-            raise ValueError("output_directory must not be None for merging")
-        if output_format is None:
-            raise ValueError("output_format must not be None for merging")
+        if not isinstance(app_config, AppConfig):
+            raise ValueError("app_config must be an AppConfig instance")
 
         merge_start = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.MERGING, merge_start)
@@ -90,10 +87,12 @@ class MergeWorker(Worker):
         full_name, file_data = await asyncio.to_thread(
             self._multi_format_exporter.generate,
             image_data_list=image_data,
-            output_directory=output_directory,
+            output_directory=app_config.output_path,
             output_name=output_name,
-            output_format=output_format,
+            output_format=app_config.output_format,
             return_bytes=self._output_queue is not None,
+            quality=app_config.quality,
+            optimize=app_config.optimize,
         )
 
         merge_end = time.perf_counter_ns()
@@ -104,8 +103,7 @@ class MergeWorker(Worker):
             manga_title=manga_title,
             chapter_number=chapter_number,
             chapter_title=chapter_title,
-            output_directory=output_directory,
-            output_format=output_format,
+            app_config=app_config,
             complete_file_data=file_data,
             full_name=full_name,
             source=job.source,

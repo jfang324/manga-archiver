@@ -57,8 +57,7 @@ class DownloadWorker(Worker):
             manga_title,
             chapter_title,
             chapter_number,
-            output_directory,
-            output_format,
+            app_config,
             urls,
             source,
         ) = (
@@ -66,8 +65,7 @@ class DownloadWorker(Worker):
             job.manga_title,
             job.chapter_title,
             job.chapter_number,
-            job.output_directory,
-            job.output_format,
+            job.app_config,
             job.urls,
             job.source,
         )
@@ -93,8 +91,7 @@ class DownloadWorker(Worker):
             manga_title=manga_title,
             chapter_number=chapter_number,
             chapter_title=chapter_title,
-            output_directory=output_directory,
-            output_format=output_format,
+            app_config=app_config,
             image_data=image_data,
             source=job.source,
         )

@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.manga_archiver.models import ContentSource
+from src.manga_archiver.models.app_config import AppConfig
 from src.manga_archiver.models.output_format import OutputFormat
 from src.manga_archiver.workers.jobs import MergingJob, UploadJob
 from src.manga_archiver.workers.merge_worker import MergeWorker
@@ -21,8 +22,7 @@ class TestMergeWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Introduction",
-            output_directory=tmp_path,
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_path=tmp_path, _output_format=OutputFormat.PDF),
             image_data=[b"image1", b"image2"],
             source=ContentSource.MANGADEX,
         )
@@ -43,8 +43,8 @@ class TestMergeWorkerDoWork:
         assert isinstance(result, UploadJob)
         assert result.id == "job_123"
         assert result.manga_title == "Test Manga"
-        assert result.output_directory == tmp_path
-        assert result.output_format == OutputFormat.PDF
+        assert result.app_config.output_path == tmp_path
+        assert result.app_config.output_format == OutputFormat.PDF
         assert result.full_name == "test.pdf"
 
     @pytest.mark.asyncio
@@ -57,8 +57,12 @@ class TestMergeWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Introduction",
-            output_directory=tmp_path,
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(
+                _output_path=tmp_path,
+                _output_format=OutputFormat.PDF,
+                _quality=82,
+                optimize=True,
+            ),
             image_data=[b"image1", b"image2"],
             source=ContentSource.MANGADEX,
         )
@@ -80,6 +84,8 @@ class TestMergeWorkerDoWork:
             output_name="Test Manga [1] - Introduction",
             output_format=OutputFormat.PDF,
             return_bytes=True,
+            quality=82,
+            optimize=True,
         )
 
     @pytest.mark.asyncio
@@ -94,8 +100,7 @@ class TestMergeWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Introduction",
-            output_directory=tmp_path,
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_path=tmp_path, _output_format=OutputFormat.PDF),
             image_data=[b"image1", b"image2"],
             source=ContentSource.MANGADEX,
         )
@@ -123,8 +128,7 @@ class TestMergeWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=5.0,
             chapter_title="Chapter 5",
-            output_directory=tmp_path,
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_path=tmp_path, _output_format=OutputFormat.PDF),
             image_data=[b"image1"],
             source=ContentSource.MANGADEX,
         )
@@ -148,15 +152,13 @@ class TestMergeWorkerDoWork:
             ({"chapter_number": None}, "chapter_number"),
             ({"chapter_number": "not a number"}, "chapter_number"),
             ({"image_data": None}, "image_data"),
-            ({"output_directory": None}, "output_directory"),
-            ({"output_format": None}, "output_format"),
+            ({"app_config": None}, "app_config"),
         ],
         ids=[
             "missing_chapter_number",
             "invalid_chapter_number",
             "missing_image_data",
-            "missing_output_directory",
-            "missing_output_format",
+            "missing_app_config",
         ],
     )
     async def test_do_work_raises_value_error_for_invalid_job(
@@ -170,8 +172,7 @@ class TestMergeWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=5.0,
             chapter_title="Chapter 5",
-            output_directory=tmp_path,
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_path=tmp_path, _output_format=OutputFormat.PDF),
             image_data=[b"image1"],
             source=ContentSource.MANGADEX,
         )

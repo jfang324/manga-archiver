@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.manga_archiver.models import ContentSource
+from src.manga_archiver.models.app_config import AppConfig
 from src.manga_archiver.utils.downloader import DownloadClient
 from src.manga_archiver.workers.download_worker import DownloadWorker
 from src.manga_archiver.workers.jobs import DownloadingJob, MergingJob
@@ -21,14 +22,14 @@ class TestDownloadWorkerDoWork:
         mock_download_client.download_images = AsyncMock(return_value=[b"image1", b"image2"])
         test_semaphore = asyncio.Semaphore(5)
         mock_notification_queue = AsyncMock()
+        app_config = AppConfig(optimize=True)
 
         job = DownloadingJob(
             id="job_123",
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=app_config,
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
             source=ContentSource.MANGADEX,
         )
@@ -49,6 +50,7 @@ class TestDownloadWorkerDoWork:
         assert result.id == "job_123"
         assert result.manga_title == "Test Manga"
         assert result.chapter_title == "Chapter 1"
+        assert result.app_config is app_config
         assert result.image_data == [b"image1", b"image2"]
 
     @pytest.mark.asyncio
@@ -56,14 +58,14 @@ class TestDownloadWorkerDoWork:
         mock_download_client = MagicMock()
         mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
         test_semaphore = asyncio.Semaphore(5)
+        app_config = AppConfig(optimize=True)
 
         job = DownloadingJob(
             id="job_123",
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=app_config,
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
             source=ContentSource.MANGADEX,
         )
@@ -78,11 +80,12 @@ class TestDownloadWorkerDoWork:
             config=MagicMock(),
         )
 
-        await worker._do_work(job)
+        result = await worker._do_work(job)
 
         mock_download_client.download_images.assert_called_once_with(
             ["http://example.com/1.jpg", "http://example.com/2.jpg"], {}, test_semaphore
         )
+        assert result.app_config is app_config
 
     @pytest.mark.asyncio
     async def test_do_work_calls_status_change_downloading(self) -> None:
@@ -96,8 +99,7 @@ class TestDownloadWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=AppConfig(),
             urls=["http://example.com/1.jpg"],
             source=ContentSource.MANGADEX,
         )
@@ -126,8 +128,7 @@ class TestDownloadWorkerDoWork:
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            output_directory=MagicMock(),
-            output_format=MagicMock(),
+            app_config=AppConfig(),
             urls=[],
             source=ContentSource.MANGADEX,
         )

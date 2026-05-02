@@ -1,9 +1,9 @@
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 from src.manga_archiver.models import ContentSource
+from src.manga_archiver.models.app_config import AppConfig
 from src.manga_archiver.models.output_format import OutputFormat
 from src.manga_archiver.pipeline_manager import PipelineConfig, PipelineManager
 from src.manga_archiver.workers.jobs import FetchingResourcesJob
@@ -19,9 +19,7 @@ class TestPipelineValidation:
             ({"chapter_number": "not-a-number"}, "must be float type"),
             ({"chapter_title": ""}, "is missing chapter_title"),
             ({"chapter_id": ""}, "is missing chapter_id"),
-            ({"output_format": None}, "output_format must be OutputFormat"),
-            ({"output_directory": None}, "output_directory"),
-            ({"output_directory": Path("/nonexistent/path")}, "output_directory does not exist"),
+            ({"app_config": None}, "app_config must be AppConfig instance"),
         ],
         ids=[
             "missing_id",
@@ -30,9 +28,7 @@ class TestPipelineValidation:
             "invalid_chapter_number",
             "missing_chapter_title",
             "missing_chapter_id",
-            "none_output_format",
-            "none_output_directory",
-            "nonexistent_output_directory",
+            "missing_app_config",
         ],
     )
     def test_validate_job_raises_on_invalid_field(
@@ -44,8 +40,7 @@ class TestPipelineValidation:
             chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_456",
-            output_directory=tmp_path,
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_path=tmp_path, _output_format=OutputFormat.PDF),
             source=ContentSource.MANGADEX,
         )
 
@@ -71,8 +66,7 @@ class TestPipelineEnqueue:
             chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_123",
-            output_directory=tmp_path,
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_path=tmp_path, _output_format=OutputFormat.PDF),
             source=ContentSource.MANGADEX,
         )
         invalid_job = FetchingResourcesJob(
@@ -81,8 +75,7 @@ class TestPipelineEnqueue:
             chapter_number=2.0,
             chapter_title="Chapter 2",
             chapter_id="chapter_456",
-            output_directory=tmp_path / "missing",
-            output_format=OutputFormat.PDF,
+            app_config=None,
             source=ContentSource.MANGADEX,
         )
         pm = PipelineManager(
@@ -104,8 +97,7 @@ class TestPipelineEnqueue:
             chapter_number=1.0,
             chapter_title="Chapter 1",
             chapter_id="chapter_123",
-            output_directory=tmp_path,
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_path=tmp_path, _output_format=OutputFormat.PDF),
             source=ContentSource.MANGADEX,
         )
         duplicate_job = FetchingResourcesJob(
@@ -114,8 +106,7 @@ class TestPipelineEnqueue:
             chapter_number=1.0,
             chapter_title="Chapter 1 Duplicate",
             chapter_id="chapter_123",
-            output_directory=tmp_path,
-            output_format=OutputFormat.PDF,
+            app_config=AppConfig(_output_path=tmp_path, _output_format=OutputFormat.PDF),
             source=ContentSource.MANGADEX,
         )
         pm = PipelineManager(

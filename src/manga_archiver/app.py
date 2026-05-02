@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from copy import deepcopy
 from typing import TYPE_CHECKING
 
 from textual import on, work
@@ -11,9 +12,8 @@ from .constants.defaults import (
     DEFAULT_AUTO_EXIT_POLL_INTERVAL,
 )
 from .integrations.content_providers import ContentProviderManager
-from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from .models.app_config import AppConfig
-from .pipeline_manager import PipelineConfig, PipelineManager
+from .pipeline_manager import PipelineManager
 from .repositories import FavoriteRepository
 from .repositories.types import FavoriteManga
 from .screens import (
@@ -25,7 +25,6 @@ from .screens import (
     SelectionScreen,
     SettingsScreen,
 )
-from .utils import DownloadClient
 from .utils.benchmark_report import write_benchmark_report
 from .utils.settings_manager import save_settings
 from .workers.jobs import FetchingResourcesJob
@@ -40,12 +39,9 @@ class MangaArchiverApp(App):
     """The core Textual application class for top level event handling.
 
     Attributes:
-        _pipeline_config (PipelineConfig): The pipeline configuration
-        _pipeline_manager (PipelineManager | None): The pipeline manager instance
+        _pipeline_manager (PipelineManager): The pipeline manager instance
         _favorite_repository (FavoriteRepository): The favorite repository
-        _google_drive_token (GoogleApiStoredToken | None): Token for Google Drive clients
         _provider_manager (ContentProviderManager): The content provider manager
-        _download_client (DownloadClient): The download client
         _backlog (list[FetchingResourcesJob] | None): The backlog of missing chapters
         _auto_exit (bool): Whether to automatically exit when all jobs are complete
 
@@ -68,12 +64,10 @@ class MangaArchiverApp(App):
 
     def __init__(
         self,
-        pipeline_config: PipelineConfig,
+        pipeline_manager: PipelineManager,
         app_config: AppConfig,
         favorite_repository: FavoriteRepository,
         provider_manager: ContentProviderManager,
-        download_client: DownloadClient,
-        google_drive_token: GoogleApiStoredToken | None = None,
         backlog: list[FetchingResourcesJob] | None = None,
         auto_exit: bool = False,
         **kwargs,
@@ -81,27 +75,22 @@ class MangaArchiverApp(App):
         """Initialize the MangaArchiverApp.
 
         Args:
-            pipeline_config: The pipeline configuration
+            pipeline_manager: Un-started pipeline manager for the app lifecycle
             app_config: The application configuration
             favorite_repository: The favorite repository
-            google_drive_token: Token for creating Google Drive clients
             backlog: Pre-fetched jobs to enqueue when pipeline starts
             provider_manager: Content provider manager (injected)
-            download_client: Download client (injected)
             auto_exit: Whether to automatically exit the application
         """
         super().__init__(**kwargs)
 
-        self._pipeline_config = pipeline_config
+        self._pipeline_manager = pipeline_manager
         self._app_config = app_config
         self._backlog = backlog
         self._auto_exit = auto_exit
 
-        self._pipeline_manager: PipelineManager | None = None
         self._favorite_repository = favorite_repository
-        self._google_drive_token = google_drive_token
         self._provider_manager = provider_manager
-        self._download_client = download_client
 
         try:
             self._favorites = self._favorite_repository.get_all()
@@ -121,9 +110,6 @@ class MangaArchiverApp(App):
         while True:
             await asyncio.sleep(DEFAULT_AUTO_EXIT_POLL_INTERVAL)
 
-            if not self._pipeline_manager:
-                continue
-
             if self._pipeline_manager.is_done():
                 self.notify(
                     f"auto exit confirm count: {confirm_count + 1}",
@@ -138,14 +124,7 @@ class MangaArchiverApp(App):
 
     @work
     async def _setup_pipeline_manager(self) -> None:
-        """Set up the pipeline manager, process backlog, and start it."""
-        self._pipeline_manager = PipelineManager(
-            self._provider_manager,
-            self._download_client,
-            self._pipeline_config,
-            google_drive_token=self._google_drive_token,
-        )
-
+        """Start the pipeline manager and process backlog jobs."""
         if self._backlog:
             self.notify(
                 f"Enqueueing {len(self._backlog)} jobs from backlog, this may take a while...",
@@ -161,11 +140,6 @@ class MangaArchiverApp(App):
     @on(SelectionScreen.EnqueueJobs)
     async def _enqueue_jobs(self, event: SelectionScreen.EnqueueJobs) -> None:
         """Enqueue jobs to the pipeline manager."""
-        if not self._pipeline_manager:
-            logger.error("Pipeline manager not initialized - missing from app setup")
-            self.notify("Pipeline manager not initialized", severity="error")
-            return
-
         partial_jobs: list[PartialJob] = event.partial_jobs
         jobs: list[FetchingResourcesJob] = [
             FetchingResourcesJob(
@@ -174,8 +148,7 @@ class MangaArchiverApp(App):
                 chapter_id=partial_job["chapter_id"],
                 chapter_number=partial_job["chapter_number"],
                 chapter_title=partial_job["chapter_title"],
-                output_directory=self._app_config.output_path,
-                output_format=self._app_config.output_format,
+                app_config=deepcopy(self._app_config),
                 source=partial_job["source"],
             )
             for partial_job in partial_jobs
@@ -192,11 +165,7 @@ class MangaArchiverApp(App):
             name="settings_screen",
         )
         self.install_screen(
-            DownloadsScreen(
-                # Lambda captures self by reference; null guard handles the window
-                # between screen install and pipeline initialization
-                lambda: self._pipeline_manager.get_jobs() if self._pipeline_manager else {}
-            ),
+            DownloadsScreen(self._pipeline_manager.get_jobs),
             name="downloads_screen",
         )
         self.install_screen(
@@ -212,24 +181,18 @@ class MangaArchiverApp(App):
         if not confirmed:
             return
 
-        if self._pipeline_manager:
+        try:
             self._pipeline_manager.stop()
-
-        benchmark_results = None
-
-        if self._pipeline_manager and self._pipeline_config.benchmark_enabled:
-            benchmark_results = self._pipeline_manager.get_benchmark_results()
-
-        write_benchmark_report(benchmark_results)
-
-        self.exit()
+            write_benchmark_report(self._pipeline_manager.get_benchmark_results())
+        except Exception as e:
+            logger.error("Error during shutdown: %s", e)
+        finally:
+            self.exit()
 
     def action_safe_pop_screen(self) -> None:
         """Check current screen safely before popping."""
         if isinstance(self.screen_stack[-1], MenuScreen):
-            incomplete_count = (
-                self._pipeline_manager.incomplete_job_count() if self._pipeline_manager else 0
-            )
+            incomplete_count = self._pipeline_manager.incomplete_job_count()
             self.push_screen(
                 QuitScreen(incomplete_count),
                 lambda confirmed: self._on_quit(confirmed),
