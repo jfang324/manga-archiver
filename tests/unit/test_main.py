@@ -1,12 +1,12 @@
 from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
+from src.manga_archiver.cli.handlers import handle_subcommands
 from src.manga_archiver.cli.presets import get_preset
 from src.manga_archiver.constants.exit_codes import EXIT_SUCCESS
 from src.manga_archiver.main import (
     _build_async_dependencies,
     _build_configurations,
-    _handle_subcommands,
 )
 from src.manga_archiver.models.app_config import AppConfig
 
@@ -105,7 +105,7 @@ class TestPresets:
     def test_handle_list_presets_prints_presets_and_exits_successfully(self, capsys) -> None:
         args = _make_args(command="list", list_target="presets")
 
-        exit_code = _handle_subcommands(args)
+        exit_code = handle_subcommands(args)
 
         captured = capsys.readouterr()
         assert exit_code == EXIT_SUCCESS
