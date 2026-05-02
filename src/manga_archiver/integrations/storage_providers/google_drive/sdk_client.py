@@ -46,18 +46,28 @@ class GoogleDriveSdkClient:
         page_size: int | None = None,
         spaces: str | None = None,
     ) -> list[GoogleDriveDirectory] | list[GoogleDriveFile]:
-        results = (
-            self._service.files()
-            .list(
-                q=query,
-                spaces=spaces,
-                fields="files(id, name, appProperties)",
-                pageSize=page_size,
-            )
-            .execute()
-        )
+        items: list[GoogleDriveDirectory] | list[GoogleDriveFile] = []
+        page_token: str | None = None
 
-        return results.get("files", [])
+        while True:
+            results = (
+                self._service.files()
+                .list(
+                    q=query,
+                    spaces=spaces,
+                    fields="files(id, name, appProperties), nextPageToken",
+                    pageSize=page_size,
+                    pageToken=page_token,
+                )
+                .execute()
+            )
+            items.extend(results.get("files", []))
+
+            page_token = results.get("nextPageToken")
+            if not page_token:
+                break
+
+        return items
 
     def list_root_folders(
         self, root_folder_name: str, page_size: int | None = None
