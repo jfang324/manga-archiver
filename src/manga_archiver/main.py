@@ -2,26 +2,24 @@ import asyncio
 import logging
 import sys
 from argparse import Namespace
-from contextlib import suppress
 from dataclasses import dataclass
 
 import aiohttp
-from tqdm import tqdm
 
 from .app import MangaArchiverApp
 from .backlog_sync import BacklogSync
 from .cli import parse_args
-from .cli.presets import RuntimePreset, format_presets, get_preset
+from .cli.handlers import handle_subcommands
+from .cli.presets import RuntimePreset, get_preset
 from .constants.exit_codes import (
     EXIT_AUTH_ERROR,
     EXIT_INIT_ERROR,
-    EXIT_MIGRATION_ERROR,
     EXIT_RUNTIME_ERROR,
-    EXIT_SUCCESS,
     EXIT_VALIDATION_ERROR,
 )
 from .db.migrations import DEFAULT_GOOGLE_DRIVE_VERSION
 from .db.schema_manager import MigrationError, SchemaManager
+from .headless_runner import HeadlessPipelineRunner
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveClient
 from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
@@ -29,15 +27,11 @@ from .models.app_config import AppConfig
 from .pipeline_manager import PipelineConfig, PipelineManager
 from .repositories import FavoriteRepository
 from .utils import DownloadClient, setup_logging
-from .utils.auth.google_drive import handle_auth_login, handle_auth_logout, load_token
-from .utils.benchmark_report import write_benchmark_report
+from .utils.auth.google_drive import load_token
 from .utils.settings_manager import load_settings
 from .workers.jobs import FetchingResourcesJob
-from .workers.types import JobStatus
 
 logger = logging.getLogger(__name__)
-
-HEADLESS_PROGRESS_POLL_INTERVAL_SECONDS = 0.25
 
 
 @dataclass(frozen=True)
@@ -68,14 +62,14 @@ async def _async_main() -> None:
     """Set up dependencies and run the application."""
     args = parse_args()
 
-    exit_code = _handle_subcommands(args)
+    exit_code = handle_subcommands(args)
     if exit_code is not None:
         sys.exit(exit_code)
 
     setup_logging()
     schema_manager = SchemaManager()
 
-    exit_code = _handle_subcommands(args, schema_manager)
+    exit_code = handle_subcommands(args, schema_manager)
     if exit_code is not None:
         sys.exit(exit_code)
 
@@ -128,10 +122,7 @@ async def _async_main() -> None:
             )
 
             if args.headless:
-                exit_code = await _run_headless_pipeline(
-                    pipeline_manager=pipeline_manager,
-                    backlog=backlog,
-                )
+                exit_code = await HeadlessPipelineRunner(pipeline_manager).run(backlog)
                 sys.exit(exit_code)
 
             app = _build_app(
@@ -151,94 +142,6 @@ async def _async_main() -> None:
     except Exception as e:
         logger.error("Failed to initialize: %s", e)
         sys.exit(EXIT_INIT_ERROR)
-
-
-def _handle_subcommands(args: Namespace, schema_manager: SchemaManager | None = None) -> int | None:
-    """Handle CLI subcommands before normal app startup.
-
-    Returns:
-        int | None: An exit code if the command was handled, None if not
-    """
-    handled, exit_code = _handle_list(args)
-    if handled:
-        return exit_code
-
-    handled, exit_code = _handle_auth(args)
-    if handled:
-        return exit_code
-
-    if schema_manager is None:
-        return None
-
-    handled, exit_code = _handle_migrations(args, schema_manager)
-    if handled:
-        return exit_code
-
-    return None
-
-
-def _handle_list(args: Namespace) -> tuple[bool, int]:
-    """Handle list subcommands.
-
-    Returns:
-        tuple[bool, int]: Tuple of (handled, exit_code). If handled is False, caller should continue.
-    """
-    if args.command != "list":
-        return False, EXIT_SUCCESS
-
-    if args.list_target == "presets":
-        print(format_presets())
-        return True, EXIT_SUCCESS
-
-    return True, EXIT_INIT_ERROR
-
-
-def _handle_auth(args: Namespace) -> tuple[bool, int]:
-    """Handle authentication commands.
-
-    Returns:
-        tuple[bool, int]: Tuple of (handled, exit_code). If handled is False, caller should continue.
-    """
-    if args.command != "auth":
-        return False, EXIT_SUCCESS
-
-    if args.auth_command == "login":
-        return True, handle_auth_login()
-
-    if args.auth_command == "logout":
-        return True, handle_auth_logout()
-
-    return True, EXIT_AUTH_ERROR
-
-
-def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[bool, int]:
-    """Handle migration commands.
-
-    Returns:
-        tuple[bool, int]: Tuple of (handled, exit_code). If handled is False, caller should continue.
-    """
-    if args.command != "migrate":
-        return False, EXIT_SUCCESS
-
-    print("Running migrations...")
-
-    try:
-        if args.migrate_system == "database":
-            system = "database"
-
-        elif args.migrate_system == "google-drive":
-            system = "google_drive"
-
-        else:
-            return True, EXIT_MIGRATION_ERROR
-
-        result = schema_manager.run_migrations(system)
-        print(f"  {result}")
-
-        return True, EXIT_SUCCESS
-    except Exception as e:
-        print(f"Migration failed: {e}")
-        return True, EXIT_MIGRATION_ERROR
 
 
 def _validate_schema_versions(
@@ -370,66 +273,6 @@ def _build_app(
         provider_manager=provider_manager,
         auto_exit=auto_exit,
     )
-
-
-async def _run_headless_pipeline(
-    pipeline_manager: PipelineManager,
-    backlog: list[FetchingResourcesJob] | None,
-) -> int:
-    """Run backlog jobs through the pipeline without launching the Textual app."""
-    jobs = backlog or []
-    if not jobs:
-        print("No missing chapters to process.")
-        return EXIT_SUCCESS
-
-    pipeline_task = asyncio.create_task(pipeline_manager.start())
-
-    completed_ids: set[str] = set()
-    failed_ids: set[str] = set()
-    terminal_ids: set[str] = set()
-
-    try:
-        enqueue_result = await pipeline_manager.enqueue_jobs(jobs)
-        accepted_count, skipped_count = enqueue_result.accepted_count, enqueue_result.skipped_count
-
-        with tqdm(total=accepted_count, desc="Processing backlog", unit="chapter") as progress:
-            while len(terminal_ids) < accepted_count:
-                if pipeline_task.done():
-                    exception = pipeline_task.exception()
-                    if exception is not None:
-                        raise exception
-
-                for job_id, (status, _) in pipeline_manager.get_jobs().items():
-                    if status not in (JobStatus.COMPLETED, JobStatus.FAILED):
-                        continue
-
-                    if job_id in terminal_ids:
-                        continue
-
-                    terminal_ids.add(job_id)
-                    progress.update(1)
-
-                    if status == JobStatus.COMPLETED:
-                        completed_ids.add(job_id)
-                    else:
-                        failed_ids.add(job_id)
-
-                await asyncio.sleep(HEADLESS_PROGRESS_POLL_INTERVAL_SECONDS)
-
-        print(
-            f"Completed: {len(completed_ids)}, Failed: {len(failed_ids)}, "
-            f"Skipped: {skipped_count}, Total: {len(jobs)}"
-        )
-        write_benchmark_report(pipeline_manager.get_benchmark_results())
-        return EXIT_SUCCESS
-    except Exception as e:
-        logger.error("Runtime error during headless pipeline execution: %s", e)
-        return EXIT_RUNTIME_ERROR
-    finally:
-        pipeline_manager.stop()
-        pipeline_task.cancel()
-        with suppress(asyncio.CancelledError, Exception):
-            await pipeline_task
 
 
 async def _load_backlog(
