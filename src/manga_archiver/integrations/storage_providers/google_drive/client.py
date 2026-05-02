@@ -15,6 +15,7 @@ from .constants import (
     DEFAULT_MAX_RETRIES,
     DEFAULT_ROOT_PAGE_SIZE,
     DEFAULT_SUB_FOLDER_PAGE_SIZE,
+    MULTIPART_UPLOAD_THRESHOLD,
     ROOT_FOLDER_NAME,
     SYSTEM_SOURCE,
 )
@@ -389,15 +390,21 @@ class GoogleDriveClient:
             "appProperties": file_metadata.to_app_properties(),
         }
 
+        should_use_resumable_upload = len(file_data) > MULTIPART_UPLOAD_THRESHOLD
+
         media = MediaIoBaseUpload(
             io.BytesIO(file_data),
             mimetype=mimetype,
-            resumable=True,
+            resumable=should_use_resumable_upload,
             chunksize=chunk_size,
         )
 
         try:
-            file = self._service.files().create(body=upload_metadata, media_body=media).execute()
+            file = (
+                self._service.files()
+                .create(body=upload_metadata, media_body=media, fields="id")
+                .execute()
+            )
 
             return file.get("id")
         except HttpError as e:
