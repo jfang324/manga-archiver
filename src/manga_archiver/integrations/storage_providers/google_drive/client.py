@@ -1,24 +1,16 @@
 import asyncio
-import io
 from dataclasses import dataclass
-from pathlib import Path
 from typing import ClassVar
 
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaIoBaseUpload
-
-from ...exceptions import ApiError, RateLimitError
 from .constants import (
     DEFAULT_CHUNK_SIZE,
     DEFAULT_MAX_RETRIES,
     DEFAULT_ROOT_PAGE_SIZE,
     DEFAULT_SUB_FOLDER_PAGE_SIZE,
-    MULTIPART_UPLOAD_THRESHOLD,
     ROOT_FOLDER_NAME,
     SYSTEM_SOURCE,
 )
+from .sdk_client import GoogleDriveSdkClient
 from .types import (
     ClientNotInitializedError,
     GoogleApiStoredToken,
@@ -28,18 +20,6 @@ from .types import (
     GoogleDriveFolderMetadata,
     InitResult,
 )
-
-
-def _escape_query_string(value: str) -> str:
-    """Escape special characters for Google Drive API query strings.
-
-    Args:
-        value: The string to escape
-
-    Returns:
-        str: The escaped string safe for use in queries
-    """
-    return value.replace("\\", "\\\\").replace("'", "\\'")
 
 
 @dataclass(frozen=True)
@@ -66,15 +46,7 @@ class GoogleDriveClient:
             stored_token: The token stored by the corresponding auth util
             max_retries: Maximum number of retries for failed uploads (default: 5)
         """
-        self._credentials = Credentials(
-            token=None,
-            refresh_token=stored_token["refresh_token"],
-            client_id=stored_token["client_id"],
-            client_secret=stored_token["client_secret"],
-            token_uri=stored_token["token_uri"],
-        )
-        self._service = build("drive", "v3", credentials=self._credentials)
-        self._max_retries = max_retries
+        self._sdk_client = GoogleDriveSdkClient(stored_token, max_retries)
 
     def initialize(self) -> InitResult:
         """Initialize and cache folders from Google Drive.
@@ -96,7 +68,8 @@ class GoogleDriveClient:
 
         if not GoogleDriveClient._root_folder_id:
             root_metadata = GoogleDriveFolderMetadata(source=SYSTEM_SOURCE)
-            GoogleDriveClient._root_folder_id = self._create_folder_sync(
+            # TODO: Use async SDK folder creation after initialize() can become async.  # noqa: FIX002
+            GoogleDriveClient._root_folder_id = self._sdk_client._create_folder_sync(
                 ROOT_FOLDER_NAME, folder_metadata=root_metadata
             )
             was_created = True
@@ -135,20 +108,7 @@ class GoogleDriveClient:
         Returns:
             list[GoogleDriveDirectory]: List of folder dictionaries with 'id' and 'name' keys
         """
-        query = f"name='{ROOT_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-
-        results = (
-            self._service.files()
-            .list(
-                q=query,
-                spaces="drive",  # "drive" space is the root folder
-                fields="files(id, name, appProperties)",
-                pageSize=page_size,
-            )
-            .execute()
-        )
-
-        return results.get("files", [])
+        return self._sdk_client.list_root_folders(ROOT_FOLDER_NAME, page_size)
 
     def _get_sub_folders(
         self, parent_id: str, page_size: int | None = None
@@ -162,19 +122,7 @@ class GoogleDriveClient:
         Returns:
             list[GoogleDriveDirectory]: List of folder dictionaries with 'id' and 'name' keys
         """
-        query = f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
-
-        results = (
-            self._service.files()
-            .list(
-                q=query,
-                fields="files(id, name, appProperties)",
-                pageSize=page_size,
-            )
-            .execute()
-        )
-
-        return results.get("files", [])
+        return self._sdk_client.list_sub_folders(parent_id, page_size)
 
     def get_files_in_folder(
         self, folder_id: str, page_size: int | None = None
@@ -188,47 +136,7 @@ class GoogleDriveClient:
         Returns:
             list[GoogleDriveFile]: List of files with 'id', 'name', 'appProperties' keys
         """
-        query = f"'{folder_id}' in parents and trashed=false"
-
-        results = (
-            self._service.files()
-            .list(
-                q=query,
-                fields="files(id, name, appProperties)",
-                pageSize=page_size,
-            )
-            .execute()
-        )
-
-        return results.get("files", [])
-
-    def _create_folder_sync(
-        self,
-        name: str,
-        folder_metadata: GoogleDriveFolderMetadata,
-        parent_id: str | None = None,
-    ) -> str:
-        """Create a new folder in Google Drive.
-
-        Args:
-            name: The name of the folder to create
-            folder_metadata: Metadata for the folder
-            parent_id: The ID of the parent folder. If None, creates in My Drive root
-
-        Returns:
-            str: The ID of the created folder
-        """
-        file_metadata: dict = {
-            "name": name,
-            "mimeType": "application/vnd.google-apps.folder",
-            "appProperties": folder_metadata.to_app_properties(),
-        }
-        if parent_id:
-            file_metadata["parents"] = [parent_id]
-
-        folder = self._service.files().create(body=file_metadata).execute()
-
-        return folder["id"]
+        return self._sdk_client.list_files_in_folder(folder_id, page_size)
 
     async def get_or_create_manga_folder(self, manga_title: str, source: str) -> str:
         """Get or create a folder for a manga title.
@@ -260,8 +168,7 @@ class GoogleDriveClient:
             if cached_folder_id:
                 return cached_folder_id
 
-            existing_id = await asyncio.to_thread(
-                self._search_folder_by_name,
+            existing_id = await self._sdk_client.search_folder_by_name(
                 manga_title,
                 GoogleDriveClient._root_folder_id,
                 source,
@@ -272,8 +179,7 @@ class GoogleDriveClient:
                 return existing_id
 
             folder_metadata = GoogleDriveFolderMetadata(source=source)
-            folder_id = await asyncio.to_thread(
-                self._create_folder_sync,
+            folder_id = await self._sdk_client.create_folder(
                 manga_title,
                 folder_metadata,
                 GoogleDriveClient._root_folder_id,
@@ -296,36 +202,6 @@ class GoogleDriveClient:
 
         return GoogleDriveClient._folder_cache.get(cache_key)
 
-    def _search_folder_by_name(self, name: str, parent_id: str, source: str) -> str | None:
-        """Search for a folder by name within a parent folder.
-
-        Args:
-            name: The folder name to search for
-            parent_id: The ID of the parent folder
-            source: The content source to match
-
-        Returns:
-            str | None: Folder ID if found, None otherwise
-        """
-        query = (
-            f"name='{_escape_query_string(name)}' and '{parent_id}' in parents and "
-            f"mimeType='application/vnd.google-apps.folder' and trashed=false and "
-            f"appProperties has {{ key='source' and value='{_escape_query_string(source)}' }}"
-        )
-
-        results = (
-            self._service.files()
-            .list(
-                q=query,
-                fields="files(id, name, appProperties)",
-                pageSize=1,
-            )
-            .execute()
-        )
-
-        files = results.get("files", [])
-        return files[0]["id"] if files else None
-
     def _update_folder_metadata(self, folder_id: str, metadata: GoogleDriveFolderMetadata) -> None:
         """Update folder metadata with appProperties.
 
@@ -334,10 +210,7 @@ class GoogleDriveClient:
             metadata: The folder metadata to apply
         """
 
-        self._service.files().update(
-            fileId=folder_id,
-            body={"appProperties": metadata.to_app_properties()},
-        ).execute()
+        self._sdk_client.update_metadata(folder_id, metadata.to_app_properties())
 
     def _update_file_metadata(self, file_id: str, metadata: GoogleDriveFileMetadata) -> None:
         """Update file metadata with appProperties.
@@ -347,87 +220,7 @@ class GoogleDriveClient:
             metadata: The file metadata to apply
         """
 
-        self._service.files().update(
-            fileId=file_id,
-            body={"appProperties": metadata.to_app_properties()},
-        ).execute()
-
-    def _upload_file_sync(
-        self,
-        file_data: bytes,
-        file_name: str,
-        folder_id: str,
-        mimetype: str,
-        file_metadata: GoogleDriveFileMetadata,
-        chunk_size: int = DEFAULT_CHUNK_SIZE,
-        attempts: int = 1,
-    ) -> str | None:
-        """Upload a file to Google Drive (synchronous).
-
-        Handles file conflicts by retrying with modified filenames.
-
-        Args:
-            file_data: The file data to upload
-            file_name: The name of the file
-            folder_id: The ID of the destination folder
-            mimetype: The MIME type of the file
-            chunk_size: The chunk size for resumable upload (default: 16MB)
-            attempts: Current attempt number for recursive retries in name collision (default: 1)
-            file_metadata: Metadata for the file
-
-        Returns:
-            str | None: The ID of the uploaded file, or None if API response missing ID
-
-        Raises:
-            ApiError: If max retries exceeded due to file conflicts
-        """
-        name = Path(file_name).stem
-        extension = Path(file_name).suffix
-
-        upload_metadata = {
-            "name": file_name,
-            "parents": [folder_id],
-            "appProperties": file_metadata.to_app_properties(),
-        }
-
-        should_use_resumable_upload = len(file_data) > MULTIPART_UPLOAD_THRESHOLD
-
-        media = MediaIoBaseUpload(
-            io.BytesIO(file_data),
-            mimetype=mimetype,
-            resumable=should_use_resumable_upload,
-            chunksize=chunk_size,
-        )
-
-        try:
-            file = (
-                self._service.files()
-                .create(body=upload_metadata, media_body=media, fields="id")
-                .execute()
-            )
-
-            return file.get("id")
-        except HttpError as e:
-            if e.resp.status == 409:
-                if attempts < self._max_retries:
-                    return self._upload_file_sync(
-                        file_data,
-                        f"{name} ({attempts}){extension}",
-                        folder_id,
-                        mimetype,
-                        file_metadata,
-                        chunk_size,
-                        attempts + 1,
-                    )
-                raise ApiError(f"Upload failed: max retries exceeded for {file_name}") from e
-
-            if e.resp.status == 403:
-                raise ApiError(f"Permission denied (403): {file_name}") from e
-
-            if e.resp.status == 429:
-                raise RateLimitError(f"Rate limit exceeded: {file_name}") from e
-
-            raise
+        self._sdk_client.update_metadata(file_id, metadata.to_app_properties())
 
     async def upload_file(
         self,
@@ -454,12 +247,11 @@ class GoogleDriveClient:
         Raises:
             ApiError: If max retries exceeded due to file conflicts
         """
-        return await asyncio.to_thread(
-            self._upload_file_sync,
+        return await self._sdk_client.upload_file(
             file_data,
             file_name,
             folder_id,
             mimetype,
-            file_metadata,
+            file_metadata.to_app_properties(),
             chunk_size,
         )

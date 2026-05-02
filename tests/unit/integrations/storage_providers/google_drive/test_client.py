@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import Generator
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from googleapiclient.errors import HttpError
@@ -10,6 +10,9 @@ from src.manga_archiver.integrations.storage_providers.google_drive.constants im
     DEFAULT_CHUNK_SIZE,
     MULTIPART_UPLOAD_THRESHOLD,
     ROOT_FOLDER_NAME,
+)
+from src.manga_archiver.integrations.storage_providers.google_drive.sdk_client import (
+    GoogleDriveSdkClient,
 )
 from src.manga_archiver.integrations.storage_providers.google_drive.types import (
     GoogleApiStoredToken,
@@ -51,17 +54,42 @@ def _file_metadata() -> GoogleDriveFileMetadata:
     )
 
 
-def _set_upload_response(client: GoogleDriveClient, response: dict[str, str]) -> MagicMock:
+def _create_sdk_client() -> GoogleDriveSdkClient:
+    return GoogleDriveSdkClient(_token())
+
+
+def _set_upload_response(sdk_client: GoogleDriveSdkClient, response: dict[str, str]) -> MagicMock:
     create_request = MagicMock()
     create_request.execute.return_value = response
     files_resource = MagicMock()
     files_resource.create.return_value = create_request
-    client._service.files.return_value = files_resource
+    sdk_client._service.files.return_value = files_resource
 
     return files_resource
 
 
-@patch("src.manga_archiver.integrations.storage_providers.google_drive.client.build")
+@patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
+def test_list_files_in_folder_returns_all_pages(_mock_build: MagicMock) -> None:
+    sdk_client = _create_sdk_client()
+    first_file = {"id": "file_1", "name": "Chapter 1", "appProperties": {}}
+    second_file = {"id": "file_2", "name": "Chapter 2", "appProperties": {}}
+    first_request = MagicMock()
+    first_request.execute.return_value = {"files": [first_file], "nextPageToken": "next_page"}
+    second_request = MagicMock()
+    second_request.execute.return_value = {"files": [second_file]}
+    files_resource = MagicMock()
+    files_resource.list.side_effect = [first_request, second_request]
+    sdk_client._service.files.return_value = files_resource
+
+    files = sdk_client.list_files_in_folder("folder_123", page_size=1)
+    list_calls = files_resource.list.call_args_list
+
+    assert files == [first_file, second_file]
+    assert [call.kwargs["pageToken"] for call in list_calls] == [None, "next_page"]
+    assert list_calls[0].kwargs["fields"] == "files(id, name, appProperties), nextPageToken"
+
+
+@patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
 def test_initialize_cache_is_visible_to_other_client_instance(
     _mock_build: MagicMock,
 ) -> None:
@@ -88,33 +116,35 @@ def test_initialize_cache_is_visible_to_other_client_instance(
 
 
 @pytest.mark.asyncio
-@patch("src.manga_archiver.integrations.storage_providers.google_drive.client.build")
+@patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
 async def test_get_or_create_manga_folder_caches_search_result(
     _mock_build: MagicMock,
 ) -> None:
     GoogleDriveClient._root_folder_id = "root_123"
     client = _create_client()
-    client._search_folder_by_name = MagicMock(return_value="folder_123")
-    client._create_folder_sync = MagicMock()
+    client._sdk_client.search_folder_by_name = AsyncMock(return_value="folder_123")
+    client._sdk_client.create_folder = AsyncMock()
 
     first_folder_id = await client.get_or_create_manga_folder("Test Manga", "mangadex")
     second_folder_id = await client.get_or_create_manga_folder("Test Manga", "mangadex")
 
     assert first_folder_id == "folder_123"
     assert second_folder_id == "folder_123"
-    client._search_folder_by_name.assert_called_once_with("Test Manga", "root_123", "mangadex")
-    client._create_folder_sync.assert_not_called()
+    client._sdk_client.search_folder_by_name.assert_awaited_once_with(
+        "Test Manga", "root_123", "mangadex"
+    )
+    client._sdk_client.create_folder.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-@patch("src.manga_archiver.integrations.storage_providers.google_drive.client.build")
+@patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
 async def test_concurrent_get_or_create_manga_folder_creates_one_folder(
     _mock_build: MagicMock,
 ) -> None:
     GoogleDriveClient._root_folder_id = "root_123"
     client = _create_client()
-    client._search_folder_by_name = MagicMock(return_value=None)
-    client._create_folder_sync = MagicMock(return_value="folder_123")
+    client._sdk_client.search_folder_by_name = AsyncMock(return_value=None)
+    client._sdk_client.create_folder = AsyncMock(return_value="folder_123")
 
     results = await asyncio.gather(
         client.get_or_create_manga_folder("Test Manga", "mangadex"),
@@ -122,11 +152,13 @@ async def test_concurrent_get_or_create_manga_folder_creates_one_folder(
     )
 
     assert results == ["folder_123", "folder_123"]
-    client._search_folder_by_name.assert_called_once_with("Test Manga", "root_123", "mangadex")
-    client._create_folder_sync.assert_called_once()
+    client._sdk_client.search_folder_by_name.assert_awaited_once_with(
+        "Test Manga", "root_123", "mangadex"
+    )
+    client._sdk_client.create_folder.assert_awaited_once()
 
 
-@patch("src.manga_archiver.integrations.storage_providers.google_drive.client.build")
+@patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
 @pytest.mark.parametrize(
     (
         "file_size",
@@ -167,19 +199,19 @@ def test_upload_file_sync_selects_upload_mode_by_file_size(
     expected_resumable: bool,
     expected_chunk_size: int | None,
 ) -> None:
-    client = _create_client()
-    files_resource = _set_upload_response(client, {"id": "file_123"})
+    sdk_client = _create_sdk_client()
+    files_resource = _set_upload_response(sdk_client, {"id": "file_123"})
 
     kwargs = {}
     if chunk_size is not None:
         kwargs["chunk_size"] = chunk_size
 
-    file_id = client._upload_file_sync(
+    file_id = sdk_client._upload_file_sync(
         file_data=b"x" * file_size,
         file_name="Test Manga [1].pdf",
         folder_id="folder_123",
         mimetype="application/pdf",
-        file_metadata=_file_metadata(),
+        app_properties=_file_metadata().to_app_properties(),
         **kwargs,
     )
 
@@ -191,11 +223,11 @@ def test_upload_file_sync_selects_upload_mode_by_file_size(
         assert media.chunksize() == expected_chunk_size
 
 
-@patch("src.manga_archiver.integrations.storage_providers.google_drive.client.build")
+@patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
 def test_upload_file_sync_retries_conflict_with_same_upload_mode(
     _mock_build: MagicMock,
 ) -> None:
-    client = _create_client()
+    sdk_client = _create_sdk_client()
     conflict = HttpError(MagicMock(status=409), b"conflict")
     first_request = MagicMock()
     first_request.execute.side_effect = conflict
@@ -203,14 +235,14 @@ def test_upload_file_sync_retries_conflict_with_same_upload_mode(
     second_request.execute.return_value = {"id": "file_456"}
     files_resource = MagicMock()
     files_resource.create.side_effect = [first_request, second_request]
-    client._service.files.return_value = files_resource
+    sdk_client._service.files.return_value = files_resource
 
-    file_id = client._upload_file_sync(
+    file_id = sdk_client._upload_file_sync(
         file_data=b"x" * MULTIPART_UPLOAD_THRESHOLD,
         file_name="Test Manga [1].pdf",
         folder_id="folder_123",
         mimetype="application/pdf",
-        file_metadata=_file_metadata(),
+        app_properties=_file_metadata().to_app_properties(),
     )
 
     first_media = files_resource.create.call_args_list[0].kwargs["media_body"]
