@@ -371,7 +371,7 @@ class GoogleDriveClient:
             file_name: The name of the file
             folder_id: The ID of the destination folder
             mimetype: The MIME type of the file
-            chunk_size: The chunk size for resumable upload (default: 5MB)
+            chunk_size: The chunk size for resumable upload (default: 16MB)
             attempts: Current attempt number for recursive retries in name collision (default: 1)
             file_metadata: Metadata for the file
 
@@ -446,7 +446,7 @@ class GoogleDriveClient:
             folder_id: The ID of the destination folder
             mimetype: The MIME type of the file
             file_metadata: Metadata for the file
-            chunk_size: The chunk size for resumable upload (default: 5MB)
+            chunk_size: The chunk size for resumable upload (default: 16MB)
 
         Returns:
             str | None: The ID of the uploaded file, or None if API response missing ID
