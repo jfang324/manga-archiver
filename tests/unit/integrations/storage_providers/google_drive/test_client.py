@@ -71,31 +71,22 @@ def _set_upload_response(sdk_client: GoogleDriveSdkClient, response: dict[str, s
 @patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
 def test_list_files_in_folder_returns_all_pages(_mock_build: MagicMock) -> None:
     sdk_client = _create_sdk_client()
+    first_file = {"id": "file_1", "name": "Chapter 1", "appProperties": {}}
+    second_file = {"id": "file_2", "name": "Chapter 2", "appProperties": {}}
     first_request = MagicMock()
-    first_request.execute.return_value = {
-        "files": [{"id": "file_1", "name": "Chapter 1", "appProperties": {}}],
-        "nextPageToken": "next_page",
-    }
+    first_request.execute.return_value = {"files": [first_file], "nextPageToken": "next_page"}
     second_request = MagicMock()
-    second_request.execute.return_value = {
-        "files": [{"id": "file_2", "name": "Chapter 2", "appProperties": {}}],
-    }
+    second_request.execute.return_value = {"files": [second_file]}
     files_resource = MagicMock()
     files_resource.list.side_effect = [first_request, second_request]
     sdk_client._service.files.return_value = files_resource
 
     files = sdk_client.list_files_in_folder("folder_123", page_size=1)
+    list_calls = files_resource.list.call_args_list
 
-    assert files == [
-        {"id": "file_1", "name": "Chapter 1", "appProperties": {}},
-        {"id": "file_2", "name": "Chapter 2", "appProperties": {}},
-    ]
-    assert files_resource.list.call_args_list[0].kwargs["pageToken"] is None
-    assert files_resource.list.call_args_list[1].kwargs["pageToken"] == "next_page"
-    assert (
-        files_resource.list.call_args_list[0].kwargs["fields"]
-        == "files(id, name, appProperties), nextPageToken"
-    )
+    assert files == [first_file, second_file]
+    assert [call.kwargs["pageToken"] for call in list_calls] == [None, "next_page"]
+    assert list_calls[0].kwargs["fields"] == "files(id, name, appProperties), nextPageToken"
 
 
 @patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
