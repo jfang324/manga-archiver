@@ -1,9 +1,16 @@
 from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from src.manga_archiver.cli.handlers import handle_subcommands
 from src.manga_archiver.cli.presets import get_preset
-from src.manga_archiver.constants.exit_codes import EXIT_SUCCESS
+from src.manga_archiver.constants.exit_codes import (
+    EXIT_AUTH_LOGIN_FAILED,
+    EXIT_AUTH_LOGOUT_FAILED,
+    EXIT_MIGRATION_ERROR,
+    EXIT_SUCCESS,
+)
 from src.manga_archiver.main import (
     _build_async_dependencies,
     _build_configurations,
@@ -113,3 +120,78 @@ class TestPresets:
         assert "safe" in captured.out
         assert "slow" in captured.out
         assert "fast" in captured.out
+
+    @pytest.mark.parametrize(
+        ("auth_command", "handler_name", "exit_code", "message"),
+        [
+            ("login", "handle_auth_login", EXIT_AUTH_LOGIN_FAILED, "login called"),
+            ("logout", "handle_auth_logout", EXIT_AUTH_LOGOUT_FAILED, "logout called"),
+        ],
+        ids=["login", "logout"],
+    )
+    def test_handle_auth_delegates_and_returns_exit_code(
+        self,
+        auth_command: str,
+        handler_name: str,
+        exit_code: int,
+        message: str,
+        capsys,
+    ) -> None:
+        with patch(f"src.manga_archiver.cli.handlers.{handler_name}") as mock_handler:
+
+            def fake_handler() -> int:
+                print(message)
+                return exit_code
+
+            mock_handler.side_effect = fake_handler
+            args = _make_args(command="auth", auth_command=auth_command)
+
+            actual_exit_code = handle_subcommands(args)
+
+        captured = capsys.readouterr()
+        mock_handler.assert_called_once_with()
+        assert actual_exit_code == exit_code
+        assert message in captured.out
+        assert captured.err == ""
+
+    @pytest.mark.parametrize(
+        ("migrate_system", "expected_system"),
+        [("database", "database"), ("google-drive", "google_drive")],
+        ids=["database", "google-drive"],
+    )
+    def test_handle_migrate_runs_migration_and_exits_successfully(
+        self, migrate_system: str, expected_system: str, capsys
+    ) -> None:
+        schema_manager = MagicMock()
+        schema_manager.run_migrations.return_value = f"{expected_system} migration complete"
+        args = _make_args(command="migrate", migrate_system=migrate_system)
+
+        exit_code = handle_subcommands(args, schema_manager)
+
+        captured = capsys.readouterr()
+        schema_manager.run_migrations.assert_called_once_with(expected_system)
+        assert exit_code == EXIT_SUCCESS
+        assert "Running migrations..." in captured.out
+        assert f"{expected_system} migration complete" in captured.out
+        assert captured.err == ""
+
+    @pytest.mark.parametrize(
+        ("migrate_system", "expected_system"),
+        [("database", "database"), ("google-drive", "google_drive")],
+        ids=["database", "google-drive"],
+    )
+    def test_handle_migrate_failure_exits_with_migration_error(
+        self, migrate_system: str, expected_system: str, capsys
+    ) -> None:
+        schema_manager = MagicMock()
+        schema_manager.run_migrations.side_effect = RuntimeError(f"{expected_system} failed")
+        args = _make_args(command="migrate", migrate_system=migrate_system)
+
+        exit_code = handle_subcommands(args, schema_manager)
+
+        captured = capsys.readouterr()
+        schema_manager.run_migrations.assert_called_once_with(expected_system)
+        assert exit_code == EXIT_MIGRATION_ERROR
+        assert "Running migrations..." in captured.out
+        assert f"Migration failed: {expected_system} failed" in captured.out
+        assert captured.err == ""

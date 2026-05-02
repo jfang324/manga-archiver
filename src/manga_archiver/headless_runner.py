@@ -82,6 +82,7 @@ class HeadlessPipelineRunner:
             return EXIT_RUNTIME_ERROR
         finally:
             self._pipeline_manager.stop()
-            pipeline_task.cancel()
-            with suppress(asyncio.CancelledError, Exception):
+            if not pipeline_task.done():
+                pipeline_task.cancel()
+            with suppress(asyncio.CancelledError):
                 await pipeline_task
