@@ -23,6 +23,13 @@ def _created_folder_caches(
     return [call.kwargs["folder_cache"] for call in mock_google_drive_archive_store.call_args_list]
 
 
+def _mock_google_drive_folder_cache() -> GoogleDriveFolderCache:
+    _mock_google_drive_folder_cache = MagicMock(GoogleDriveFolderCache)
+    _mock_google_drive_folder_cache.root_folder_id = "root_123"
+
+    return _mock_google_drive_folder_cache
+
+
 class TestWorkerManagerInit:
     def test_creates_resolve_pool_with_correct_size(self) -> None:
         mock_provider_manager = MagicMock()
@@ -73,6 +80,7 @@ class TestWorkerManagerInit:
             provider_manager=mock_provider_manager,
             download_client=mock_download_client,
             google_drive_token=_token(),
+            google_drive_folder_cache=_mock_google_drive_folder_cache(),
             on_status_update=mock_callback,
         )
 
@@ -229,7 +237,7 @@ class TestWorkerManagerWiring:
         mock_callback = MagicMock()
         clients = [MagicMock(), MagicMock()]
         mock_google_drive_archive_store.side_effect = clients
-        folder_cache = GoogleDriveFolderCache()
+        folder_cache = _mock_google_drive_folder_cache()
 
         manager = WorkerManager(
             resolve_queue=Queue(),
@@ -245,8 +253,8 @@ class TestWorkerManagerWiring:
             provider_manager=MagicMock(),
             download_client=MagicMock(),
             google_drive_token=_token(),
-            on_status_update=mock_callback,
             google_drive_folder_cache=folder_cache,
+            on_status_update=mock_callback,
         )
 
         assert manager.upload_pool[0]._google_drive_archive_store is clients[0]
@@ -267,7 +275,7 @@ class TestWorkerManagerWiring:
         merge_q = Queue()
         upload_q = Queue()
         notify_q = Queue()
-        folder_cache = GoogleDriveFolderCache()
+        folder_cache = _mock_google_drive_folder_cache()
 
         manager = WorkerManager(
             resolve_queue=Queue(),

@@ -307,7 +307,7 @@ async def _load_backlog(
     if not google_drive_archive_store:
         return BacklogSyncResult(
             exit_code=EXIT_INIT_ERROR,
-            message="--backlog requires a Google Drive client, try running with --archive",
+            message="--backlog requires a Google Drive archive store, try running with --archive",
         )
 
     backlog_sync = BacklogSync(
