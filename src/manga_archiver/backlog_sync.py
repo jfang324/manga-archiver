@@ -54,7 +54,7 @@ class BacklogSync:
         """
         print("=== Backlog Sync ===")
 
-        favorites = self._favorite_repository.get_all()
+        favorites = await self._favorite_repository.get_all()
         print(f"Found {len(favorites)} favorites")
 
         if not favorites:
