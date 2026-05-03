@@ -9,6 +9,7 @@ from .constants import (
 from .folder_cache import GoogleDriveFolderCache
 from .sdk_client import GoogleDriveSdkClient
 from .types import (
+    ArchivedChapterScanResult,
     ClientNotInitializedError,
     GoogleApiStoredToken,
     GoogleDriveFile,
@@ -73,13 +74,13 @@ class GoogleDriveArchiveStore:
             was_created=was_created,
         )
 
-    async def get_archived_chapter_numbers(
+    async def scan_archived_chapters(
         self, manga_title: str, source: str, page_size: int = 1000
-    ) -> list[float]:
-        """Return archived chapter numbers for a cached manga folder."""
+    ) -> ArchivedChapterScanResult:
+        """Scan archived chapter files for usable chapter numbers."""
         folder_id = self._folder_cache.get_folder_id(source, manga_title)
         if not folder_id:
-            return []
+            return ArchivedChapterScanResult(chapter_numbers=[], skipped_file_count=0)
 
         files = await self._sdk_client.list_files_in_folder(folder_id, page_size)
         return self._parse_chapter_numbers(files)
@@ -147,21 +148,28 @@ class GoogleDriveArchiveStore:
 
         return folder_id
 
-    def _parse_chapter_numbers(self, files: list[GoogleDriveFile]) -> list[float]:
+    def _parse_chapter_numbers(self, files: list[GoogleDriveFile]) -> ArchivedChapterScanResult:
         chapter_numbers: list[float] = []
+        skipped_file_count = 0
 
         for file in files:
             app_props = file.get("appProperties")
             if not app_props:
+                skipped_file_count += 1
                 continue
 
             chapter_num = app_props.get("chapter_num")
             if chapter_num is None:
+                skipped_file_count += 1
                 continue
 
             try:
                 chapter_numbers.append(float(chapter_num))
             except (ValueError, TypeError):
+                skipped_file_count += 1
                 continue
 
-        return chapter_numbers
+        return ArchivedChapterScanResult(
+            chapter_numbers=chapter_numbers,
+            skipped_file_count=skipped_file_count,
+        )
