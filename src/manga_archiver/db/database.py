@@ -73,6 +73,16 @@ def init_db(conn: Connection) -> None:
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS page_cache (
+            source TEXT NOT NULL,
+            chapter_id TEXT NOT NULL,
+            urls TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (source, chapter_id)
+        )
+    """)
+
     conn.commit()
 
 

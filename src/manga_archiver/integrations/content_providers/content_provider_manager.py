@@ -6,6 +6,7 @@ from aiohttp import ClientSession
 
 from ...constants.defaults import DEFAULT_DOWNLOAD_RATE_LIMIT, DEFAULT_PROVIDER_RATE_LIMIT
 from ...models import Chapter, ContentSource, DownloadResource, Manga
+from ...repositories import PageCacheRepository
 from .allanime.client import AllMangaClient
 from .mangadex.client import MangaDexApiClient
 
@@ -45,6 +46,7 @@ class ContentProviderManager:
         self._download_semaphores: dict[ContentSource, Semaphore] = {
             source: Semaphore(download_rate_limit) for source in ContentSource
         }
+        self._page_cache = PageCacheRepository()
 
     async def search_manga(self, query: str, page: int, page_size: int) -> SearchResults:
         """Search all providers in parallel.
@@ -120,7 +122,7 @@ class ContentProviderManager:
             chapter_id: ID of chapter at that provider
 
         Returns:
-            DownloadResource with URLs for images
+            DownloadResource: DownloadResource with URLs for images
 
         Raises:
             ValueError: If source is not supported
@@ -134,8 +136,24 @@ class ContentProviderManager:
         if provider is None or semaphore is None:
             raise ValueError(f"Unsupported content source: {source}")
 
+        try:
+            cached_urls = await self._page_cache.get(source, chapter_id)
+        except Exception:
+            cached_urls = None
+
+        if cached_urls:
+            return DownloadResource(urls=cached_urls, source=source)
+
         async with semaphore:
-            return await provider.get_download_resource(chapter_id)
+            result = await provider.get_download_resource(chapter_id)
+
+        if result.urls:
+            try:
+                await self._page_cache.set(source, chapter_id, result.urls)
+            except Exception:
+                return result
+
+        return result
 
     def get_download_semaphore(self, source: ContentSource) -> Semaphore:
         """Get the download semaphore for a specific provider.
@@ -144,7 +162,7 @@ class ContentProviderManager:
             source: Which provider to get semaphore for
 
         Returns:
-            Semaphore for rate limiting download operations
+            Semaphore: Semaphore for rate limiting download operations
 
         Raises:
             ValueError: If source is not supported
@@ -155,3 +173,15 @@ class ContentProviderManager:
             raise ValueError(f"Unsupported content source: {source}")
 
         return semaphore
+
+    async def invalidate_cache(self, source: ContentSource, chapter_id: str) -> None:
+        """Invalidate cached URLs for a chapter.
+
+        Args:
+            source: Which provider to invalidate
+            chapter_id: ID of chapter to invalidate cache for
+        """
+        try:
+            await self._page_cache.delete(source, chapter_id)
+        except Exception:
+            return

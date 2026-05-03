@@ -52,7 +52,7 @@ def _parse_settings_file(settings_path: Path) -> SettingsData | None:
         settings_path: Path to settings.json
 
     Returns:
-        SettingsData if successful, None if file cannot be read or parsed
+        SettingsData | None: SettingsData if successful, None if file cannot be read or parsed
     """
     try:
         return json.loads(settings_path.read_text())

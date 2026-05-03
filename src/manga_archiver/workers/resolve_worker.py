@@ -104,5 +104,6 @@ class ResolveWorker(Worker):
             chapter_title=chapter_title,
             app_config=app_config,
             urls=resources.urls,
+            chapter_id=job.chapter_id,
             source=job.source,
         )

@@ -14,6 +14,7 @@ class TestDownloadWorkerDoWork:
     def _create_mock_provider_manager(self, semaphore) -> MagicMock:
         manager = MagicMock()
         manager.get_download_semaphore = MagicMock(return_value=semaphore)
+        manager.invalidate_cache = AsyncMock()
         return manager
 
     @pytest.mark.asyncio
@@ -31,6 +32,7 @@ class TestDownloadWorkerDoWork:
             chapter_title="Chapter 1",
             app_config=app_config,
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
+            chapter_id="test_manga:1",
             source=ContentSource.MANGADEX,
         )
 
@@ -67,6 +69,7 @@ class TestDownloadWorkerDoWork:
             chapter_title="Chapter 1",
             app_config=app_config,
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
+            chapter_id="test_manga:1",
             source=ContentSource.MANGADEX,
         )
 
@@ -93,14 +96,16 @@ class TestDownloadWorkerDoWork:
         mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
         test_semaphore = asyncio.Semaphore(5)
         mock_notification_queue = AsyncMock()
+        app_config = AppConfig(optimize=True)
 
         job = DownloadingJob(
             id="job_123",
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            app_config=AppConfig(),
-            urls=["http://example.com/1.jpg"],
+            app_config=app_config,
+            urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
+            chapter_id="test_manga:1",
             source=ContentSource.MANGADEX,
         )
 
@@ -130,6 +135,7 @@ class TestDownloadWorkerDoWork:
             chapter_title="Chapter 1",
             app_config=AppConfig(),
             urls=[],
+            chapter_id="test_manga:1",
             source=ContentSource.MANGADEX,
         )
 
@@ -163,3 +169,38 @@ class TestDownloadWorkerDoWork:
 
         with pytest.raises(ValueError, match="Invalid job type"):
             await worker._do_work(mock_job)
+
+    @pytest.mark.asyncio
+    async def test_do_work_preserves_download_error_when_cache_invalidation_fails(self) -> None:
+        download_error = RuntimeError("download failed")
+        mock_download_client = MagicMock()
+        mock_download_client.download_images = AsyncMock(side_effect=download_error)
+        test_semaphore = asyncio.Semaphore(5)
+        mock_provider_manager = self._create_mock_provider_manager(test_semaphore)
+        mock_provider_manager.invalidate_cache = AsyncMock(
+            side_effect=RuntimeError("cache delete failed")
+        )
+
+        job = DownloadingJob(
+            id="job_123",
+            manga_title="Test Manga",
+            chapter_number=1.0,
+            chapter_title="Chapter 1",
+            app_config=AppConfig(),
+            urls=["http://example.com/1.jpg"],
+            chapter_id="test_manga:1",
+            source=ContentSource.MANGADEX,
+        )
+
+        worker = DownloadWorker(
+            download_client=mock_download_client,
+            provider_manager=mock_provider_manager,
+            worker_id="download_worker_0",
+            input_queue=MagicMock(),
+            output_queue=MagicMock(),
+            notification_queue=AsyncMock(),
+            config=MagicMock(),
+        )
+
+        with pytest.raises(RuntimeError, match="download failed"):
+            await worker._do_work(job)
