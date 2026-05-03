@@ -2,8 +2,7 @@ import logging
 import time
 from asyncio import Queue
 
-from ..integrations.storage_providers.google_drive import GoogleDriveClient
-from ..integrations.storage_providers.google_drive.types import GoogleDriveFileMetadata
+from ..integrations.storage_providers.google_drive import GoogleDriveArchiveStore
 from .base import Worker, WorkerConfig
 from .jobs import Job, JobStatus, NotificationJob, UploadJob
 
@@ -20,7 +19,7 @@ class UploadWorker(Worker):
         output_queue: Queue[Job] | None,
         notification_queue: Queue[NotificationJob],
         config: WorkerConfig,
-        google_drive_client: GoogleDriveClient,
+        google_drive_archive_store: GoogleDriveArchiveStore,
     ) -> None:
         """Initialize the upload worker.
 
@@ -30,11 +29,11 @@ class UploadWorker(Worker):
             output_queue: The output queue for the worker
             notification_queue: The queue for notification jobs
             config: The configuration for the worker
-            google_drive_client: The Google Drive client for uploads
+            google_drive_archive_store: The Google Drive archive store for uploads
         """
         super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
 
-        self._google_drive_client = google_drive_client
+        self._google_drive_archive_store = google_drive_archive_store
 
     async def _do_work(self, job: Job) -> None:
         """Upload the merged file to Google Drive.
@@ -82,22 +81,14 @@ class UploadWorker(Worker):
         chapter_num = f"{job.chapter_number:g}"
 
         try:
-            folder_id = await self._google_drive_client.get_or_create_manga_folder(
-                manga_title, source=job.source.value
-            )
-
-            file_metadata = GoogleDriveFileMetadata(
+            uploaded_id = await self._google_drive_archive_store.upload_chapter(
+                file_data=complete_file_data,
+                file_name=full_name,
+                manga_title=manga_title,
                 source=job.source.value,
                 chapter_num=chapter_num,
                 chapter_title=chapter_title,
-            )
-
-            uploaded_id = await self._google_drive_client.upload_file(
-                file_data=complete_file_data,
-                file_name=full_name,
-                folder_id=folder_id,
                 mimetype=app_config.output_format.mime_type,
-                file_metadata=file_metadata,
             )
 
             upload_end = time.perf_counter_ns()

@@ -1,17 +1,11 @@
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from googleapiclient.errors import HttpError
 
-from src.manga_archiver.integrations.storage_providers.google_drive.client import GoogleDriveClient
 from src.manga_archiver.integrations.storage_providers.google_drive.constants import (
     DEFAULT_CHUNK_SIZE,
     MULTIPART_UPLOAD_THRESHOLD,
-    ROOT_FOLDER_NAME,
-)
-from src.manga_archiver.integrations.storage_providers.google_drive.folder_cache import (
-    GoogleDriveFolderCache,
 )
 from src.manga_archiver.integrations.storage_providers.google_drive.sdk_client import (
     GoogleDriveSdkClient,
@@ -29,10 +23,6 @@ def _token() -> GoogleApiStoredToken:
         "client_secret": "client-secret",
         "refresh_token": "refresh-token",
     }
-
-
-def _create_client(folder_cache: GoogleDriveFolderCache) -> GoogleDriveClient:
-    return GoogleDriveClient(_token(), folder_cache=folder_cache)
 
 
 def _file_metadata() -> GoogleDriveFileMetadata:
@@ -76,78 +66,6 @@ def test_list_files_in_folder_returns_all_pages(_mock_build: MagicMock) -> None:
     assert files == [first_file, second_file]
     assert [call.kwargs["pageToken"] for call in list_calls] == [None, "next_page"]
     assert list_calls[0].kwargs["fields"] == "files(id, name, appProperties), nextPageToken"
-
-
-@patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
-def test_initialize_cache_is_visible_to_other_client_instance(
-    _mock_build: MagicMock,
-) -> None:
-    folder_cache = GoogleDriveFolderCache()
-    first_client = _create_client(folder_cache)
-    first_client._get_root_folders = MagicMock(
-        return_value=[{"id": "root_123", "name": ROOT_FOLDER_NAME, "appProperties": {}}]
-    )
-    first_client._get_sub_folders = MagicMock(
-        return_value=[
-            {
-                "id": "folder_123",
-                "name": "Test Manga",
-                "appProperties": {"source": "mangadex"},
-            }
-        ]
-    )
-
-    init_result = first_client.initialize()
-    second_client = _create_client(folder_cache)
-
-    assert init_result.root_folder_id == "root_123"
-    assert init_result.cached_folder_count == 1
-    assert second_client.get_cached_manga_folder_id("Test Manga", "mangadex") == "folder_123"
-
-
-@pytest.mark.asyncio
-@patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
-async def test_get_or_create_manga_folder_caches_search_result(
-    _mock_build: MagicMock,
-) -> None:
-    folder_cache = GoogleDriveFolderCache()
-    folder_cache.root_folder_id = "root_123"
-    client = _create_client(folder_cache)
-    client._sdk_client.search_folder_by_name = AsyncMock(return_value="folder_123")
-    client._sdk_client.create_folder = AsyncMock()
-
-    first_folder_id = await client.get_or_create_manga_folder("Test Manga", "mangadex")
-    second_folder_id = await client.get_or_create_manga_folder("Test Manga", "mangadex")
-
-    assert first_folder_id == "folder_123"
-    assert second_folder_id == "folder_123"
-    client._sdk_client.search_folder_by_name.assert_awaited_once_with(
-        "Test Manga", "root_123", "mangadex"
-    )
-    client._sdk_client.create_folder.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-@patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
-async def test_concurrent_get_or_create_manga_folder_creates_one_folder(
-    _mock_build: MagicMock,
-) -> None:
-    folder_cache = GoogleDriveFolderCache()
-    folder_cache.root_folder_id = "root_123"
-    client = _create_client(folder_cache)
-    client._sdk_client.search_folder_by_name = AsyncMock(return_value=None)
-    client._sdk_client.create_folder = AsyncMock(return_value="folder_123")
-
-    results = await asyncio.gather(
-        client.get_or_create_manga_folder("Test Manga", "mangadex"),
-        client.get_or_create_manga_folder("Test Manga", "mangadex"),
-    )
-
-    assert results == ["folder_123", "folder_123"]
-    client._sdk_client.search_folder_by_name.assert_awaited_once_with(
-        "Test Manga", "root_123", "mangadex"
-    )
-    client._sdk_client.create_folder.assert_awaited_once()
 
 
 @patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")

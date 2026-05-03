@@ -4,7 +4,10 @@ from asyncio import Queue
 from collections.abc import Callable
 
 from ..integrations.content_providers import ContentProviderManager
-from ..integrations.storage_providers.google_drive import GoogleDriveClient, GoogleDriveFolderCache
+from ..integrations.storage_providers.google_drive import (
+    GoogleDriveArchiveStore,
+    GoogleDriveFolderCache,
+)
 from ..integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
@@ -123,7 +126,7 @@ class WorkerManager:
                     output_queue=None,
                     notification_queue=notification_queue,
                     config=WorkerConfig(),
-                    google_drive_client=GoogleDriveClient(
+                    google_drive_archive_store=GoogleDriveArchiveStore(
                         google_drive_token, folder_cache=folder_cache
                     ),
                 )
