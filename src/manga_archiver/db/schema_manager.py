@@ -1,13 +1,26 @@
 import importlib.util
 import inspect
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from pathlib import Path
 from sqlite3 import Connection, Cursor
+from typing import cast
 
 from .database import get_connection, init_db, insert_version_record_if_missing
 from .migrations import MIN_DATABASE_VERSION, MIN_GOOGLE_DRIVE_VERSION
 
-MigrationFunc = Callable[[str | None, Cursor], str | Awaitable[str]]
+MigrationApplyFunc = Callable[[Cursor], str]
+
+
+@dataclass(frozen=True)
+class PreparedMigration:
+    """Migration work prepared before opening the database write transaction."""
+
+    apply: MigrationApplyFunc
+
+
+MigrationResult = str | PreparedMigration
+MigrationFunc = Callable[[str | None, Cursor], MigrationResult | Awaitable[MigrationResult]]
 MigrationStep = tuple[str, MigrationFunc]
 
 
@@ -120,10 +133,14 @@ class SchemaManager:
             cursor = self._conn.cursor()
             for migrate_version, migrate_func in pending:
                 current = self.get_current_version(system)
-                cursor.execute("BEGIN IMMEDIATE")
-
-                result = migrate_func(current, cursor)
-                migration_msg = await result if inspect.isawaitable(result) else result
+                if inspect.iscoroutinefunction(migrate_func):
+                    result = await migrate_func(current, cursor)
+                    cursor.execute("BEGIN IMMEDIATE")
+                    migration_msg = self._apply_migration_result(result, cursor)
+                else:
+                    cursor.execute("BEGIN IMMEDIATE")
+                    result = cast(MigrationResult, migrate_func(current, cursor))
+                    migration_msg = self._apply_migration_result(result, cursor)
 
                 self._conn.commit()
                 print(migration_msg)  # print is used here to give the user feedback per migration
@@ -133,6 +150,13 @@ class SchemaManager:
             raise MigrationError(f"Migration {current_version} failed: {e}") from e
 
         return f"Migrated to {current_version}"
+
+    def _apply_migration_result(self, result: MigrationResult, cursor: Cursor) -> str:
+        """Apply a prepared migration result inside an open database transaction."""
+        if isinstance(result, PreparedMigration):
+            return result.apply(cursor)
+
+        return result
 
     def check_versions(
         self,

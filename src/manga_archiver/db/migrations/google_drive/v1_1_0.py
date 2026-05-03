@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from sqlite3 import Cursor
 
-from manga_archiver.db.schema_manager import _version_compare
+from manga_archiver.db.schema_manager import PreparedMigration, _version_compare
 from manga_archiver.integrations.storage_providers.google_drive import GoogleDriveMigrationClient
 from manga_archiver.integrations.storage_providers.google_drive.types import (
     GoogleDriveDirectory,
@@ -171,7 +171,18 @@ async def _verify_migration(
     return remaining_folders, remaining_files
 
 
-async def migrate(current: str, cursor: Cursor) -> str:
+def _prepare_version_record_message(message: str) -> PreparedMigration:
+    def apply(cursor: Cursor) -> str:
+        cursor.execute(
+            "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
+            (MIGRATION_VERSION, "google_drive"),
+        )
+        return message
+
+    return PreparedMigration(apply=apply)
+
+
+async def migrate(current: str, _cursor: Cursor) -> str | PreparedMigration:
     """Execute Google Drive migration from pre-v1.1.0 to v1.1.0.
 
     Args:
@@ -187,11 +198,9 @@ async def migrate(current: str, cursor: Cursor) -> str:
     token = load_token()
     if token is None:
         logger.error("No Google Drive token found, skipping file migration")
-        cursor.execute(
-            "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
-            (MIGRATION_VERSION, "google_drive"),
+        return _prepare_version_record_message(
+            f"Migrated to {MIGRATION_VERSION}: Skipped (no token)"
         )
-        return f"Migrated to {MIGRATION_VERSION}: Skipped (no token)"
 
     client = GoogleDriveMigrationClient(token)
 
@@ -199,11 +208,9 @@ async def migrate(current: str, cursor: Cursor) -> str:
         init_result = await client.initialize()
     except Exception as e:
         logger.error("Failed to initialize Google Drive client: %s", e)
-        cursor.execute(
-            "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
-            (MIGRATION_VERSION, "google_drive"),
+        return _prepare_version_record_message(
+            f"Migrated to {MIGRATION_VERSION}: Failed to initialize Drive client"
         )
-        return f"Migrated to {MIGRATION_VERSION}: Failed to initialize Drive client"
 
     sub_folders = await client.list_child_folders(init_result.root_folder_id)
 
@@ -223,7 +230,8 @@ async def migrate(current: str, cursor: Cursor) -> str:
         migrated_files += file_count
 
     # Verification: re-count items needing migration
-    remaining_folders, remaining_files = await _verify_migration(client, sub_folders)
+    refreshed_sub_folders = await client.list_child_folders(init_result.root_folder_id)
+    remaining_folders, remaining_files = await _verify_migration(client, refreshed_sub_folders)
     print(
         f"Verification: {remaining_folders} folders, {remaining_files} files still need migration"
     )
@@ -231,9 +239,6 @@ async def migrate(current: str, cursor: Cursor) -> str:
     if remaining_folders == 0 and remaining_files == 0:
         print("Migration complete - all metadata added successfully")
 
-    cursor.execute(
-        "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
-        (MIGRATION_VERSION, "google_drive"),
+    return _prepare_version_record_message(
+        f"Migrated to {MIGRATION_VERSION}: {migrated_folders} folders, {migrated_files} files"
     )
-
-    return f"Migrated to {MIGRATION_VERSION}: {migrated_folders} folders, {migrated_files} files"

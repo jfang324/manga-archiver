@@ -1,10 +1,17 @@
-from sqlite3 import connect
+import asyncio
+from sqlite3 import Cursor, connect
 
 import pytest
 
 from src.manga_archiver.db.database import init_schema_version_table
 from src.manga_archiver.db.migrations import DEFAULT_DATABASE_VERSION
-from src.manga_archiver.db.schema_manager import SchemaManager, _version_compare, _version_key
+from src.manga_archiver.db.schema_manager import (
+    MigrationStep,
+    PreparedMigration,
+    SchemaManager,
+    _version_compare,
+    _version_key,
+)
 
 
 class TestVersionKey:
@@ -122,3 +129,46 @@ class TestSchemaManager:
         )
 
         assert cursor.fetchall() == [(1, "database", DEFAULT_DATABASE_VERSION)]
+
+    async def test_run_migrations_awaits_prepare_before_write_transaction(self) -> None:
+        events: list[str] = []
+
+        class AsyncPreparedMigrationSchemaManager(SchemaManager):
+            def get_current_version(self, system: str) -> str | None:
+                assert system == "async_test"
+                return None
+
+            def get_pending_migrations(self, system: str) -> list[MigrationStep]:
+                assert system == "async_test"
+                return [("v9.9.9", async_migrate)]
+
+        async def async_migrate(_current: str | None, _cursor: Cursor) -> PreparedMigration:
+            events.append("prepare")
+            await asyncio.sleep(0)
+
+            def apply(cursor: Cursor) -> str:
+                events.append("apply")
+                cursor.execute(
+                    "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
+                    ("v9.9.9", "async_test"),
+                )
+                return "prepared migration applied"
+
+            return PreparedMigration(apply=apply)
+
+        conn = connect(":memory:")
+        conn.set_trace_callback(
+            lambda statement: events.append(statement) if statement == "BEGIN IMMEDIATE" else None
+        )
+        manager = AsyncPreparedMigrationSchemaManager(conn)
+
+        result = await manager.run_migrations("async_test")
+
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT version, system FROM schema_version WHERE system = ?",
+            ("async_test",),
+        )
+        assert result == "Migrated to v9.9.9"
+        assert cursor.fetchone() == ("v9.9.9", "async_test")
+        assert events.index("prepare") < events.index("BEGIN IMMEDIATE") < events.index("apply")
