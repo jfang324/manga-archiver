@@ -12,7 +12,7 @@ from src.manga_archiver.integrations.exceptions import (
 from tests.conftest import (
     AsyncContextManagerMock,
 )
-from tests.unit.integrations.mangadex.mock_mangadex_api_data import (
+from tests.unit.integrations.content_providers.mangadex.mock_mangadex_api_data import (
     mock_chapter_data,
     mock_download_resource_data,
     mock_empty_chapter_data,

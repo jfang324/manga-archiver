@@ -12,7 +12,7 @@ from src.manga_archiver.integrations.exceptions import (
 )
 from src.manga_archiver.models import ContentSource
 from tests.conftest import AsyncContextManagerMock
-from tests.unit.integrations.allanime.mock_allanime_api_data import (
+from tests.unit.integrations.content_providers.allanime.mock_allanime_api_data import (
     mock_chapter_pages_missing_urls,
     mock_chapter_pages_response,
     mock_chapter_response_empty_pages,

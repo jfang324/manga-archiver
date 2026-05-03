@@ -114,11 +114,12 @@ class WorkerManager:
         self._upload_pool: list[UploadWorker] = []
 
         if google_drive_token:
-            folder_cache = (
-                google_drive_folder_cache
-                if google_drive_folder_cache is not None
-                else GoogleDriveFolderCache()
-            )
+            if (
+                google_drive_folder_cache is None
+                or google_drive_folder_cache.root_folder_id is None
+            ):
+                raise ValueError("Google Drive folder cache is not initialized")
+
             self._upload_pool = [
                 UploadWorker(
                     worker_id=f"upload_worker_{index}",
@@ -127,7 +128,7 @@ class WorkerManager:
                     notification_queue=notification_queue,
                     config=WorkerConfig(),
                     google_drive_archive_store=GoogleDriveArchiveStore(
-                        google_drive_token, folder_cache=folder_cache
+                        google_drive_token, folder_cache=google_drive_folder_cache
                     ),
                 )
                 for index in range(num_upload_workers)

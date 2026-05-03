@@ -201,6 +201,9 @@ async def test_concurrent_upload_chapter_creates_one_folder(
     assert create_folder_args[1].to_app_properties() == {"source": "mangadex"}
     assert create_folder_args[2] == "root_123"
     assert store._sdk_client.upload_file.await_count == 2
+    upload_calls = store._sdk_client.upload_file.await_args_list
+    assert [call.args[2] for call in upload_calls] == ["folder_123", "folder_123"]
+    assert [call.args[4]["chapter_num"] for call in upload_calls] == ["1", "2"]
 
 
 @pytest.mark.asyncio
