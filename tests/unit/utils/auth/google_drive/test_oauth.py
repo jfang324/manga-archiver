@@ -82,7 +82,7 @@ class TestHandleAuthLogin:
     @patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token")
     @patch("src.manga_archiver.utils.auth.google_drive.oauth.os.path.exists")
     @patch("src.manga_archiver.utils.auth.google_drive.oauth._get_credentials_path")
-    def test_login_returns_1_on_network_error(
+    def test_login_returns_exit_auth_login_failed_on_network_error(
         self,
         mock_get_path: MagicMock,
         mock_exists: MagicMock,
@@ -111,7 +111,7 @@ class TestHandleAuthLogin:
     @patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token")
     @patch("src.manga_archiver.utils.auth.google_drive.oauth.os.path.exists")
     @patch("src.manga_archiver.utils.auth.google_drive.oauth._get_credentials_path")
-    def test_login_returns_1_on_http_error(
+    def test_login_returns_exit_auth_login_failed_on_http_error(
         self,
         mock_get_path: MagicMock,
         mock_exists: MagicMock,
@@ -157,7 +157,7 @@ class TestHandleAuthLogout:
 
     @patch("src.manga_archiver.utils.auth.google_drive.oauth.requests.post")
     @patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token")
-    def test_logout_returns_1_on_network_error(
+    def test_logout_returns_exit_auth_logout_failed_on_network_error(
         self,
         mock_load_token: MagicMock,
         mock_post: MagicMock,

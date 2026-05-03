@@ -144,6 +144,7 @@ class TestLoadSettings:
         assert config.output_format == DEFAULT_OUTPUT_FORMAT
         assert config.optimize == DEFAULT_OPTIMIZE
         assert config.data_saver == DEFAULT_DATA_SAVER
+        assert config.output_path in (DEFAULT_OUTPUT_PATH, Path.cwd())
 
     @patch.object(settings_manager, "_get_settings_path")
     def test_load_settings_returns_valid_config(
