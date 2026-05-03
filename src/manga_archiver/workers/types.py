@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from enum import Enum
 
+from ..models import ContentSource
+from ..models.app_config import AppConfig
+
 
 class JobStatus(Enum):
     """An enum class for the status of a job."""
@@ -23,6 +26,8 @@ class JobMetadata:
         chapter_id (str): The ID of the chapter
         chapter_number (float): The chapter number
         chapter_title (str): The title of the chapter
+        app_config (AppConfig): Output settings for the job
+        source (ContentSource): The content source (provider)
         completed_at (float): Unix timestamp when job completed (set only on terminal status). Set to -1 if in progress
     """
 
@@ -30,4 +35,6 @@ class JobMetadata:
     chapter_id: str
     chapter_number: float
     chapter_title: str
+    app_config: AppConfig
+    source: ContentSource
     completed_at: float = -1

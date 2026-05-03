@@ -132,6 +132,7 @@ class PipelineManager:
             )
 
         self._job_statuses: dict[str, tuple[JobStatus, JobMetadata]] = {}
+        self._failed_jobs: dict[str, FetchingResourcesJob] = {}
         self._job_expiry_queue: deque[tuple[float, str]] = deque()
         self._job_expiry_seconds: int = DEFAULT_JOB_EXPIRY_SECONDS
 
@@ -170,6 +171,23 @@ class PipelineManager:
         """
         self._job_statuses[job_id] = (status, metadata)
 
+        # Track failed jobs for retry
+        if status == JobStatus.FAILED:
+            failed_job = FetchingResourcesJob(
+                id=job_id,
+                manga_title=metadata.manga_title,
+                chapter_id=metadata.chapter_id,
+                chapter_number=metadata.chapter_number,
+                chapter_title=metadata.chapter_title,
+                app_config=metadata.app_config,
+                source=metadata.source,
+            )
+            self._failed_jobs[job_id] = failed_job
+
+        # Remove from failed jobs if it succeeds (no longer needs retry)
+        if status == JobStatus.COMPLETED:
+            self._failed_jobs.pop(job_id, None)
+
         # Add to expiry queue when job completes
         if status in (JobStatus.COMPLETED, JobStatus.FAILED):
             self._job_expiry_queue.append((time.time(), job_id))
@@ -197,6 +215,22 @@ class PipelineManager:
                 if status not in (JobStatus.COMPLETED, JobStatus.FAILED)
             ]
         )
+
+    async def retry_failed_jobs(self) -> int:
+        """Re-queue all failed jobs for retry through the scheduler.
+
+        Returns:
+            int: Number of jobs re-queued
+        """
+        if not self._failed_jobs:
+            return 0
+
+        jobs = list(self._failed_jobs.values())
+
+        await self.enqueue_jobs(jobs)
+        self._failed_jobs.clear()
+
+        return len(jobs)
 
     def _validate_job(self, job: FetchingResourcesJob) -> None:
         """Validate job has all required fields and valid values.

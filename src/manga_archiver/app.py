@@ -165,7 +165,10 @@ class MangaArchiverApp(App):
             name="settings_screen",
         )
         self.install_screen(
-            DownloadsScreen(self._pipeline_manager.get_jobs),
+            DownloadsScreen(
+                get_jobs=self._pipeline_manager.get_jobs,
+                retry_failed_jobs=self._pipeline_manager.retry_failed_jobs,
+            ),
             name="downloads_screen",
         )
         self.install_screen(

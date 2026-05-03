@@ -69,6 +69,8 @@ class NotificationWorker:
             manga_title=job.manga_title,
             chapter_number=job.chapter_number,
             chapter_title=job.chapter_title,
+            app_config=job.app_config,
+            source=job.source,
         )
 
         # Set completed_at for terminal statuses
