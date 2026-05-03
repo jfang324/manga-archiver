@@ -286,27 +286,25 @@ class TestAllMangaClientGetDownloadResource:
         with pytest.raises(ApiError):
             await client.get_download_resource("manga:1")
 
+    @patch("src.manga_archiver.integrations.content_providers.allanime.client.decode_tobeparsed")
     @pytest.mark.parametrize(
         "mock_api_response",
         [(200, {"data": {"tobeparsed": "encrypted_data_string"}})],
         indirect=["mock_api_response"],
     )
     async def test_get_download_resource_decrypts_tobeparsed(
-        self, mock_session, mock_api_response
+        self, mock_decode: MagicMock, mock_session, mock_api_response
     ) -> None:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
-        with patch(
-            "src.manga_archiver.integrations.content_providers.allanime.client.decode_tobeparsed"
-        ) as mock_decode:
-            mock_decode.return_value = {
-                "chapterPages": {"edges": [{"pictureUrls": [{"url": "decoded.jpg"}]}]}
-            }
-            client = AllMangaClient(mock_session)
-            result = await client.get_download_resource("manga:1")
-            mock_decode.assert_called_once_with("encrypted_data_string")
+        mock_decode.return_value = {
+            "chapterPages": {"edges": [{"pictureUrls": [{"url": "decoded.jpg"}]}]}
+        }
+        client = AllMangaClient(mock_session)
+        result = await client.get_download_resource("manga:1")
 
-            assert len(result.urls) == 1
-            assert result.urls[0] == f"{CDN_BASE_URL}decoded.jpg"
+        mock_decode.assert_called_once_with("encrypted_data_string")
+        assert len(result.urls) == 1
+        assert result.urls[0] == f"{CDN_BASE_URL}decoded.jpg"
 
 
 class TestAllMangaClientErrorPropagation:

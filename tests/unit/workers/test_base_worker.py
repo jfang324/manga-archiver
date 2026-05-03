@@ -149,7 +149,13 @@ class TestRetryLogic:
         assert mock_notification_queue.put.call_args[0][0].status == JobStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_backoff_called_between_retries(self, mock_job) -> None:
+    @patch(
+        "src.manga_archiver.workers.base.Worker._calculate_backoff",
+        return_value=0.1,
+    )
+    async def test_backoff_called_between_retries(
+        self, mock_calculate_backoff: MagicMock, mock_job
+    ) -> None:
         config = WorkerConfig(max_retries=2, base_delay=0)
 
         worker = ConcreteWorker(
@@ -168,16 +174,10 @@ class TestRetryLogic:
             raise TimeoutError("Simulated timeout")
 
         worker._do_work = mock_do_work
-        mock_calculate_backoff = MagicMock(return_value=0.1)
+        await worker._process_job(mock_job)
 
-        with patch(
-            "src.manga_archiver.workers.base.Worker._calculate_backoff",
-            mock_calculate_backoff,
-        ):
-            await worker._process_job(mock_job)
-
-            assert call_count == config.max_retries + 1
-            assert mock_calculate_backoff.call_count == config.max_retries
+        assert call_count == config.max_retries + 1
+        assert mock_calculate_backoff.call_count == config.max_retries
 
     @pytest.mark.asyncio
     async def test_retries_on_transient_errors(self, mock_job) -> None:

@@ -1,7 +1,5 @@
-from collections.abc import Generator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-import pytest
 import requests
 
 from src.manga_archiver.constants.exit_codes import (
@@ -29,39 +27,47 @@ MOCK_DEVICE_CODE = {
 }
 
 
-@pytest.fixture
-def mock_auth_pipeline() -> Generator[tuple[MagicMock | AsyncMock, MagicMock | AsyncMock]]:
-    """Set up the full auth pipeline for login tests."""
-    with (
-        patch(
-            "src.manga_archiver.utils.auth.google_drive.oauth._get_credentials_path"
-        ) as mock_get_path,
-        patch("src.manga_archiver.utils.auth.google_drive.oauth.os.path.exists") as mock_exists,
-        patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token") as mock_load_token,
-        patch(
-            "src.manga_archiver.utils.auth.google_drive.oauth._load_client_credentials"
-        ) as mock_load_creds,
-        patch("src.manga_archiver.utils.auth.google_drive.oauth._fetch_device_code") as mock_fetch,
-        patch("src.manga_archiver.utils.auth.google_drive.oauth._poll_for_token") as mock_poll,
-    ):
-        mock_get_path.return_value = "/valid/path"
-        mock_exists.return_value = True
-        mock_load_token.return_value = None
-        mock_load_creds.return_value = MOCK_CREDENTIALS["installed"]
-
-        yield mock_fetch, mock_poll
+def _configure_auth_pipeline(
+    mock_get_path: MagicMock,
+    mock_exists: MagicMock,
+    mock_load_token: MagicMock,
+    mock_load_creds: MagicMock,
+) -> None:
+    mock_get_path.return_value = "/valid/path"
+    mock_exists.return_value = True
+    mock_load_token.return_value = None
+    mock_load_creds.return_value = MOCK_CREDENTIALS["installed"]
 
 
 class TestHandleAuthLogin:
-    def test_login_saves_token_and_returns_0_on_success(self, mock_auth_pipeline, capsys) -> None:
-        mock_fetch, mock_poll = mock_auth_pipeline
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.save_token")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._poll_for_token")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._fetch_device_code")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._load_client_credentials")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.os.path.exists")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._get_credentials_path")
+    def test_login_saves_token_and_returns_0_on_success(
+        self,
+        mock_get_path: MagicMock,
+        mock_exists: MagicMock,
+        mock_load_token: MagicMock,
+        mock_load_creds: MagicMock,
+        mock_fetch: MagicMock,
+        mock_poll: MagicMock,
+        mock_save_token: MagicMock,
+        capsys,
+    ) -> None:
+        _configure_auth_pipeline(
+            mock_get_path,
+            mock_exists,
+            mock_load_token,
+            mock_load_creds,
+        )
         mock_fetch.return_value = MOCK_DEVICE_CODE
         mock_poll.return_value = "test_refresh_token"
 
-        with patch(
-            "src.manga_archiver.utils.auth.google_drive.oauth.save_token"
-        ) as mock_save_token:
-            result = handle_auth_login()
+        result = handle_auth_login()
 
         assert result == EXIT_SUCCESS
         assert "Authentication successful!" in capsys.readouterr().out
@@ -70,8 +76,28 @@ class TestHandleAuthLogin:
         assert saved_token["refresh_token"] == "test_refresh_token"  # noqa: S105
         assert saved_token["client_id"] == "test_client_id"
 
-    def test_login_returns_1_on_network_error(self, mock_auth_pipeline, capsys) -> None:
-        mock_fetch, _ = mock_auth_pipeline
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._poll_for_token")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._fetch_device_code")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._load_client_credentials")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.os.path.exists")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._get_credentials_path")
+    def test_login_returns_exit_auth_login_failed_on_network_error(
+        self,
+        mock_get_path: MagicMock,
+        mock_exists: MagicMock,
+        mock_load_token: MagicMock,
+        mock_load_creds: MagicMock,
+        mock_fetch: MagicMock,
+        _mock_poll: MagicMock,
+        capsys,
+    ) -> None:
+        _configure_auth_pipeline(
+            mock_get_path,
+            mock_exists,
+            mock_load_token,
+            mock_load_creds,
+        )
         mock_fetch.side_effect = requests.Timeout("Connection timed out")
 
         result = handle_auth_login()
@@ -79,8 +105,28 @@ class TestHandleAuthLogin:
         assert result == EXIT_AUTH_LOGIN_FAILED
         assert "Network error" in capsys.readouterr().out
 
-    def test_login_returns_1_on_http_error(self, mock_auth_pipeline, capsys) -> None:
-        mock_fetch, _ = mock_auth_pipeline
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._poll_for_token")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._fetch_device_code")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._load_client_credentials")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.os.path.exists")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth._get_credentials_path")
+    def test_login_returns_exit_auth_login_failed_on_http_error(
+        self,
+        mock_get_path: MagicMock,
+        mock_exists: MagicMock,
+        mock_load_token: MagicMock,
+        mock_load_creds: MagicMock,
+        mock_fetch: MagicMock,
+        _mock_poll: MagicMock,
+        capsys,
+    ) -> None:
+        _configure_auth_pipeline(
+            mock_get_path,
+            mock_exists,
+            mock_load_token,
+            mock_load_creds,
+        )
         mock_fetch.side_effect = requests.HTTPError("500 Server Error")
 
         result = handle_auth_login()
@@ -90,33 +136,37 @@ class TestHandleAuthLogin:
 
 
 class TestHandleAuthLogout:
-    def test_logout_deletes_token_and_returns_0_on_success(self) -> None:
-        with (
-            patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token") as mock_load_token,
-            patch("src.manga_archiver.utils.auth.google_drive.oauth.requests.post") as mock_post,
-            patch(
-                "src.manga_archiver.utils.auth.google_drive.oauth.delete_token"
-            ) as mock_delete_token,
-        ):
-            mock_load_token.return_value = {"refresh_token": "test_refresh_token"}
-            mock_response = MagicMock()
-            mock_response.status_code = 200
-            mock_post.return_value = mock_response
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.delete_token")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.requests.post")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token")
+    def test_logout_deletes_token_and_returns_0_on_success(
+        self,
+        mock_load_token: MagicMock,
+        mock_post: MagicMock,
+        mock_delete_token: MagicMock,
+    ) -> None:
+        mock_load_token.return_value = {"refresh_token": "test_refresh_token"}
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_post.return_value = mock_response
 
-            result = handle_auth_logout()
+        result = handle_auth_logout()
 
         assert result == EXIT_SUCCESS
         mock_delete_token.assert_called_once()
 
-    def test_logout_returns_1_on_network_error(self, capsys) -> None:
-        with (
-            patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token") as mock_load_token,
-            patch("src.manga_archiver.utils.auth.google_drive.oauth.requests.post") as mock_post,
-        ):
-            mock_load_token.return_value = {"refresh_token": "test_refresh_token"}
-            mock_post.side_effect = requests.Timeout("Connection timed out")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.requests.post")
+    @patch("src.manga_archiver.utils.auth.google_drive.oauth.load_token")
+    def test_logout_returns_exit_auth_logout_failed_on_network_error(
+        self,
+        mock_load_token: MagicMock,
+        mock_post: MagicMock,
+        capsys,
+    ) -> None:
+        mock_load_token.return_value = {"refresh_token": "test_refresh_token"}
+        mock_post.side_effect = requests.Timeout("Connection timed out")
 
-            result = handle_auth_logout()
+        result = handle_auth_logout()
 
         assert result == EXIT_AUTH_LOGOUT_FAILED
         assert "Network error" in capsys.readouterr().out

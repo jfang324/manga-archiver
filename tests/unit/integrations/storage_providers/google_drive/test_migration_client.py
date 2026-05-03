@@ -29,7 +29,9 @@ def _file_metadata() -> GoogleDriveFileMetadata:
     )
 
 
-@patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
+@patch(
+    "src.manga_archiver.integrations.storage_providers.google_drive.migration_client.GoogleDriveSdkClient"
+)
 @pytest.mark.parametrize(
     ("client_method", "sdk_method", "item_id"),
     [
@@ -39,22 +41,25 @@ def _file_metadata() -> GoogleDriveFileMetadata:
     ids=["child-folders", "files"],
 )
 async def test_migration_client_delegates_listing(
-    _mock_build: MagicMock,
+    mock_sdk_client_cls: MagicMock,
     client_method: str,
     sdk_method: str,
     item_id: str,
 ) -> None:
     client = GoogleDriveMigrationClient(_token())
-    client._sdk_client.list_sub_folders = AsyncMock(return_value=[])
-    client._sdk_client.list_files_in_folder = AsyncMock(return_value=[])
+    sdk_client = mock_sdk_client_cls.return_value
+    sdk_client.list_sub_folders = AsyncMock(return_value=[])
+    sdk_client.list_files_in_folder = AsyncMock(return_value=[])
 
     result = await getattr(client, client_method)(item_id)
 
     assert result == []
-    getattr(client._sdk_client, sdk_method).assert_awaited_once_with(item_id)
+    getattr(sdk_client, sdk_method).assert_awaited_once_with(item_id)
 
 
-@patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
+@patch(
+    "src.manga_archiver.integrations.storage_providers.google_drive.migration_client.GoogleDriveSdkClient"
+)
 @pytest.mark.parametrize(
     ("client_method", "item_id", "metadata"),
     [
@@ -64,17 +69,18 @@ async def test_migration_client_delegates_listing(
     ids=["folder", "file"],
 )
 async def test_migration_client_delegates_metadata_updates(
-    _mock_build: MagicMock,
+    mock_sdk_client_cls: MagicMock,
     client_method: str,
     item_id: str,
     metadata: GoogleDriveFolderMetadata | GoogleDriveFileMetadata,
 ) -> None:
     client = GoogleDriveMigrationClient(_token())
-    client._sdk_client.update_metadata = AsyncMock()
+    sdk_client = mock_sdk_client_cls.return_value
+    sdk_client.update_metadata = AsyncMock()
 
     await getattr(client, client_method)(item_id, metadata)
 
-    client._sdk_client.update_metadata.assert_awaited_once_with(
+    sdk_client.update_metadata.assert_awaited_once_with(
         item_id,
         metadata.to_app_properties(),
     )
