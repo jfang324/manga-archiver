@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -38,20 +38,20 @@ def _file_metadata() -> GoogleDriveFileMetadata:
     ],
     ids=["child-folders", "files"],
 )
-def test_migration_client_delegates_listing(
+async def test_migration_client_delegates_listing(
     _mock_build: MagicMock,
     client_method: str,
     sdk_method: str,
     item_id: str,
 ) -> None:
     client = GoogleDriveMigrationClient(_token())
-    client._sdk_client.list_sub_folders = MagicMock(return_value=[])
-    client._sdk_client.list_files_in_folder = MagicMock(return_value=[])
+    client._sdk_client.list_sub_folders = AsyncMock(return_value=[])
+    client._sdk_client.list_files_in_folder = AsyncMock(return_value=[])
 
-    result = getattr(client, client_method)(item_id)
+    result = await getattr(client, client_method)(item_id)
 
     assert result == []
-    getattr(client._sdk_client, sdk_method).assert_called_once_with(item_id)
+    getattr(client._sdk_client, sdk_method).assert_awaited_once_with(item_id)
 
 
 @patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
@@ -63,18 +63,18 @@ def test_migration_client_delegates_listing(
     ],
     ids=["folder", "file"],
 )
-def test_migration_client_delegates_metadata_updates(
+async def test_migration_client_delegates_metadata_updates(
     _mock_build: MagicMock,
     client_method: str,
     item_id: str,
     metadata: GoogleDriveFolderMetadata | GoogleDriveFileMetadata,
 ) -> None:
     client = GoogleDriveMigrationClient(_token())
-    client._sdk_client.update_metadata = MagicMock()
+    client._sdk_client.update_metadata = AsyncMock()
 
-    getattr(client, client_method)(item_id, metadata)
+    await getattr(client, client_method)(item_id, metadata)
 
-    client._sdk_client.update_metadata.assert_called_once_with(
+    client._sdk_client.update_metadata.assert_awaited_once_with(
         item_id,
         metadata.to_app_properties(),
     )

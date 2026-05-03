@@ -48,7 +48,7 @@ def _set_upload_response(sdk_client: GoogleDriveSdkClient, response: dict[str, s
 
 
 @patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
-def test_list_files_in_folder_returns_all_pages(_mock_build: MagicMock) -> None:
+async def test_list_files_in_folder_returns_all_pages(_mock_build: MagicMock) -> None:
     sdk_client = _create_sdk_client()
     first_file = {"id": "file_1", "name": "Chapter 1", "appProperties": {}}
     second_file = {"id": "file_2", "name": "Chapter 2", "appProperties": {}}
@@ -60,7 +60,7 @@ def test_list_files_in_folder_returns_all_pages(_mock_build: MagicMock) -> None:
     files_resource.list.side_effect = [first_request, second_request]
     sdk_client._service.files.return_value = files_resource
 
-    files = sdk_client.list_files_in_folder("folder_123", page_size=1)
+    files = await sdk_client.list_files_in_folder("folder_123", page_size=1)
     list_calls = files_resource.list.call_args_list
 
     assert files == [first_file, second_file]

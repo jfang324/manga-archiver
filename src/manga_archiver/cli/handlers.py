@@ -11,7 +11,9 @@ from ..utils.auth.google_drive import handle_auth_login, handle_auth_logout
 from .presets import format_presets
 
 
-def handle_subcommands(args: Namespace, schema_manager: SchemaManager | None = None) -> int | None:
+async def handle_subcommands(
+    args: Namespace, schema_manager: SchemaManager | None = None
+) -> int | None:
     """Handle CLI subcommands before normal app startup.
 
     Returns:
@@ -28,7 +30,7 @@ def handle_subcommands(args: Namespace, schema_manager: SchemaManager | None = N
     if schema_manager is None:
         return None
 
-    handled, exit_code = _handle_migrations(args, schema_manager)
+    handled, exit_code = await _handle_migrations(args, schema_manager)
     if handled:
         return exit_code
 
@@ -69,7 +71,7 @@ def _handle_auth(args: Namespace) -> tuple[bool, int]:
     return True, EXIT_AUTH_ERROR
 
 
-def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[bool, int]:
+async def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[bool, int]:
     """Handle migration commands.
 
     Returns:
@@ -90,7 +92,7 @@ def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[
         else:
             return True, EXIT_MIGRATION_ERROR
 
-        result = schema_manager.run_migrations(system)
+        result = await schema_manager.run_migrations(system)
         print(f"  {result}")
 
         return True, EXIT_SUCCESS

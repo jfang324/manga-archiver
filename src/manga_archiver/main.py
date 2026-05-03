@@ -66,14 +66,14 @@ async def _async_main() -> None:
     """Set up dependencies and run the application."""
     args = parse_args()
 
-    exit_code = handle_subcommands(args)
+    exit_code = await handle_subcommands(args)
     if exit_code is not None:
         sys.exit(exit_code)
 
     setup_logging()
     schema_manager = SchemaManager()
 
-    exit_code = handle_subcommands(args, schema_manager)
+    exit_code = await handle_subcommands(args, schema_manager)
     if exit_code is not None:
         sys.exit(exit_code)
 
@@ -89,7 +89,7 @@ async def _async_main() -> None:
     google_drive_token = None
 
     if google_drive_enabled:
-        init_result = _initialize_google_drive(schema_manager)
+        init_result = await _initialize_google_drive(schema_manager)
         if init_result.message is not None:
             print(init_result.message)
 
@@ -171,7 +171,7 @@ def _validate_schema_versions(
     return None
 
 
-def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDriveInitResult:
+async def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDriveInitResult:
     """Initialize Google Drive client for archive mode."""
     token = load_token()
 
@@ -188,7 +188,7 @@ def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDriveInitRe
         )
 
         print("Initializing Google Drive...")
-        init_result = google_drive_archive_store.initialize()
+        init_result = await google_drive_archive_store.initialize()
 
         if init_result.was_created:
             print(f"Created root folder: {init_result.root_folder_id}")

@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from sqlite3 import Cursor
 
-from manga_archiver.db.schema_manager import _version_compare
+from manga_archiver.db.schema_manager import PreparedMigration, _version_compare
 from manga_archiver.integrations.storage_providers.google_drive import GoogleDriveMigrationClient
 from manga_archiver.integrations.storage_providers.google_drive.types import (
     GoogleDriveDirectory,
@@ -51,7 +51,7 @@ def _parse_filename(filename: str) -> tuple[str, str]:
     return chapter_num, chapter_title
 
 
-def _count_items_needing_migration(
+async def _count_items_needing_migration(
     client: GoogleDriveMigrationClient, sub_folders: list[GoogleDriveDirectory]
 ) -> tuple[int, int]:
     """Count folders and files that need metadata added.
@@ -71,7 +71,7 @@ def _count_items_needing_migration(
         if not app_props or not app_props.get("source"):
             folders_needed += 1
 
-        files = client.list_files(folder["id"])
+        files = await client.list_files(folder["id"])
         for f in files:
             file_props = f.get("appProperties")
             if not file_props or not file_props.get("source"):
@@ -80,7 +80,7 @@ def _count_items_needing_migration(
     return folders_needed, files_needed
 
 
-def _migrate_folder(
+async def _migrate_folder(
     client: GoogleDriveMigrationClient, folder: GoogleDriveDirectory, print_progress: bool = True
 ) -> tuple[int, int]:
     """Migrate a single folder and its files.
@@ -103,13 +103,13 @@ def _migrate_folder(
     if app_props is None or "source" not in app_props:
         try:
             folder_metadata = GoogleDriveFolderMetadata(source=DEFAULT_SOURCE)
-            client.update_folder_metadata(folder_id, folder_metadata)
+            await client.update_folder_metadata(folder_id, folder_metadata)
             migrated_folders += 1
         except Exception as e:
             logger.error("Failed to migrate folder %s: %s", folder_name, e)
             raise
 
-    files = client.list_files(folder_id)
+    files = await client.list_files(folder_id)
     files_needing_migration = [f for f in files if not (f.get("appProperties") or {}).get("source")]
 
     for idx, file in enumerate(files_needing_migration, 1):
@@ -126,7 +126,7 @@ def _migrate_folder(
                     chapter_num=chapter_num,
                     chapter_title=chapter_title,
                 )
-                client.update_file_metadata(file_id, file_metadata)
+                await client.update_file_metadata(file_id, file_metadata)
                 migrated_files += 1
 
                 if print_progress and idx % 10 == 0:
@@ -142,7 +142,7 @@ def _migrate_folder(
     return migrated_folders, migrated_files
 
 
-def _verify_migration(
+async def _verify_migration(
     client: GoogleDriveMigrationClient, sub_folders: list[GoogleDriveDirectory]
 ) -> tuple[int, int]:
     """Verify migration was successful by re-counting items needing metadata.
@@ -162,7 +162,7 @@ def _verify_migration(
         if not app_props or not app_props.get("source"):
             remaining_folders += 1
 
-        files = client.list_files(folder["id"])
+        files = await client.list_files(folder["id"])
         for f in files:
             file_props = f.get("appProperties")
             if not file_props or not file_props.get("source"):
@@ -171,7 +171,18 @@ def _verify_migration(
     return remaining_folders, remaining_files
 
 
-def migrate(current: str, cursor: Cursor) -> str:
+def _prepare_version_record_message(message: str) -> PreparedMigration:
+    def apply(cursor: Cursor) -> str:
+        cursor.execute(
+            "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
+            (MIGRATION_VERSION, "google_drive"),
+        )
+        return message
+
+    return PreparedMigration(apply=apply)
+
+
+async def migrate(current: str, _cursor: Cursor) -> str | PreparedMigration:
     """Execute Google Drive migration from pre-v1.1.0 to v1.1.0.
 
     Args:
@@ -187,28 +198,24 @@ def migrate(current: str, cursor: Cursor) -> str:
     token = load_token()
     if token is None:
         logger.error("No Google Drive token found, skipping file migration")
-        cursor.execute(
-            "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
-            (MIGRATION_VERSION, "google_drive"),
+        return _prepare_version_record_message(
+            f"Migrated to {MIGRATION_VERSION}: Skipped (no token)"
         )
-        return f"Migrated to {MIGRATION_VERSION}: Skipped (no token)"
 
     client = GoogleDriveMigrationClient(token)
 
     try:
-        init_result = client.initialize()
+        init_result = await client.initialize()
     except Exception as e:
         logger.error("Failed to initialize Google Drive client: %s", e)
-        cursor.execute(
-            "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
-            (MIGRATION_VERSION, "google_drive"),
-        )
-        return f"Migrated to {MIGRATION_VERSION}: Failed to initialize Drive client"
+        raise RuntimeError("Failed to initialize Google Drive client") from e
 
-    sub_folders = client.list_child_folders(init_result.root_folder_id)
+    sub_folders = await client.list_child_folders(init_result.root_folder_id)
 
     # Pre-flight: count items needing migration
-    total_folders_needed, total_files_needed = _count_items_needing_migration(client, sub_folders)
+    total_folders_needed, total_files_needed = await _count_items_needing_migration(
+        client, sub_folders
+    )
     print(f"Found {total_folders_needed} folders and {total_files_needed} files to migrate")
 
     # Migrate all folders
@@ -216,12 +223,13 @@ def migrate(current: str, cursor: Cursor) -> str:
     migrated_files = 0
 
     for folder in sub_folders:
-        folder_count, file_count = _migrate_folder(client, folder)
+        folder_count, file_count = await _migrate_folder(client, folder)
         migrated_folders += folder_count
         migrated_files += file_count
 
     # Verification: re-count items needing migration
-    remaining_folders, remaining_files = _verify_migration(client, sub_folders)
+    refreshed_sub_folders = await client.list_child_folders(init_result.root_folder_id)
+    remaining_folders, remaining_files = await _verify_migration(client, refreshed_sub_folders)
     print(
         f"Verification: {remaining_folders} folders, {remaining_files} files still need migration"
     )
@@ -229,9 +237,6 @@ def migrate(current: str, cursor: Cursor) -> str:
     if remaining_folders == 0 and remaining_files == 0:
         print("Migration complete - all metadata added successfully")
 
-    cursor.execute(
-        "INSERT OR IGNORE INTO schema_version (version, system) VALUES (?, ?)",
-        (MIGRATION_VERSION, "google_drive"),
+    return _prepare_version_record_message(
+        f"Migrated to {MIGRATION_VERSION}: {migrated_folders} folders, {migrated_files} files"
     )
-
-    return f"Migrated to {MIGRATION_VERSION}: {migrated_folders} folders, {migrated_files} files"

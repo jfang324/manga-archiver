@@ -73,7 +73,9 @@ class BacklogSync:
             if api_chapters is None:
                 continue
 
-            google_drive_chapters = self._fetch_google_drive_chapters(manga_title, source.value)
+            google_drive_chapters = await self._fetch_google_drive_chapters(
+                manga_title, source.value
+            )
 
             print(
                 f"  {manga_title}: {len(api_chapters)} from API, "
@@ -164,7 +166,7 @@ class BacklogSync:
             print(f"ERROR: Failed to get chapters for '{manga_title}'")
             return None
 
-    def _fetch_google_drive_chapters(self, manga_title: str, source: str) -> list[float]:
+    async def _fetch_google_drive_chapters(self, manga_title: str, source: str) -> list[float]:
         """Fetch chapter numbers from Google Drive folder.
 
         Args:
@@ -174,5 +176,7 @@ class BacklogSync:
         Returns:
             list[float]: List of chapter numbers found in Google Drive
         """
-        # TODO: Return scan metadata from the archive store so backlog sync can warn once per manga when archived files are skipped due to missing/invalid chapter metadata.  # noqa: FIX002
-        return self._google_drive_archive_store.get_archived_chapter_numbers(manga_title, source)
+        # TODO: Return the number of archived files skipped due to missing/invalid chapter metadata.  # noqa: FIX002
+        return await self._google_drive_archive_store.get_archived_chapter_numbers(
+            manga_title, source
+        )
