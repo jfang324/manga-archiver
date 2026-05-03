@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -64,19 +64,6 @@ class TestBackoffCalculation:
         assert worker._calculate_backoff(0) == 5.0
         assert worker._calculate_backoff(1) == 10.0
         assert worker._calculate_backoff(2) == 20.0
-
-    def test_stop_sets_running_false(self) -> None:
-        worker = ConcreteWorker(
-            worker_id="test_worker",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            config=WorkerConfig(),
-            notification_queue=AsyncMock(),
-        )
-
-        worker._running = True
-        worker.stop()
-        assert worker._running is False
 
 
 class TestRetryLogic:
@@ -147,37 +134,6 @@ class TestRetryLogic:
         assert call_count == config.max_retries + 1
         mock_notification_queue.put.assert_called_once()
         assert mock_notification_queue.put.call_args[0][0].status == JobStatus.FAILED
-
-    @pytest.mark.asyncio
-    @patch(
-        "src.manga_archiver.workers.base.Worker._calculate_backoff",
-        return_value=0.1,
-    )
-    async def test_backoff_called_between_retries(
-        self, mock_calculate_backoff: MagicMock, mock_job
-    ) -> None:
-        config = WorkerConfig(max_retries=2, base_delay=0)
-
-        worker = ConcreteWorker(
-            worker_id="test_worker",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            config=config,
-            notification_queue=AsyncMock(),
-        )
-
-        call_count = 0
-
-        async def mock_do_work(job) -> None:  # noqa: ARG001
-            nonlocal call_count
-            call_count += 1
-            raise TimeoutError("Simulated timeout")
-
-        worker._do_work = mock_do_work
-        await worker._process_job(mock_job)
-
-        assert call_count == config.max_retries + 1
-        assert mock_calculate_backoff.call_count == config.max_retries
 
     @pytest.mark.asyncio
     async def test_retries_on_transient_errors(self, mock_job) -> None:

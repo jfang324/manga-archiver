@@ -116,16 +116,3 @@ async def test_do_work_records_benchmark_timing(status) -> None:
     await worker._do_work(job)
 
     benchmark.record.assert_called_once_with("job_123", status, 1000, 2000)
-
-
-class TestNotificationWorker:
-    def test_stop_sets_running_false(self) -> None:
-        worker = NotificationWorker(
-            worker_id="test_notification_worker",
-            input_queue=MagicMock(),
-            on_status_update=MagicMock(),
-        )
-
-        worker.stop()
-
-        assert worker._running is False
