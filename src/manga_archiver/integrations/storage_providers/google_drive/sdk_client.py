@@ -69,19 +69,18 @@ class GoogleDriveSdkClient:
 
         return items
 
-    def list_root_folders(
+    async def list_root_folders(
         self, root_folder_name: str, page_size: int | None = None
     ) -> list[GoogleDriveDirectory]:
         """List matching root folders in My Drive."""
-        # TODO: Convert list_root_folders/list_sub_folders/list_files_in_folder to async after sync callers move up.  # noqa: FIX002
         query = (
             f"name='{_escape_query_string(root_folder_name)}' and "
             "mimeType='application/vnd.google-apps.folder' and trashed=false"
         )
 
-        return self._list_items_sync(query, page_size, spaces="drive")
+        return await asyncio.to_thread(self._list_items_sync, query, page_size, spaces="drive")
 
-    def list_sub_folders(
+    async def list_sub_folders(
         self, parent_id: str, page_size: int | None = None
     ) -> list[GoogleDriveDirectory]:
         """List subfolders under a parent folder."""
@@ -90,15 +89,15 @@ class GoogleDriveSdkClient:
             "mimeType='application/vnd.google-apps.folder' and trashed=false"
         )
 
-        return self._list_items_sync(query, page_size)
+        return await asyncio.to_thread(self._list_items_sync, query, page_size)
 
-    def list_files_in_folder(
+    async def list_files_in_folder(
         self, folder_id: str, page_size: int | None = None
     ) -> list[GoogleDriveFile]:
         """List files under a parent folder."""
         query = f"'{_escape_query_string(folder_id)}' in parents and trashed=false"
 
-        return self._list_items_sync(query, page_size)
+        return await asyncio.to_thread(self._list_items_sync, query, page_size)
 
     def _create_folder_sync(
         self,
@@ -154,13 +153,16 @@ class GoogleDriveSdkClient:
             source,
         )
 
-    def update_metadata(self, item_id: str, app_properties: dict[str, str]) -> None:
+    def _update_metadata_sync(self, item_id: str, app_properties: dict[str, str]) -> None:
         """Update file or folder appProperties."""
-        # TODO: Convert public SDK metadata updates to async after migrations move up.  # noqa: FIX002
         self._service.files().update(
             fileId=item_id,
             body={"appProperties": app_properties},
         ).execute()
+
+    async def update_metadata(self, item_id: str, app_properties: dict[str, str]) -> None:
+        """Update file or folder appProperties without blocking the event loop."""
+        await asyncio.to_thread(self._update_metadata_sync, item_id, app_properties)
 
     def _upload_file_sync(
         self,

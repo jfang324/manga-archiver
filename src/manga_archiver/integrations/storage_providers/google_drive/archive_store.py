@@ -30,9 +30,9 @@ class GoogleDriveArchiveStore:
         self._sdk_client = GoogleDriveSdkClient(stored_token, max_retries)
         self._folder_cache = folder_cache if folder_cache is not None else GoogleDriveFolderCache()
 
-    def initialize(self) -> InitResult:
+    async def initialize(self) -> InitResult:
         """Initialize root folder and hydrate the manga folder cache."""
-        root_folders = self._sdk_client.list_root_folders(
+        root_folders = await self._sdk_client.list_root_folders(
             ROOT_FOLDER_NAME, page_size=DEFAULT_ROOT_PAGE_SIZE
         )
 
@@ -44,13 +44,12 @@ class GoogleDriveArchiveStore:
 
         if not self._folder_cache.root_folder_id:
             root_metadata = GoogleDriveFolderMetadata(source=SYSTEM_SOURCE)
-            # TODO: Use async SDK folder creation after initialize() can become async.  # noqa: FIX002
-            self._folder_cache.root_folder_id = self._sdk_client._create_folder_sync(
+            self._folder_cache.root_folder_id = await self._sdk_client.create_folder(
                 ROOT_FOLDER_NAME, folder_metadata=root_metadata
             )
             was_created = True
 
-        sub_folders = self._sdk_client.list_sub_folders(
+        sub_folders = await self._sdk_client.list_sub_folders(
             self._folder_cache.root_folder_id, page_size=DEFAULT_SUB_FOLDER_PAGE_SIZE
         )
 
@@ -74,7 +73,7 @@ class GoogleDriveArchiveStore:
             was_created=was_created,
         )
 
-    def get_archived_chapter_numbers(
+    async def get_archived_chapter_numbers(
         self, manga_title: str, source: str, page_size: int = 1000
     ) -> list[float]:
         """Return archived chapter numbers for a cached manga folder."""
@@ -82,7 +81,7 @@ class GoogleDriveArchiveStore:
         if not folder_id:
             return []
 
-        files = self._sdk_client.list_files_in_folder(folder_id, page_size)
+        files = await self._sdk_client.list_files_in_folder(folder_id, page_size)
         return self._parse_chapter_numbers(files)
 
     async def upload_chapter(

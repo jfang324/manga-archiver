@@ -1,12 +1,13 @@
 import importlib.util
-from collections.abc import Callable
+import inspect
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from sqlite3 import Connection, Cursor
 
 from .database import get_connection, init_db, insert_version_record_if_missing
 from .migrations import MIN_DATABASE_VERSION, MIN_GOOGLE_DRIVE_VERSION
 
-MigrationFunc = Callable[[str | None, Cursor], str]
+MigrationFunc = Callable[[str | None, Cursor], str | Awaitable[str]]
 MigrationStep = tuple[str, MigrationFunc]
 
 
@@ -105,7 +106,7 @@ class SchemaManager:
         spec.loader.exec_module(module)
         return module.migrate  # type: ignore[return-value]
 
-    def run_migrations(self, system: str) -> str:
+    async def run_migrations(self, system: str) -> str:
         """Run all pending migrations for a single system. Returns result message."""
         pending = self.get_pending_migrations(system)
 
@@ -121,7 +122,8 @@ class SchemaManager:
                 current = self.get_current_version(system)
                 cursor.execute("BEGIN IMMEDIATE")
 
-                migration_msg = migrate_func(current, cursor)
+                result = migrate_func(current, cursor)
+                migration_msg = await result if inspect.isawaitable(result) else result
 
                 self._conn.commit()
                 print(migration_msg)  # print is used here to give the user feedback per migration

@@ -50,15 +50,15 @@ async def _upload_chapter(
 
 
 @patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
-def test_initialize_cache_is_visible_to_other_archive_store_instance(
+async def test_initialize_cache_is_visible_to_other_archive_store_instance(
     _mock_build: MagicMock,
 ) -> None:
     folder_cache = GoogleDriveFolderCache()
     first_store = _create_archive_store(folder_cache)
-    first_store._sdk_client.list_root_folders = MagicMock(
+    first_store._sdk_client.list_root_folders = AsyncMock(
         return_value=[{"id": "root_123", "name": ROOT_FOLDER_NAME, "appProperties": {}}]
     )
-    first_store._sdk_client.list_sub_folders = MagicMock(
+    first_store._sdk_client.list_sub_folders = AsyncMock(
         return_value=[
             {
                 "id": "folder_123",
@@ -68,27 +68,27 @@ def test_initialize_cache_is_visible_to_other_archive_store_instance(
         ]
     )
 
-    init_result = first_store.initialize()
+    init_result = await first_store.initialize()
     second_store = _create_archive_store(folder_cache)
 
     assert init_result.root_folder_id == "root_123"
     assert init_result.cached_folder_count == 1
-    assert second_store.get_archived_chapter_numbers("Missing Manga", "mangadex") == []
+    assert await second_store.get_archived_chapter_numbers("Missing Manga", "mangadex") == []
     assert folder_cache.get_folder_id("mangadex", "Test Manga") == "folder_123"
 
 
 @patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
-def test_get_archived_chapter_numbers_returns_empty_without_cached_folder(
+async def test_get_archived_chapter_numbers_returns_empty_without_cached_folder(
     _mock_build: MagicMock,
 ) -> None:
     folder_cache = GoogleDriveFolderCache()
     store = _create_archive_store(folder_cache)
-    store._sdk_client.list_files_in_folder = MagicMock()
+    store._sdk_client.list_files_in_folder = AsyncMock()
 
-    chapter_numbers = store.get_archived_chapter_numbers("Missing Manga", "mangadex")
+    chapter_numbers = await store.get_archived_chapter_numbers("Missing Manga", "mangadex")
 
     assert chapter_numbers == []
-    store._sdk_client.list_files_in_folder.assert_not_called()
+    store._sdk_client.list_files_in_folder.assert_not_awaited()
 
 
 @pytest.mark.parametrize(
@@ -119,7 +119,7 @@ def test_get_archived_chapter_numbers_returns_empty_without_cached_folder(
     ],
 )
 @patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
-def test_get_archived_chapter_numbers_parses_valid_files_and_skips_invalid_files(
+async def test_get_archived_chapter_numbers_parses_valid_files_and_skips_invalid_files(
     _mock_build: MagicMock,
     file: GoogleDriveFile,
     expected_chapter_numbers: list[float],
@@ -127,12 +127,12 @@ def test_get_archived_chapter_numbers_parses_valid_files_and_skips_invalid_files
     folder_cache = GoogleDriveFolderCache()
     folder_cache.set_folder_id("mangadex", "Test Manga", "folder_123")
     store = _create_archive_store(folder_cache)
-    store._sdk_client.list_files_in_folder = MagicMock(return_value=[file])
+    store._sdk_client.list_files_in_folder = AsyncMock(return_value=[file])
 
-    chapter_numbers = store.get_archived_chapter_numbers("Test Manga", "mangadex")
+    chapter_numbers = await store.get_archived_chapter_numbers("Test Manga", "mangadex")
 
     assert chapter_numbers == expected_chapter_numbers
-    store._sdk_client.list_files_in_folder.assert_called_once_with("folder_123", 1000)
+    store._sdk_client.list_files_in_folder.assert_awaited_once_with("folder_123", 1000)
 
 
 @pytest.mark.asyncio
