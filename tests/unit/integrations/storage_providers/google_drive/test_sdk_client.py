@@ -102,7 +102,7 @@ async def test_list_files_in_folder_returns_all_pages(_mock_build: MagicMock) ->
         "large_allows_custom_resumable_chunk_size",
     ],
 )
-def test_upload_file_sync_selects_upload_mode_by_file_size(
+async def test_upload_file_selects_upload_mode_by_file_size(
     _mock_build: MagicMock,
     file_size: int,
     chunk_size: int | None,
@@ -112,17 +112,17 @@ def test_upload_file_sync_selects_upload_mode_by_file_size(
     sdk_client = _create_sdk_client()
     files_resource = _set_upload_response(sdk_client, {"id": "file_123"})
 
-    kwargs = {}
+    upload_kwargs: dict[str, int] = {}
     if chunk_size is not None:
-        kwargs["chunk_size"] = chunk_size
+        upload_kwargs["chunk_size"] = chunk_size
 
-    file_id = sdk_client._upload_file_sync(
+    file_id = await sdk_client.upload_file(
         file_data=b"x" * file_size,
         file_name="Test Manga [1].pdf",
         folder_id="folder_123",
         mimetype="application/pdf",
         app_properties=_file_metadata().to_app_properties(),
-        **kwargs,
+        **upload_kwargs,
     )
 
     create_kwargs = files_resource.create.call_args.kwargs
@@ -134,7 +134,7 @@ def test_upload_file_sync_selects_upload_mode_by_file_size(
 
 
 @patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
-def test_upload_file_sync_retries_conflict_with_same_upload_mode(
+async def test_upload_file_retries_conflict_with_same_upload_mode(
     _mock_build: MagicMock,
 ) -> None:
     sdk_client = _create_sdk_client()
@@ -147,7 +147,7 @@ def test_upload_file_sync_retries_conflict_with_same_upload_mode(
     files_resource.create.side_effect = [first_request, second_request]
     sdk_client._service.files.return_value = files_resource
 
-    file_id = sdk_client._upload_file_sync(
+    file_id = await sdk_client.upload_file(
         file_data=b"x" * MULTIPART_UPLOAD_THRESHOLD,
         file_name="Test Manga [1].pdf",
         folder_id="folder_123",

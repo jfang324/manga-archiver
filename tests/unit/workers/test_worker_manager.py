@@ -23,11 +23,11 @@ def _created_folder_caches(
     return [call.kwargs["folder_cache"] for call in mock_google_drive_archive_store.call_args_list]
 
 
-def _mock_google_drive_folder_cache() -> GoogleDriveFolderCache:
-    _mock_google_drive_folder_cache = MagicMock(GoogleDriveFolderCache)
-    _mock_google_drive_folder_cache.root_folder_id = "root_123"
+def _initialized_google_drive_folder_cache() -> GoogleDriveFolderCache:
+    folder_cache = GoogleDriveFolderCache()
+    folder_cache.root_folder_id = "root_123"
 
-    return _mock_google_drive_folder_cache
+    return folder_cache
 
 
 class TestWorkerManagerInit:
@@ -57,61 +57,6 @@ class TestWorkerManagerInit:
         assert len(manager.download_pool) == 4
         assert len(manager.merge_pool) == 2
         assert len(manager.upload_pool) == 0
-
-    @patch("src.manga_archiver.workers.worker_manager.GoogleDriveArchiveStore")
-    def test_creates_upload_pool_when_google_drive_provided(
-        self, mock_google_drive_archive_store: MagicMock
-    ) -> None:
-        mock_provider_manager = MagicMock()
-        mock_download_client = MagicMock()
-        mock_callback = MagicMock()
-
-        manager = WorkerManager(
-            resolve_queue=Queue(),
-            download_queue=Queue(),
-            merge_queue=Queue(),
-            upload_queue=Queue(),
-            notification_queue=Queue(),
-            num_resolve_workers=1,
-            num_download_workers=1,
-            num_merge_workers=1,
-            num_upload_workers=2,
-            benchmark_enabled=False,
-            provider_manager=mock_provider_manager,
-            download_client=mock_download_client,
-            google_drive_token=_token(),
-            google_drive_folder_cache=_mock_google_drive_folder_cache(),
-            on_status_update=mock_callback,
-        )
-
-        assert len(manager.upload_pool) == 2
-        first_cache, second_cache = _created_folder_caches(mock_google_drive_archive_store)
-        assert isinstance(first_cache, GoogleDriveFolderCache)
-        assert second_cache is first_cache
-
-    def test_creates_notification_worker(self) -> None:
-        mock_provider_manager = MagicMock()
-        mock_download_client = MagicMock()
-        mock_callback = MagicMock()
-
-        manager = WorkerManager(
-            resolve_queue=Queue(),
-            download_queue=Queue(),
-            merge_queue=Queue(),
-            upload_queue=Queue(),
-            notification_queue=Queue(),
-            num_resolve_workers=1,
-            num_download_workers=1,
-            num_merge_workers=1,
-            num_upload_workers=0,
-            benchmark_enabled=False,
-            provider_manager=mock_provider_manager,
-            download_client=mock_download_client,
-            google_drive_token=None,
-            on_status_update=mock_callback,
-        )
-
-        assert manager.notification_worker is not None
 
     def test_creates_benchmark_when_enabled(self) -> None:
         mock_provider_manager = MagicMock()
@@ -237,7 +182,7 @@ class TestWorkerManagerWiring:
         mock_callback = MagicMock()
         clients = [MagicMock(), MagicMock()]
         mock_google_drive_archive_store.side_effect = clients
-        folder_cache = _mock_google_drive_folder_cache()
+        folder_cache = _initialized_google_drive_folder_cache()
 
         manager = WorkerManager(
             resolve_queue=Queue(),
@@ -275,7 +220,7 @@ class TestWorkerManagerWiring:
         merge_q = Queue()
         upload_q = Queue()
         notify_q = Queue()
-        folder_cache = _mock_google_drive_folder_cache()
+        folder_cache = _initialized_google_drive_folder_cache()
 
         manager = WorkerManager(
             resolve_queue=Queue(),

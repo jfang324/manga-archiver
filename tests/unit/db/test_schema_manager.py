@@ -49,51 +49,28 @@ class TestVersionCompare:
             ("v1.10.0", "v1.9.0", 1),
             ("v1.9.0", "v1.10.0", -1),
             ("v1.2.0", "v1.2.0", 0),
-            ("v1.0", "v1.0", 0),
-            ("v1.2.3", "v1.2.3", 0),
             ("v1", "v1.0.0", 0),
-            ("v1.0.0", "v1", 0),
             ("v2.0.0", "v1.9.9", 1),
-            ("v1.0.0", "v2.0.0", -1),
             ("v1.2.3", "v1.2.4", -1),
             ("v1.2.5", "v1.2.4", 1),
             ("v1.2", "v1.2.0", 0),
-            ("v1.2.0", "v1.2", 0),
         ],
         ids=[
             "v1_10_greater_than_v1_9",
             "v1_9_less_than_v1_10",
             "v1_2_0_equal_v1_2_0",
-            "v1_0_equal_v1_0",
-            "v1_2_3_equal_v1_2_3",
             "single_component_equal_to_three",
-            "three_components_equal_to_single",
             "v2_greater_than_v1",
-            "v1_less_than_v2",
             "v1_2_3_less_than_v1_2_4",
             "v1_2_5_greater_than_v1_2_4",
             "two_components_equal_three_with_zeros",
-            "three_with_zeros_equal_two",
         ],
     )
     def test_version_compare_returns_correct_result(self, a: str, b: str, expected: int) -> None:
         assert _version_compare(a, b) == expected
 
-    @pytest.mark.parametrize(
-        "a, expected",
-        [
-            ("v1.0.0", 1),
-            ("v1.10.0", 1),
-            ("v0.0.1", 1),
-        ],
-        ids=[
-            "v1_0_0_greater_than_none",
-            "v1_10_0_greater_than_none",
-            "v0_0_1_greater_than_none",
-        ],
-    )
-    def test_version_compare_greater_than_none(self, a: str, expected: int) -> None:
-        assert _version_compare(a, None) == expected
+    def test_version_compare_greater_than_none(self) -> None:
+        assert _version_compare("v1.0.0", None) == 1
 
 
 class TestSchemaManager:

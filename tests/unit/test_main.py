@@ -129,24 +129,32 @@ class TestPresets:
         ],
         ids=["login", "logout"],
     )
+    @patch("src.manga_archiver.cli.handlers.handle_auth_logout")
+    @patch("src.manga_archiver.cli.handlers.handle_auth_login")
     async def test_handle_auth_delegates_and_returns_exit_code(
         self,
+        mock_handle_auth_login: MagicMock,
+        mock_handle_auth_logout: MagicMock,
         auth_command: str,
         handler_name: str,
         exit_code: int,
         message: str,
         capsys,
     ) -> None:
-        with patch(f"src.manga_archiver.cli.handlers.{handler_name}") as mock_handler:
+        mock_handler = (
+            mock_handle_auth_login
+            if handler_name == "handle_auth_login"
+            else mock_handle_auth_logout
+        )
 
-            def fake_handler() -> int:
-                print(message)
-                return exit_code
+        def fake_handler() -> int:
+            print(message)
+            return exit_code
 
-            mock_handler.side_effect = fake_handler
-            args = _make_args(command="auth", auth_command=auth_command)
+        mock_handler.side_effect = fake_handler
+        args = _make_args(command="auth", auth_command=auth_command)
 
-            actual_exit_code = await handle_subcommands(args)
+        actual_exit_code = await handle_subcommands(args)
 
         captured = capsys.readouterr()
         mock_handler.assert_called_once_with()

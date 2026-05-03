@@ -74,6 +74,7 @@ class TestDownloadClientDownloadImages:
         assert len(result) == len(urls)
         assert result == expected_result
 
+    @patch("asyncio.create_task")
     @pytest.mark.parametrize(
         "mock_api_response_list, expect_error",
         [
@@ -86,8 +87,9 @@ class TestDownloadClientDownloadImages:
         ids=["partial_failure", "all_success", "all_not_found", "all_server_error"],
     )
     async def test_download_images_various_results(
-        self, mock_session, mock_api_response_list, expect_error, task_tracker
+        self, mock_create_task, mock_session, mock_api_response_list, expect_error, task_tracker
     ) -> None:
+        mock_create_task.side_effect = task_tracker
         mock_session.get.side_effect = mock_api_response_list
 
         client = DownloadClient(mock_session)
@@ -98,15 +100,12 @@ class TestDownloadClientDownloadImages:
         ]
 
         if expect_error:
-            with patch("asyncio.create_task", side_effect=task_tracker) and pytest.raises(
-                expect_error
-            ):
+            with pytest.raises(expect_error):
                 await client.download_images(urls)
 
             for task in task_tracker.tasks:
                 if not task.done():
                     task.cancel.assert_called_once()
         else:
-            with patch("asyncio.create_task", side_effect=task_tracker):
-                results = await client.download_images(urls)
-                assert len(results) == len(urls)
+            results = await client.download_images(urls)
+            assert len(results) == len(urls)
