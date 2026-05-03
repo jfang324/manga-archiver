@@ -267,6 +267,7 @@ class TestWorkerManagerWiring:
         merge_q = Queue()
         upload_q = Queue()
         notify_q = Queue()
+        folder_cache = GoogleDriveFolderCache()
 
         manager = WorkerManager(
             resolve_queue=Queue(),
@@ -283,6 +284,7 @@ class TestWorkerManagerWiring:
             download_client=MagicMock(),
             google_drive_token=_token(),
             on_status_update=MagicMock(),
+            google_drive_folder_cache=folder_cache,
         )
 
         for worker in manager.merge_pool:
@@ -290,9 +292,7 @@ class TestWorkerManagerWiring:
             assert worker._output_queue is upload_q
         mock_google_drive_client.assert_called_once()
         assert mock_google_drive_client.call_args.args == (_token(),)
-        assert isinstance(
-            mock_google_drive_client.call_args.kwargs["folder_cache"], GoogleDriveFolderCache
-        )
+        assert mock_google_drive_client.call_args.kwargs["folder_cache"] is folder_cache
 
     def test_notification_worker_receives_all_notifications(self) -> None:
         resolve_q = Queue()
