@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 
 from textual.app import ComposeResult
@@ -29,20 +29,27 @@ class DownloadsScreen(Screen):
     }
     """
 
+    BINDINGS = [
+        ("ctrl+r", "retry_failed", "Retry failed"),
+    ]
+
     jobs: reactive[dict[str, JobStatusRecord]] = reactive({})
 
     def __init__(
         self,
         get_jobs: Callable[[], dict[str, JobStatusRecord]],
+        retry_failed_jobs: Callable[[], Awaitable[int]] | None = None,
         **kwargs,
     ) -> None:
         """Initialize the DownloadsScreen.
 
         Args:
             get_jobs: Callable that returns the current job statuses
+            retry_failed_jobs: Optional async callable to retry failed jobs
         """
         super().__init__(**kwargs)
         self._get_jobs = get_jobs
+        self._retry_failed_jobs = retry_failed_jobs
 
     def compose(self) -> ComposeResult:
         yield DataTable(id="downloads_table", cursor_type="row")
@@ -77,3 +84,14 @@ class DownloadsScreen(Screen):
                 completed,
                 status.value,
             )
+
+    async def action_retry_failed(self) -> None:
+        """Retry all failed jobs."""
+        if self._retry_failed_jobs is None:
+            return
+
+        count = await self._retry_failed_jobs()
+        if count > 0:
+            self.app.notify(f"Retrying {count} failed jobs")
+        else:
+            self.app.notify("No failed jobs to retry")
