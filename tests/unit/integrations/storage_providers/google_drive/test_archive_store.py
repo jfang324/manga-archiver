@@ -14,6 +14,7 @@ from src.manga_archiver.integrations.storage_providers.google_drive.folder_cache
     GoogleDriveFolderCache,
 )
 from src.manga_archiver.integrations.storage_providers.google_drive.types import (
+    ArchivedChapterScanResult,
     ClientNotInitializedError,
     GoogleApiStoredToken,
     GoogleDriveFile,
@@ -73,41 +74,52 @@ async def test_initialize_cache_is_visible_to_other_archive_store_instance(
 
     assert init_result.root_folder_id == "root_123"
     assert init_result.cached_folder_count == 1
-    assert await second_store.get_archived_chapter_numbers("Missing Manga", "mangadex") == []
+    assert await second_store.scan_archived_chapters(
+        "Missing Manga", "mangadex"
+    ) == ArchivedChapterScanResult(chapter_numbers=[], skipped_file_count=0)
     assert folder_cache.get_folder_id("mangadex", "Test Manga") == "folder_123"
 
 
 @patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
-async def test_get_archived_chapter_numbers_returns_empty_without_cached_folder(
+async def test_scan_archived_chapters_returns_empty_without_cached_folder(
     _mock_build: MagicMock,
 ) -> None:
     folder_cache = GoogleDriveFolderCache()
     store = _create_archive_store(folder_cache)
     store._sdk_client.list_files_in_folder = AsyncMock()
 
-    chapter_numbers = await store.get_archived_chapter_numbers("Missing Manga", "mangadex")
+    result = await store.scan_archived_chapters("Missing Manga", "mangadex")
 
-    assert chapter_numbers == []
+    assert result == ArchivedChapterScanResult(chapter_numbers=[], skipped_file_count=0)
     store._sdk_client.list_files_in_folder.assert_not_awaited()
 
 
 @pytest.mark.parametrize(
-    ("file", "expected_chapter_numbers"),
+    ("file", "expected_result"),
     [
         (
             {"id": "file_1", "name": "Chapter 1", "appProperties": {"chapter_num": "1"}},
-            [1.0],
+            ArchivedChapterScanResult(chapter_numbers=[1.0], skipped_file_count=0),
         ),
-        ({"id": "file_2", "name": "No Properties", "appProperties": None}, []),
-        ({"id": "file_3", "name": "Empty Properties", "appProperties": {}}, []),
-        ({"id": "file_4", "name": "Missing Number", "appProperties": {"source": "mangadex"}}, []),
+        (
+            {"id": "file_2", "name": "No Properties", "appProperties": None},
+            ArchivedChapterScanResult(chapter_numbers=[], skipped_file_count=1),
+        ),
+        (
+            {"id": "file_3", "name": "Empty Properties", "appProperties": {}},
+            ArchivedChapterScanResult(chapter_numbers=[], skipped_file_count=1),
+        ),
+        (
+            {"id": "file_4", "name": "Missing Number", "appProperties": {"source": "mangadex"}},
+            ArchivedChapterScanResult(chapter_numbers=[], skipped_file_count=1),
+        ),
         (
             {
                 "id": "file_5",
                 "name": "Invalid Number",
                 "appProperties": {"chapter_num": "not-a-number"},
             },
-            [],
+            ArchivedChapterScanResult(chapter_numbers=[], skipped_file_count=1),
         ),
     ],
     ids=[
@@ -119,19 +131,19 @@ async def test_get_archived_chapter_numbers_returns_empty_without_cached_folder(
     ],
 )
 @patch("src.manga_archiver.integrations.storage_providers.google_drive.sdk_client.build")
-async def test_get_archived_chapter_numbers_parses_valid_files_and_skips_invalid_files(
+async def test_scan_archived_chapters_parses_valid_files_and_counts_skipped_files(
     _mock_build: MagicMock,
     file: GoogleDriveFile,
-    expected_chapter_numbers: list[float],
+    expected_result: ArchivedChapterScanResult,
 ) -> None:
     folder_cache = GoogleDriveFolderCache()
     folder_cache.set_folder_id("mangadex", "Test Manga", "folder_123")
     store = _create_archive_store(folder_cache)
     store._sdk_client.list_files_in_folder = AsyncMock(return_value=[file])
 
-    chapter_numbers = await store.get_archived_chapter_numbers("Test Manga", "mangadex")
+    result = await store.scan_archived_chapters("Test Manga", "mangadex")
 
-    assert chapter_numbers == expected_chapter_numbers
+    assert result == expected_result
     store._sdk_client.list_files_in_folder.assert_awaited_once_with("folder_123", 1000)
 
 

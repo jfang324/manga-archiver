@@ -55,6 +55,14 @@ class InitResult:
 
 
 @dataclass(frozen=True)
+class ArchivedChapterScanResult:
+    """Result from scanning archived chapter files."""
+
+    chapter_numbers: list[float]
+    skipped_file_count: int
+
+
+@dataclass(frozen=True)
 class GoogleDriveFolderMetadata:
     """Immutable metadata for Google Drive folders."""
 

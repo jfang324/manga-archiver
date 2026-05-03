@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from .integrations.content_providers import ContentProviderManager
 from .integrations.storage_providers.google_drive import GoogleDriveArchiveStore
+from .integrations.storage_providers.google_drive.types import ArchivedChapterScanResult
 from .models import Chapter, ContentSource
 from .models.app_config import AppConfig
 from .repositories import FavoriteRepository
@@ -73,14 +74,19 @@ class BacklogSync:
             if api_chapters is None:
                 continue
 
-            google_drive_chapters = await self._fetch_google_drive_chapters(
-                manga_title, source.value
-            )
+            archived_chapters = await self._fetch_google_drive_chapters(manga_title, source.value)
+            google_drive_chapters = archived_chapters.chapter_numbers
 
-            print(
+            status_message = (
                 f"  {manga_title}: {len(api_chapters)} from API, "
                 f"{len(google_drive_chapters)} in Google Drive"
             )
+            if archived_chapters.skipped_file_count > 0:
+                status_message += (
+                    f", {archived_chapters.skipped_file_count} skipped due to "
+                    "missing/invalid metadata"
+                )
+            print(status_message)
 
             self._mangas.append(
                 Manga(
@@ -166,7 +172,9 @@ class BacklogSync:
             print(f"ERROR: Failed to get chapters for '{manga_title}'")
             return None
 
-    async def _fetch_google_drive_chapters(self, manga_title: str, source: str) -> list[float]:
+    async def _fetch_google_drive_chapters(
+        self, manga_title: str, source: str
+    ) -> ArchivedChapterScanResult:
         """Fetch chapter numbers from Google Drive folder.
 
         Args:
@@ -174,9 +182,6 @@ class BacklogSync:
             source: The content source (e.g., "mangadex")
 
         Returns:
-            list[float]: List of chapter numbers found in Google Drive
+            ArchivedChapterScanResult: Chapter numbers found in Google Drive and skipped file count.
         """
-        # TODO: Return the number of archived files skipped due to missing/invalid chapter metadata.  # noqa: FIX002
-        return await self._google_drive_archive_store.get_archived_chapter_numbers(
-            manga_title, source
-        )
+        return await self._google_drive_archive_store.scan_archived_chapters(manga_title, source)
