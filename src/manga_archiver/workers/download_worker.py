@@ -85,8 +85,12 @@ class DownloadWorker(Worker):
             image_data: list[bytes] = await self._download_client.download_images(
                 urls, headers, semaphore
             )
-        except Exception:
-            await self._provider_manager.invalidate_cache(source, chapter_id)
+        except Exception as download_error:
+            try:
+                await self._provider_manager.invalidate_cache(source, chapter_id)
+            except Exception:
+                raise download_error
+
             raise
 
         download_end = time.perf_counter_ns()
