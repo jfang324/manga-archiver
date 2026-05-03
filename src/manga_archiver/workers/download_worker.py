@@ -59,6 +59,7 @@ class DownloadWorker(Worker):
             chapter_number,
             app_config,
             urls,
+            chapter_id,
             source,
         ) = (
             job.id,
@@ -67,6 +68,7 @@ class DownloadWorker(Worker):
             job.chapter_number,
             job.app_config,
             job.urls,
+            job.chapter_id,
             job.source,
         )
 
@@ -79,9 +81,13 @@ class DownloadWorker(Worker):
         await self._send_notification(job, JobStatus.DOWNLOADING, download_start)
 
         semaphore = self._provider_manager.get_download_semaphore(source)
-        image_data: list[bytes] = await self._download_client.download_images(
-            urls, headers, semaphore
-        )
+        try:
+            image_data: list[bytes] = await self._download_client.download_images(
+                urls, headers, semaphore
+            )
+        except Exception:
+            self._provider_manager.invalidate_cache(source, chapter_id)
+            raise
 
         download_end = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.DOWNLOADING, download_start, download_end)

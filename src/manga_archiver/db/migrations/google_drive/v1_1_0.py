@@ -32,10 +32,12 @@ def _parse_filename(filename: str) -> tuple[str, str]:
     """Parse chapter number and title from filename.
 
     Pattern: "One Piece[1] - Romance Dawn.pdf"
-    Returns: ("1", "Romance Dawn")
 
     Args:
         filename: The filename to parse
+
+    Example:
+        ("1", "Romance Dawn")
 
     Returns:
         tuple[str, str]: (chapter_num, chapter_title)

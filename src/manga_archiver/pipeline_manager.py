@@ -334,7 +334,7 @@ class PipelineManager:
         """Get benchmark results if benchmarking is enabled.
 
         Returns:
-            Dictionary with benchmark metrics, or None if benchmarking is not enabled
+            dict[str, Any] | None: Dictionary with benchmark metrics, or None if benchmarking is not enabled
         """
         if not self._benchmark_enabled:
             return None

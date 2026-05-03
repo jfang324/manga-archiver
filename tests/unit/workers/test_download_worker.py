@@ -31,6 +31,7 @@ class TestDownloadWorkerDoWork:
             chapter_title="Chapter 1",
             app_config=app_config,
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
+            chapter_id="test_manga:1",
             source=ContentSource.MANGADEX,
         )
 
@@ -67,6 +68,7 @@ class TestDownloadWorkerDoWork:
             chapter_title="Chapter 1",
             app_config=app_config,
             urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
+            chapter_id="test_manga:1",
             source=ContentSource.MANGADEX,
         )
 
@@ -93,14 +95,16 @@ class TestDownloadWorkerDoWork:
         mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
         test_semaphore = asyncio.Semaphore(5)
         mock_notification_queue = AsyncMock()
+        app_config = AppConfig(optimize=True)
 
         job = DownloadingJob(
             id="job_123",
             manga_title="Test Manga",
             chapter_number=1.0,
             chapter_title="Chapter 1",
-            app_config=AppConfig(),
-            urls=["http://example.com/1.jpg"],
+            app_config=app_config,
+            urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
+            chapter_id="test_manga:1",
             source=ContentSource.MANGADEX,
         )
 
@@ -130,6 +134,7 @@ class TestDownloadWorkerDoWork:
             chapter_title="Chapter 1",
             app_config=AppConfig(),
             urls=[],
+            chapter_id="test_manga:1",
             source=ContentSource.MANGADEX,
         )
 

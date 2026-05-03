@@ -58,9 +58,11 @@ class DownloadingJob(Job):
 
     Attributes:
         urls (list[str]): List of image URLs to download
+        chapter_id (str): The chapter ID used for cache invalidation
     """
 
     urls: list[str]
+    chapter_id: str
 
 
 @dataclass

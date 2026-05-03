@@ -94,7 +94,7 @@ class BenchmarkManager:
         """Calculate timing aggregates per phase.
 
         Returns:
-            Tuple of (total_time_per_phase, count_per_phase, total_times_per_job)
+            tuple[dict[JobStatus, int], dict[JobStatus, int], list[int]]: Tuple of (total_time_per_phase, count_per_phase, total_times_per_job)
         """
         total_time_per_phase = dict.fromkeys(self._TRACKED_PHASES, 0)
         count_per_phase = dict.fromkeys(self._TRACKED_PHASES, 0)
@@ -121,7 +121,7 @@ class BenchmarkManager:
         """Calculate global timing markers across all jobs.
 
         Returns:
-            Tuple of (earliest_resolve, latest_merge, latest_upload)
+            tuple[float | None, float, float]: Tuple of (earliest_resolve, latest_merge, latest_upload)
         """
         earliest_resolve: float | None = None
         latest_merge: float = 0
@@ -161,7 +161,7 @@ class BenchmarkManager:
             count: Count of jobs per phase
 
         Returns:
-            Dictionary of average times per phase
+            dict[JobStatus, int]: Dictionary of average times per phase
         """
         return {
             phase: total_time[phase] // count[phase] if count[phase] > 0 else 0
@@ -175,7 +175,7 @@ class BenchmarkManager:
             total_times: List of total times per job
 
         Returns:
-            Average total time in nanoseconds
+            int: Average total time in nanoseconds
         """
         return sum(total_times) // len(total_times) if total_times else 0
 
@@ -190,7 +190,7 @@ class BenchmarkManager:
             latest_upload: Latest upload end time
 
         Returns:
-            Tuple of (highest_perceived_download_time, highest_perceived_end_to_end)
+            tuple[int, int]: Tuple of (highest_perceived_download_time, highest_perceived_end_to_end)
         """
         highest_download = 0
         if earliest_resolve is not None and latest_merge > 0:
