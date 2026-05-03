@@ -1,6 +1,7 @@
 from asyncio import Queue
 from unittest.mock import MagicMock, patch
 
+from src.manga_archiver.integrations.storage_providers.google_drive import GoogleDriveFolderCache
 from src.manga_archiver.integrations.storage_providers.google_drive.types import (
     GoogleApiStoredToken,
 )
@@ -14,6 +15,12 @@ def _token() -> GoogleApiStoredToken:
         "client_secret": "client-secret",
         "refresh_token": "refresh-token",
     }
+
+
+def _created_folder_caches(
+    mock_google_drive_client: MagicMock,
+) -> list[GoogleDriveFolderCache]:
+    return [call.kwargs["folder_cache"] for call in mock_google_drive_client.call_args_list]
 
 
 class TestWorkerManagerInit:
@@ -70,7 +77,9 @@ class TestWorkerManagerInit:
         )
 
         assert len(manager.upload_pool) == 2
-        assert mock_google_drive_client.call_count == 2
+        first_cache, second_cache = _created_folder_caches(mock_google_drive_client)
+        assert isinstance(first_cache, GoogleDriveFolderCache)
+        assert second_cache is first_cache
 
     def test_creates_notification_worker(self) -> None:
         mock_provider_manager = MagicMock()
@@ -220,6 +229,7 @@ class TestWorkerManagerWiring:
         mock_callback = MagicMock()
         clients = [MagicMock(), MagicMock()]
         mock_google_drive_client.side_effect = clients
+        folder_cache = GoogleDriveFolderCache()
 
         manager = WorkerManager(
             resolve_queue=Queue(),
@@ -236,11 +246,14 @@ class TestWorkerManagerWiring:
             download_client=MagicMock(),
             google_drive_token=_token(),
             on_status_update=mock_callback,
+            google_drive_folder_cache=folder_cache,
         )
 
-        assert mock_google_drive_client.call_count == 2
         assert manager.upload_pool[0]._google_drive_client is clients[0]
         assert manager.upload_pool[1]._google_drive_client is clients[1]
+        first_cache, second_cache = _created_folder_caches(mock_google_drive_client)
+        assert first_cache is folder_cache
+        assert second_cache is first_cache
 
         for worker in manager.upload_pool:
             assert worker._input_queue is upload_q
@@ -254,6 +267,7 @@ class TestWorkerManagerWiring:
         merge_q = Queue()
         upload_q = Queue()
         notify_q = Queue()
+        folder_cache = GoogleDriveFolderCache()
 
         manager = WorkerManager(
             resolve_queue=Queue(),
@@ -270,12 +284,15 @@ class TestWorkerManagerWiring:
             download_client=MagicMock(),
             google_drive_token=_token(),
             on_status_update=MagicMock(),
+            google_drive_folder_cache=folder_cache,
         )
 
         for worker in manager.merge_pool:
             assert worker._input_queue is merge_q
             assert worker._output_queue is upload_q
-        mock_google_drive_client.assert_called_once_with(_token())
+        mock_google_drive_client.assert_called_once()
+        assert mock_google_drive_client.call_args.args == (_token(),)
+        assert mock_google_drive_client.call_args.kwargs["folder_cache"] is folder_cache
 
     def test_notification_worker_receives_all_notifications(self) -> None:
         resolve_q = Queue()

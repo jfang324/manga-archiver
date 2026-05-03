@@ -1,7 +1,3 @@
-import asyncio
-from dataclasses import dataclass
-from typing import ClassVar
-
 from .constants import (
     DEFAULT_CHUNK_SIZE,
     DEFAULT_MAX_RETRIES,
@@ -10,6 +6,7 @@ from .constants import (
     ROOT_FOLDER_NAME,
     SYSTEM_SOURCE,
 )
+from .folder_cache import GoogleDriveFolderCache
 from .sdk_client import GoogleDriveSdkClient
 from .types import (
     ClientNotInitializedError,
@@ -22,31 +19,24 @@ from .types import (
 )
 
 
-@dataclass(frozen=True)
-class _MangaFolderKey:
-    source: str
-    title: str
-
-
 class GoogleDriveClient:
     """Client for interacting with Google Drive API for cloud storage. Must call initialize() after construction before using other methods."""
-
-    _root_folder_id: ClassVar[str | None] = None
-    _folder_cache: ClassVar[dict[_MangaFolderKey, str]] = {}
-    _folder_cache_lock: ClassVar[asyncio.Lock] = asyncio.Lock()
 
     def __init__(
         self,
         stored_token: GoogleApiStoredToken,
         max_retries: int = DEFAULT_MAX_RETRIES,
+        folder_cache: GoogleDriveFolderCache | None = None,
     ) -> None:
         """Initialize the Google Drive client.
 
         Args:
             stored_token: The token stored by the corresponding auth util
             max_retries: Maximum number of retries for failed uploads (default: 5)
+            folder_cache: Shared Google Drive folder cache
         """
         self._sdk_client = GoogleDriveSdkClient(stored_token, max_retries)
+        self._folder_cache = folder_cache if folder_cache is not None else GoogleDriveFolderCache()
 
     def initialize(self) -> InitResult:
         """Initialize and cache folders from Google Drive.
@@ -63,19 +53,19 @@ class GoogleDriveClient:
         was_created = False
         for folder in root_folders:
             if folder["name"] == ROOT_FOLDER_NAME:
-                GoogleDriveClient._root_folder_id = folder["id"]
+                self._folder_cache.root_folder_id = folder["id"]
                 break
 
-        if not GoogleDriveClient._root_folder_id:
+        if not self._folder_cache.root_folder_id:
             root_metadata = GoogleDriveFolderMetadata(source=SYSTEM_SOURCE)
             # TODO: Use async SDK folder creation after initialize() can become async.  # noqa: FIX002
-            GoogleDriveClient._root_folder_id = self._sdk_client._create_folder_sync(
+            self._folder_cache.root_folder_id = self._sdk_client._create_folder_sync(
                 ROOT_FOLDER_NAME, folder_metadata=root_metadata
             )
             was_created = True
 
         sub_folders = self._get_sub_folders(
-            GoogleDriveClient._root_folder_id, page_size=DEFAULT_SUB_FOLDER_PAGE_SIZE
+            self._folder_cache.root_folder_id, page_size=DEFAULT_SUB_FOLDER_PAGE_SIZE
         )
 
         cached_count = 0
@@ -89,12 +79,11 @@ class GoogleDriveClient:
             except ValueError:
                 continue
 
-            cache_key = _MangaFolderKey(metadata.source, folder["name"])
-            GoogleDriveClient._folder_cache[cache_key] = folder["id"]
+            self._folder_cache.set_folder_id(metadata.source, folder["name"], folder["id"])
             cached_count += 1
 
         return InitResult(
-            root_folder_id=GoogleDriveClient._root_folder_id,
+            root_folder_id=self._folder_cache.root_folder_id,
             cached_folder_count=cached_count,
             was_created=was_created,
         )
@@ -154,41 +143,39 @@ class GoogleDriveClient:
         Raises:
             ClientNotInitializedError: If the client has not been initialized
         """
-        cache_key = _MangaFolderKey(source, manga_title)
-
-        cached_folder_id = GoogleDriveClient._folder_cache.get(cache_key)
+        cached_folder_id = self._folder_cache.get_folder_id(source, manga_title)
         if cached_folder_id:
             return cached_folder_id
 
-        if not GoogleDriveClient._root_folder_id:
+        if not self._folder_cache.root_folder_id:
             raise ClientNotInitializedError("Client not initialized. Call initialize() first.")
 
-        async with GoogleDriveClient._folder_cache_lock:
-            cached_folder_id = GoogleDriveClient._folder_cache.get(cache_key)
+        async with self._folder_cache.lock:
+            cached_folder_id = self._folder_cache.get_folder_id(source, manga_title)
             if cached_folder_id:
                 return cached_folder_id
 
             existing_id = await self._sdk_client.search_folder_by_name(
                 manga_title,
-                GoogleDriveClient._root_folder_id,
+                self._folder_cache.root_folder_id,
                 source,
             )
 
             if existing_id:
-                GoogleDriveClient._folder_cache[cache_key] = existing_id
+                self._folder_cache.set_folder_id(source, manga_title, existing_id)
                 return existing_id
 
             folder_metadata = GoogleDriveFolderMetadata(source=source)
             folder_id = await self._sdk_client.create_folder(
                 manga_title,
                 folder_metadata,
-                GoogleDriveClient._root_folder_id,
+                self._folder_cache.root_folder_id,
             )
-            GoogleDriveClient._folder_cache[cache_key] = folder_id
+            self._folder_cache.set_folder_id(source, manga_title, folder_id)
 
         return folder_id
 
-    def get_manga_folder_id(self, manga_title: str, source: str) -> str | None:
+    def get_cached_manga_folder_id(self, manga_title: str, source: str) -> str | None:
         """Get the folder ID for a manga title from the cache.
 
         Args:
@@ -198,9 +185,7 @@ class GoogleDriveClient:
         Returns:
             str | None: The folder ID if found in cache, None otherwise
         """
-        cache_key = _MangaFolderKey(source, manga_title)
-
-        return GoogleDriveClient._folder_cache.get(cache_key)
+        return self._folder_cache.get_folder_id(source, manga_title)
 
     def _update_folder_metadata(self, folder_id: str, metadata: GoogleDriveFolderMetadata) -> None:
         """Update folder metadata with appProperties.

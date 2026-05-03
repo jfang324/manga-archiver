@@ -17,6 +17,7 @@ from .constants.defaults import (
     DEFAULT_UPLOAD_WORKERS,
 )
 from .integrations.content_providers import ContentProviderManager
+from .integrations.storage_providers.google_drive import GoogleDriveFolderCache
 from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from .models.app_config import AppConfig
 from .utils import DownloadClient
@@ -94,6 +95,7 @@ class PipelineManager:
         download_client: DownloadClient,
         config: PipelineConfig,
         google_drive_token: GoogleApiStoredToken | None = None,
+        google_drive_folder_cache: GoogleDriveFolderCache | None = None,
     ) -> None:
         """Initialize the pipeline manager.
 
@@ -102,6 +104,7 @@ class PipelineManager:
             download_client: The client for downloading images
             config: The configuration for the pipeline
             google_drive_token: Token for creating Google Drive upload clients
+            google_drive_folder_cache: Shared Google Drive folder cache
         """
         self._resolve_queue: Queue[Job] = Queue(
             maxsize=config.resolve_queue_size if config.resolve_scheduler_enabled else 0
@@ -146,6 +149,7 @@ class PipelineManager:
             provider_manager=provider_manager,
             download_client=download_client,
             google_drive_token=google_drive_token,
+            google_drive_folder_cache=google_drive_folder_cache,
             on_status_update=self._on_status_update,
             resolve_scheduler_feedback_queue=self._resolve_scheduler_feedback_queue,
         )

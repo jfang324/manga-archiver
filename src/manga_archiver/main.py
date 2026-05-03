@@ -21,7 +21,7 @@ from .db.migrations import DEFAULT_GOOGLE_DRIVE_VERSION
 from .db.schema_manager import MigrationError, SchemaManager
 from .headless_runner import HeadlessPipelineRunner
 from .integrations.content_providers import ContentProviderManager
-from .integrations.storage_providers.google_drive import GoogleDriveClient
+from .integrations.storage_providers.google_drive import GoogleDriveClient, GoogleDriveFolderCache
 from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from .models.app_config import AppConfig
 from .pipeline_manager import PipelineConfig, PipelineManager
@@ -39,6 +39,7 @@ class GoogleDriveInitResult:
     """Result of Google Drive initialization."""
 
     client: GoogleDriveClient | None = None
+    folder_cache: GoogleDriveFolderCache | None = None
     token: GoogleApiStoredToken | None = None
     exit_code: int | None = None
     message: str | None = None
@@ -81,6 +82,7 @@ async def _async_main() -> None:
         sys.exit(exit_code)
 
     google_drive_client = None
+    google_drive_folder_cache = None
     google_drive_token = None
 
     if google_drive_enabled:
@@ -92,6 +94,7 @@ async def _async_main() -> None:
             sys.exit(init_result.exit_code)
 
         google_drive_client = init_result.client
+        google_drive_folder_cache = init_result.folder_cache
         google_drive_token = init_result.token
 
     try:
@@ -119,6 +122,7 @@ async def _async_main() -> None:
                 download_client,
                 pipeline_config,
                 google_drive_token=google_drive_token,
+                google_drive_folder_cache=google_drive_folder_cache,
             )
 
             if args.headless:
@@ -175,7 +179,8 @@ def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDriveInitRe
         )
 
     try:
-        google_drive_client = GoogleDriveClient(token)
+        google_drive_folder_cache = GoogleDriveFolderCache()
+        google_drive_client = GoogleDriveClient(token, folder_cache=google_drive_folder_cache)
 
         print("Initializing Google Drive...")
         init_result = google_drive_client.initialize()
@@ -202,7 +207,11 @@ def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDriveInitRe
             message="Failed to initialize Google Drive. Run: manga-archiver auth logout && auth login",
         )
 
-    return GoogleDriveInitResult(client=google_drive_client, token=token)
+    return GoogleDriveInitResult(
+        client=google_drive_client,
+        folder_cache=google_drive_folder_cache,
+        token=token,
+    )
 
 
 def _build_configurations(args: Namespace) -> tuple[PipelineConfig, AppConfig]:

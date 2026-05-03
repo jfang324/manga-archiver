@@ -4,7 +4,7 @@ from asyncio import Queue
 from collections.abc import Callable
 
 from ..integrations.content_providers import ContentProviderManager
-from ..integrations.storage_providers.google_drive import GoogleDriveClient
+from ..integrations.storage_providers.google_drive import GoogleDriveClient, GoogleDriveFolderCache
 from ..integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from ..utils import DownloadClient, MultiFormatExporter
 from .base import WorkerConfig
@@ -47,6 +47,7 @@ class WorkerManager:
         download_client: DownloadClient,
         google_drive_token: GoogleApiStoredToken | None,
         on_status_update: Callable[[str, JobStatus, JobMetadata], None],
+        google_drive_folder_cache: GoogleDriveFolderCache | None = None,
         resolve_scheduler_feedback_queue: Queue[SchedulerFeedback] | None = None,
     ) -> None:
         """Initialize the worker manager.
@@ -65,6 +66,7 @@ class WorkerManager:
             provider_manager: Content provider manager
             download_client: Client for downloading images
             google_drive_token: Token for creating Google Drive upload clients
+            google_drive_folder_cache: Shared cache for upload clients
             on_status_update: Callback for status updates
             resolve_scheduler_feedback_queue: Optional queue for resolve scheduler feedback
         """
@@ -109,6 +111,11 @@ class WorkerManager:
         self._upload_pool: list[UploadWorker] = []
 
         if google_drive_token:
+            folder_cache = (
+                google_drive_folder_cache
+                if google_drive_folder_cache is not None
+                else GoogleDriveFolderCache()
+            )
             self._upload_pool = [
                 UploadWorker(
                     worker_id=f"upload_worker_{index}",
@@ -116,7 +123,9 @@ class WorkerManager:
                     output_queue=None,
                     notification_queue=notification_queue,
                     config=WorkerConfig(),
-                    google_drive_client=GoogleDriveClient(google_drive_token),
+                    google_drive_client=GoogleDriveClient(
+                        google_drive_token, folder_cache=folder_cache
+                    ),
                 )
                 for index in range(num_upload_workers)
             ]

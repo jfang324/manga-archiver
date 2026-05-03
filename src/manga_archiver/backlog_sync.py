@@ -175,7 +175,7 @@ class BacklogSync:
         Returns:
             list[float]: List of chapter numbers found in Google Drive
         """
-        folder_id = self._google_drive_client.get_manga_folder_id(manga_title, source)
+        folder_id = self._google_drive_client.get_cached_manga_folder_id(manga_title, source)
         files = []
 
         if folder_id:

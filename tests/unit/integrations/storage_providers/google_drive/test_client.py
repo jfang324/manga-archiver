@@ -1,5 +1,4 @@
 import asyncio
-from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,6 +10,9 @@ from src.manga_archiver.integrations.storage_providers.google_drive.constants im
     MULTIPART_UPLOAD_THRESHOLD,
     ROOT_FOLDER_NAME,
 )
+from src.manga_archiver.integrations.storage_providers.google_drive.folder_cache import (
+    GoogleDriveFolderCache,
+)
 from src.manga_archiver.integrations.storage_providers.google_drive.sdk_client import (
     GoogleDriveSdkClient,
 )
@@ -18,19 +20,6 @@ from src.manga_archiver.integrations.storage_providers.google_drive.types import
     GoogleApiStoredToken,
     GoogleDriveFileMetadata,
 )
-
-
-def _reset_google_drive_client_cache() -> None:
-    GoogleDriveClient._root_folder_id = None
-    GoogleDriveClient._folder_cache = {}
-    GoogleDriveClient._folder_cache_lock = asyncio.Lock()
-
-
-@pytest.fixture(autouse=True)
-def reset_google_drive_client_cache() -> Generator[None, None, None]:
-    _reset_google_drive_client_cache()
-    yield
-    _reset_google_drive_client_cache()
 
 
 def _token() -> GoogleApiStoredToken:
@@ -42,8 +31,8 @@ def _token() -> GoogleApiStoredToken:
     }
 
 
-def _create_client() -> GoogleDriveClient:
-    return GoogleDriveClient(_token())
+def _create_client(folder_cache: GoogleDriveFolderCache) -> GoogleDriveClient:
+    return GoogleDriveClient(_token(), folder_cache=folder_cache)
 
 
 def _file_metadata() -> GoogleDriveFileMetadata:
@@ -93,7 +82,8 @@ def test_list_files_in_folder_returns_all_pages(_mock_build: MagicMock) -> None:
 def test_initialize_cache_is_visible_to_other_client_instance(
     _mock_build: MagicMock,
 ) -> None:
-    first_client = _create_client()
+    folder_cache = GoogleDriveFolderCache()
+    first_client = _create_client(folder_cache)
     first_client._get_root_folders = MagicMock(
         return_value=[{"id": "root_123", "name": ROOT_FOLDER_NAME, "appProperties": {}}]
     )
@@ -108,11 +98,11 @@ def test_initialize_cache_is_visible_to_other_client_instance(
     )
 
     init_result = first_client.initialize()
-    second_client = _create_client()
+    second_client = _create_client(folder_cache)
 
     assert init_result.root_folder_id == "root_123"
     assert init_result.cached_folder_count == 1
-    assert second_client.get_manga_folder_id("Test Manga", "mangadex") == "folder_123"
+    assert second_client.get_cached_manga_folder_id("Test Manga", "mangadex") == "folder_123"
 
 
 @pytest.mark.asyncio
@@ -120,8 +110,9 @@ def test_initialize_cache_is_visible_to_other_client_instance(
 async def test_get_or_create_manga_folder_caches_search_result(
     _mock_build: MagicMock,
 ) -> None:
-    GoogleDriveClient._root_folder_id = "root_123"
-    client = _create_client()
+    folder_cache = GoogleDriveFolderCache()
+    folder_cache.root_folder_id = "root_123"
+    client = _create_client(folder_cache)
     client._sdk_client.search_folder_by_name = AsyncMock(return_value="folder_123")
     client._sdk_client.create_folder = AsyncMock()
 
@@ -141,8 +132,9 @@ async def test_get_or_create_manga_folder_caches_search_result(
 async def test_concurrent_get_or_create_manga_folder_creates_one_folder(
     _mock_build: MagicMock,
 ) -> None:
-    GoogleDriveClient._root_folder_id = "root_123"
-    client = _create_client()
+    folder_cache = GoogleDriveFolderCache()
+    folder_cache.root_folder_id = "root_123"
+    client = _create_client(folder_cache)
     client._sdk_client.search_folder_by_name = AsyncMock(return_value=None)
     client._sdk_client.create_folder = AsyncMock(return_value="folder_123")
 
