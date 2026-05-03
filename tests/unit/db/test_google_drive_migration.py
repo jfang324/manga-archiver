@@ -3,9 +3,10 @@ import sys
 from sqlite3 import connect
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 import src.manga_archiver as manga_archiver_package
 from src.manga_archiver.db import schema_manager as schema_manager_module
-from src.manga_archiver.db.schema_manager import PreparedMigration
 from src.manga_archiver.integrations.storage_providers.google_drive.types import (
     GoogleApiStoredToken,
 )
@@ -24,7 +25,9 @@ def _token() -> GoogleApiStoredToken:
     }
 
 
-async def test_migrate_records_version_when_drive_client_initialization_fails() -> None:
+async def test_migrate_raises_without_recording_version_when_drive_client_initialization_fails() -> (
+    None
+):
     conn = connect(":memory:")
     cursor = conn.cursor()
     cursor.execute("""
@@ -43,11 +46,8 @@ async def test_migrate_records_version_when_drive_client_initialization_fails() 
         mock_client.initialize = AsyncMock(side_effect=RuntimeError("auth failed"))
         mock_client_class.return_value = mock_client
 
-        result = await v1_1_0.migrate("v1.0.0", cursor)
-
-    assert isinstance(result, PreparedMigration)
-    message = result.apply(cursor)
+        with pytest.raises(RuntimeError, match="Failed to initialize Google Drive client"):
+            await v1_1_0.migrate("v1.0.0", cursor)
 
     cursor.execute("SELECT version, system FROM schema_version")
-    assert message == "Migrated to v1.1.0: Failed to initialize Drive client"
-    assert cursor.fetchall() == [("v1.1.0", "google_drive")]
+    assert cursor.fetchall() == []

@@ -208,9 +208,7 @@ async def migrate(current: str, _cursor: Cursor) -> str | PreparedMigration:
         init_result = await client.initialize()
     except Exception as e:
         logger.error("Failed to initialize Google Drive client: %s", e)
-        return _prepare_version_record_message(
-            f"Migrated to {MIGRATION_VERSION}: Failed to initialize Drive client"
-        )
+        raise RuntimeError("Failed to initialize Google Drive client") from e
 
     sub_folders = await client.list_child_folders(init_result.root_folder_id)
 
