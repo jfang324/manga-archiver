@@ -226,9 +226,10 @@ class PipelineManager:
             return 0
 
         jobs = list(self._failed_jobs.values())
-        self._failed_jobs.clear()
 
         await self.enqueue_jobs(jobs)
+        self._failed_jobs.clear()
+
         return len(jobs)
 
     def _validate_job(self, job: FetchingResourcesJob) -> None:
