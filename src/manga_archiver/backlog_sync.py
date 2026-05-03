@@ -2,8 +2,7 @@ import logging
 from dataclasses import dataclass
 
 from .integrations.content_providers import ContentProviderManager
-from .integrations.storage_providers.google_drive import GoogleDriveClient
-from .integrations.storage_providers.google_drive.types import GoogleDriveFile
+from .integrations.storage_providers.google_drive import GoogleDriveArchiveStore
 from .models import Chapter, ContentSource
 from .models.app_config import AppConfig
 from .repositories import FavoriteRepository
@@ -28,7 +27,7 @@ class BacklogSync:
     def __init__(
         self,
         favorite_repository: FavoriteRepository,
-        google_drive_client: GoogleDriveClient,
+        google_drive_archive_store: GoogleDriveArchiveStore,
         provider_manager: ContentProviderManager,
         app_config: AppConfig,
     ) -> None:
@@ -36,12 +35,12 @@ class BacklogSync:
 
         Args:
             favorite_repository: Repository for favorites
-            google_drive_client: Google Drive client (must be initialized)
+            google_drive_archive_store: Google Drive archive store (must be initialized)
             provider_manager: Content provider manager
             app_config: Application settings to pass through queued jobs
         """
         self._favorite_repository = favorite_repository
-        self._google_drive_client = google_drive_client
+        self._google_drive_archive_store = google_drive_archive_store
         self._provider_manager = provider_manager
         self._app_config = app_config
         self._mangas: list[Manga] = []
@@ -175,49 +174,5 @@ class BacklogSync:
         Returns:
             list[float]: List of chapter numbers found in Google Drive
         """
-        folder_id = self._google_drive_client.get_cached_manga_folder_id(manga_title, source)
-        files = []
-
-        if folder_id:
-            # 1000 is just a placeholder for now, I don't expect many manga to have more than 1000 chapters
-            cloud_files = self._google_drive_client.get_files_in_folder(folder_id, 1000)
-            files.extend(cloud_files)
-
-        return self._parse_chapter_numbers(files)
-
-    def _parse_chapter_numbers(self, files: list[GoogleDriveFile]) -> list[float]:
-        """Parse chapter numbers from file names.
-
-        Args:
-            files: List of file metadata with 'name' key
-
-        Returns:
-            list[float]: List of parsed chapter numbers
-        """
-        chapter_numbers: list[float] = []
-
-        for file in files:
-            app_props = file.get("appProperties")
-
-            if not app_props:
-                logger.error("Skipping chapter %s - missing appProperties", file["name"])
-                continue
-
-            chapter_num = app_props.get("chapter_num")
-            if chapter_num is None:
-                logger.error("Skipping chapter %s - missing chapter_num", file["name"])
-                continue
-
-            try:
-                chapter_num = float(chapter_num)
-            except (ValueError, TypeError):
-                logger.error(
-                    "Skipping chapter %s - chapter_num is not a float: %s",
-                    file["name"],
-                    chapter_num,
-                )
-                continue
-
-            chapter_numbers.append(float(chapter_num))
-
-        return chapter_numbers
+        # TODO: Return scan metadata from the archive store so backlog sync can warn once per manga when archived files are skipped due to missing/invalid chapter metadata.  # noqa: FIX002
+        return self._google_drive_archive_store.get_archived_chapter_numbers(manga_title, source)

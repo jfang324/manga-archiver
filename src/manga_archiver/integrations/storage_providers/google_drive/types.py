@@ -47,7 +47,7 @@ class GoogleDriveFile(TypedDict):
 
 @dataclass(frozen=True)
 class InitResult:
-    """Result from GoogleDriveClient.initialize()."""
+    """Result from Google Drive archive or migration initialization."""
 
     root_folder_id: str
     cached_folder_count: int

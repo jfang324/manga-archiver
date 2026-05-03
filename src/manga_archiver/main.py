@@ -21,7 +21,10 @@ from .db.migrations import DEFAULT_GOOGLE_DRIVE_VERSION
 from .db.schema_manager import MigrationError, SchemaManager
 from .headless_runner import HeadlessPipelineRunner
 from .integrations.content_providers import ContentProviderManager
-from .integrations.storage_providers.google_drive import GoogleDriveClient, GoogleDriveFolderCache
+from .integrations.storage_providers.google_drive import (
+    GoogleDriveArchiveStore,
+    GoogleDriveFolderCache,
+)
 from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from .models.app_config import AppConfig
 from .pipeline_manager import PipelineConfig, PipelineManager
@@ -38,7 +41,7 @@ logger = logging.getLogger(__name__)
 class GoogleDriveInitResult:
     """Result of Google Drive initialization."""
 
-    client: GoogleDriveClient | None = None
+    archive_store: GoogleDriveArchiveStore | None = None
     folder_cache: GoogleDriveFolderCache | None = None
     token: GoogleApiStoredToken | None = None
     exit_code: int | None = None
@@ -81,7 +84,7 @@ async def _async_main() -> None:
         print(message)
         sys.exit(exit_code)
 
-    google_drive_client = None
+    google_drive_archive_store = None
     google_drive_folder_cache = None
     google_drive_token = None
 
@@ -93,7 +96,7 @@ async def _async_main() -> None:
         if init_result.exit_code is not None:
             sys.exit(init_result.exit_code)
 
-        google_drive_client = init_result.client
+        google_drive_archive_store = init_result.archive_store
         google_drive_folder_cache = init_result.folder_cache
         google_drive_token = init_result.token
 
@@ -106,7 +109,7 @@ async def _async_main() -> None:
             backlog_result = await _load_backlog(
                 args=args,
                 favorite_repository=favorite_repository,
-                google_drive_client=google_drive_client,
+                google_drive_archive_store=google_drive_archive_store,
                 provider_manager=provider_manager,
                 app_config=app_config,
             )
@@ -180,10 +183,12 @@ def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDriveInitRe
 
     try:
         google_drive_folder_cache = GoogleDriveFolderCache()
-        google_drive_client = GoogleDriveClient(token, folder_cache=google_drive_folder_cache)
+        google_drive_archive_store = GoogleDriveArchiveStore(
+            token, folder_cache=google_drive_folder_cache
+        )
 
         print("Initializing Google Drive...")
-        init_result = google_drive_client.initialize()
+        init_result = google_drive_archive_store.initialize()
 
         if init_result.was_created:
             print(f"Created root folder: {init_result.root_folder_id}")
@@ -208,7 +213,7 @@ def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDriveInitRe
         )
 
     return GoogleDriveInitResult(
-        client=google_drive_client,
+        archive_store=google_drive_archive_store,
         folder_cache=google_drive_folder_cache,
         token=token,
     )
@@ -287,7 +292,7 @@ def _build_app(
 async def _load_backlog(
     args: Namespace,
     favorite_repository: FavoriteRepository,
-    google_drive_client: GoogleDriveClient | None,
+    google_drive_archive_store: GoogleDriveArchiveStore | None,
     provider_manager: ContentProviderManager,
     app_config: AppConfig,
 ) -> BacklogSyncResult:
@@ -299,7 +304,7 @@ async def _load_backlog(
     if not args.backlog:
         return BacklogSyncResult(backlog=[])
 
-    if not google_drive_client:
+    if not google_drive_archive_store:
         return BacklogSyncResult(
             exit_code=EXIT_INIT_ERROR,
             message="--backlog requires a Google Drive client, try running with --archive",
@@ -307,7 +312,7 @@ async def _load_backlog(
 
     backlog_sync = BacklogSync(
         favorite_repository=favorite_repository,
-        google_drive_client=google_drive_client,
+        google_drive_archive_store=google_drive_archive_store,
         provider_manager=provider_manager,
         app_config=app_config,
     )

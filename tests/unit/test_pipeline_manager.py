@@ -1,3 +1,4 @@
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -75,7 +76,7 @@ class TestPipelineEnqueue:
             chapter_number=2.0,
             chapter_title="Chapter 2",
             chapter_id="chapter_456",
-            app_config=None,
+            app_config=cast(AppConfig, None),
             source=ContentSource.MANGADEX,
         )
         pm = PipelineManager(

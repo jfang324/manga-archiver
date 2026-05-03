@@ -121,7 +121,7 @@ docstring-code-format = false
 docstring-code-line-length = "dynamic"
 
 [tool.pyright]
-include = ["src"]
+include = ["src", "tests"]
 exclude = [
     "**/__pycache__",
     "**/.pytest_cache",

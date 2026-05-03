@@ -10,18 +10,13 @@ from src.manga_archiver.workers.upload_worker import UploadWorker
 
 
 class TestUploadWorkerDoWork:
-    def _create_mock_drive_client(self, uploaded_id: str | None = "folder_123") -> MagicMock:
-        client = MagicMock()
-        client.get_or_create_manga_folder = AsyncMock(return_value="folder_123")
-        client.upload_file = AsyncMock(return_value=uploaded_id)
-        return client
+    def _create_mock_archive_store(self, uploaded_id: str | None = "file_123") -> MagicMock:
+        archive_store = MagicMock()
+        archive_store.upload_chapter = AsyncMock(return_value=uploaded_id)
+        return archive_store
 
-    @pytest.mark.asyncio
-    async def test_do_work_uploads_file_successfully(self) -> None:
-        mock_drive_client = self._create_mock_drive_client()
-        mock_notification_queue = AsyncMock()
-
-        job = UploadJob(
+    def _create_job(self) -> UploadJob:
+        return UploadJob(
             id="job_123",
             manga_title="Test Manga",
             chapter_number=1.0,
@@ -32,58 +27,44 @@ class TestUploadWorkerDoWork:
             source=ContentSource.MANGADEX,
         )
 
-        worker = UploadWorker(
-            google_drive_client=mock_drive_client,
+    def _create_worker(
+        self, archive_store: MagicMock, notification_queue: AsyncMock | None = None
+    ) -> UploadWorker:
+        return UploadWorker(
+            google_drive_archive_store=archive_store,
             worker_id="upload_worker_0",
             input_queue=MagicMock(),
             output_queue=MagicMock(),
-            notification_queue=mock_notification_queue,
+            notification_queue=notification_queue or AsyncMock(),
             config=MagicMock(),
         )
 
+    @pytest.mark.asyncio
+    async def test_do_work_uploads_file_successfully(self) -> None:
+        mock_archive_store = self._create_mock_archive_store()
+        worker = self._create_worker(mock_archive_store)
+
+        job = self._create_job()
         result = await worker._do_work(job)
 
-        mock_drive_client.get_or_create_manga_folder.assert_called_once_with(
-            "Test Manga", source="mangadex"
-        )
-        mock_drive_client.upload_file.assert_called_once()
-        call_kwargs = mock_drive_client.upload_file.call_args.kwargs
+        mock_archive_store.upload_chapter.assert_called_once()
+        call_kwargs = mock_archive_store.upload_chapter.call_args.kwargs
         assert call_kwargs["file_data"] == b"fake pdf data"
         assert call_kwargs["file_name"] == "Test Manga [1] - Chapter 1.pdf"
-        assert call_kwargs["folder_id"] == "folder_123"
+        assert call_kwargs["manga_title"] == "Test Manga"
+        assert call_kwargs["source"] == "mangadex"
+        assert call_kwargs["chapter_num"] == "1"
+        assert call_kwargs["chapter_title"] == "Chapter 1"
         assert call_kwargs["mimetype"] == OutputFormat.PDF.mime_type
-        assert call_kwargs["file_metadata"] is not None
-        assert call_kwargs["file_metadata"].source == "mangadex"
-        assert call_kwargs["file_metadata"].chapter_num == "1"
-        assert call_kwargs["file_metadata"].chapter_title == "Chapter 1"
         assert result is None
 
     @pytest.mark.asyncio
     async def test_do_work_sends_completed_notification(self) -> None:
-        mock_drive_client = self._create_mock_drive_client()
+        mock_archive_store = self._create_mock_archive_store()
         mock_notification_queue = AsyncMock()
+        worker = self._create_worker(mock_archive_store, mock_notification_queue)
 
-        job = UploadJob(
-            id="job_123",
-            manga_title="Test Manga",
-            chapter_number=1.0,
-            chapter_title="Chapter 1",
-            app_config=AppConfig(_output_format=OutputFormat.PDF),
-            complete_file_data=b"fake pdf data",
-            full_name="Test Manga [1] - Chapter 1.pdf",
-            source=ContentSource.MANGADEX,
-        )
-
-        worker = UploadWorker(
-            google_drive_client=mock_drive_client,
-            worker_id="upload_worker_0",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            notification_queue=mock_notification_queue,
-            config=MagicMock(),
-        )
-
-        await worker._do_work(job)
+        await worker._do_work(self._create_job())
 
         assert mock_notification_queue.put.call_count == 2
         notifications = mock_notification_queue.put.call_args_list
@@ -92,30 +73,11 @@ class TestUploadWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_sends_failed_notification_when_upload_returns_none(self) -> None:
-        mock_drive_client = self._create_mock_drive_client(uploaded_id=None)
+        mock_archive_store = self._create_mock_archive_store(uploaded_id=None)
         mock_notification_queue = AsyncMock()
+        worker = self._create_worker(mock_archive_store, mock_notification_queue)
 
-        job = UploadJob(
-            id="job_123",
-            manga_title="Test Manga",
-            chapter_number=1.0,
-            chapter_title="Chapter 1",
-            app_config=AppConfig(_output_format=OutputFormat.PDF),
-            complete_file_data=b"fake pdf data",
-            full_name="Test Manga [1] - Chapter 1.pdf",
-            source=ContentSource.MANGADEX,
-        )
-
-        worker = UploadWorker(
-            google_drive_client=mock_drive_client,
-            worker_id="upload_worker_0",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            notification_queue=mock_notification_queue,
-            config=MagicMock(),
-        )
-
-        result = await worker._do_work(job)
+        result = await worker._do_work(self._create_job())
 
         assert result is None
         assert mock_notification_queue.put.call_count == 2
@@ -125,31 +87,12 @@ class TestUploadWorkerDoWork:
 
     @pytest.mark.asyncio
     async def test_do_work_raises_exception(self) -> None:
-        mock_drive_client = self._create_mock_drive_client()
-        mock_drive_client.get_or_create_manga_folder = AsyncMock(side_effect=Exception("API error"))
-
-        job = UploadJob(
-            id="job_123",
-            manga_title="Test Manga",
-            chapter_number=1.0,
-            chapter_title="Chapter 1",
-            app_config=AppConfig(_output_format=OutputFormat.PDF),
-            complete_file_data=b"fake pdf data",
-            full_name="Test Manga [1] - Chapter 1.pdf",
-            source=ContentSource.MANGADEX,
-        )
-
-        worker = UploadWorker(
-            google_drive_client=mock_drive_client,
-            worker_id="upload_worker_0",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            notification_queue=AsyncMock(),
-            config=MagicMock(),
-        )
+        mock_archive_store = self._create_mock_archive_store()
+        mock_archive_store.upload_chapter = AsyncMock(side_effect=Exception("API error"))
+        worker = self._create_worker(mock_archive_store)
 
         with pytest.raises(Exception, match="API error"):
-            await worker._do_work(job)
+            await worker._do_work(self._create_job())
 
     @pytest.mark.parametrize(
         "invalid_fields, expected_error_message",
@@ -171,49 +114,26 @@ class TestUploadWorkerDoWork:
     async def test_do_work_raises_value_error_for_invalid_job(
         self, invalid_fields, expected_error_message
     ) -> None:
-        mock_drive_client = MagicMock()
-        mock_drive_client.get_or_create_manga_folder.return_value = "folder_id"
+        mock_archive_store = MagicMock()
+        mock_archive_store.upload_chapter = AsyncMock(return_value="file_id")
 
-        job = UploadJob(
-            id="job_123",
-            manga_title="Test Manga",
-            chapter_number=1.0,
-            chapter_title="Chapter 1",
-            app_config=AppConfig(_output_format=OutputFormat.PDF),
-            complete_file_data=b"fake pdf data",
-            full_name="Test Manga [1] - Chapter 1.pdf",
-            source=ContentSource.MANGADEX,
-        )
+        job = self._create_job()
 
         for key, value in invalid_fields.items():
             setattr(job, key, value)
 
-        worker = UploadWorker(
-            google_drive_client=mock_drive_client,
-            worker_id="upload_worker_0",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            notification_queue=AsyncMock(),
-            config=MagicMock(),
-        )
+        worker = self._create_worker(mock_archive_store)
 
         with pytest.raises(ValueError, match=expected_error_message):
             await worker._do_work(job)
+        mock_archive_store.upload_chapter.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_do_work_raises_error_for_wrong_job_type(self, mock_job) -> None:
-        mock_drive_client = MagicMock()
-        mock_drive_client.get_or_create_manga_folder = AsyncMock(return_value="folder_123")
-        mock_drive_client.upload_file = AsyncMock(return_value="file_123")
+        mock_archive_store = self._create_mock_archive_store()
 
-        worker = UploadWorker(
-            google_drive_client=mock_drive_client,
-            worker_id="upload_worker_0",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            notification_queue=AsyncMock(),
-            config=MagicMock(),
-        )
+        worker = self._create_worker(mock_archive_store)
 
         with pytest.raises(ValueError, match="Invalid job type"):
             await worker._do_work(mock_job)
+        mock_archive_store.upload_chapter.assert_not_awaited()

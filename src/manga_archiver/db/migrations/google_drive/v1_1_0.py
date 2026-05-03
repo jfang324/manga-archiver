@@ -12,7 +12,7 @@ from pathlib import Path
 from sqlite3 import Cursor
 
 from manga_archiver.db.schema_manager import _version_compare
-from manga_archiver.integrations.storage_providers.google_drive import GoogleDriveClient
+from manga_archiver.integrations.storage_providers.google_drive import GoogleDriveMigrationClient
 from manga_archiver.integrations.storage_providers.google_drive.types import (
     GoogleDriveDirectory,
     GoogleDriveFileMetadata,
@@ -52,7 +52,7 @@ def _parse_filename(filename: str) -> tuple[str, str]:
 
 
 def _count_items_needing_migration(
-    client: GoogleDriveClient, sub_folders: list[GoogleDriveDirectory]
+    client: GoogleDriveMigrationClient, sub_folders: list[GoogleDriveDirectory]
 ) -> tuple[int, int]:
     """Count folders and files that need metadata added.
 
@@ -71,7 +71,7 @@ def _count_items_needing_migration(
         if not app_props or not app_props.get("source"):
             folders_needed += 1
 
-        files = client.get_files_in_folder(folder["id"])
+        files = client.list_files(folder["id"])
         for f in files:
             file_props = f.get("appProperties")
             if not file_props or not file_props.get("source"):
@@ -81,7 +81,7 @@ def _count_items_needing_migration(
 
 
 def _migrate_folder(
-    client: GoogleDriveClient, folder: GoogleDriveDirectory, print_progress: bool = True
+    client: GoogleDriveMigrationClient, folder: GoogleDriveDirectory, print_progress: bool = True
 ) -> tuple[int, int]:
     """Migrate a single folder and its files.
 
@@ -103,13 +103,13 @@ def _migrate_folder(
     if app_props is None or "source" not in app_props:
         try:
             folder_metadata = GoogleDriveFolderMetadata(source=DEFAULT_SOURCE)
-            client._update_folder_metadata(folder_id, folder_metadata)
+            client.update_folder_metadata(folder_id, folder_metadata)
             migrated_folders += 1
         except Exception as e:
             logger.error("Failed to migrate folder %s: %s", folder_name, e)
             raise
 
-    files = client.get_files_in_folder(folder_id)
+    files = client.list_files(folder_id)
     files_needing_migration = [f for f in files if not (f.get("appProperties") or {}).get("source")]
 
     for idx, file in enumerate(files_needing_migration, 1):
@@ -126,7 +126,7 @@ def _migrate_folder(
                     chapter_num=chapter_num,
                     chapter_title=chapter_title,
                 )
-                client._update_file_metadata(file_id, file_metadata)
+                client.update_file_metadata(file_id, file_metadata)
                 migrated_files += 1
 
                 if print_progress and idx % 10 == 0:
@@ -143,7 +143,7 @@ def _migrate_folder(
 
 
 def _verify_migration(
-    client: GoogleDriveClient, sub_folders: list[GoogleDriveDirectory]
+    client: GoogleDriveMigrationClient, sub_folders: list[GoogleDriveDirectory]
 ) -> tuple[int, int]:
     """Verify migration was successful by re-counting items needing metadata.
 
@@ -162,7 +162,7 @@ def _verify_migration(
         if not app_props or not app_props.get("source"):
             remaining_folders += 1
 
-        files = client.get_files_in_folder(folder["id"])
+        files = client.list_files(folder["id"])
         for f in files:
             file_props = f.get("appProperties")
             if not file_props or not file_props.get("source"):
@@ -193,7 +193,7 @@ def migrate(current: str, cursor: Cursor) -> str:
         )
         return f"Migrated to {MIGRATION_VERSION}: Skipped (no token)"
 
-    client = GoogleDriveClient(token)
+    client = GoogleDriveMigrationClient(token)
 
     try:
         init_result = client.initialize()
@@ -205,7 +205,7 @@ def migrate(current: str, cursor: Cursor) -> str:
         )
         return f"Migrated to {MIGRATION_VERSION}: Failed to initialize Drive client"
 
-    sub_folders = client._get_sub_folders(init_result.root_folder_id)
+    sub_folders = client.list_child_folders(init_result.root_folder_id)
 
     # Pre-flight: count items needing migration
     total_folders_needed, total_files_needed = _count_items_needing_migration(client, sub_folders)
