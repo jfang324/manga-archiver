@@ -91,15 +91,20 @@ class MangaArchiverApp(App):
 
         self._favorite_repository = favorite_repository
         self._provider_manager = provider_manager
+        self._favorites = []
 
+        self.mutate_reactive(MangaArchiverApp._app_config)
+
+    async def _load_favorites(self) -> None:
+        """Load favorites from the database."""
         try:
-            self._favorites = self._favorite_repository.get_all()
+            self._favorites = await self._favorite_repository.get_all()
+            self.mutate_reactive(MangaArchiverApp._favorites)
         except Exception as e:
             logger.error("Failed to load favorites from database: %s", e)
             self.notify("Failed to load favorites from database", severity="error")
             self._favorites = []
 
-        self.mutate_reactive(MangaArchiverApp._app_config)
         self.mutate_reactive(MangaArchiverApp._favorites)
 
     @work
@@ -158,6 +163,8 @@ class MangaArchiverApp(App):
 
     async def on_mount(self) -> None:
         """On mount, install screens and start pipeline manager."""
+        await self._load_favorites()
+
         self.install_screen(MenuScreen(), name="menu_screen")
         self.install_screen(SearchScreen(self._provider_manager), name="search_screen")
         self.install_screen(
@@ -217,7 +224,7 @@ class MangaArchiverApp(App):
             self.notify("Failed to save settings", severity="error")
 
     @on(FavoritesScreen.Deleted)
-    def _on_favorite_deleted(self, event: FavoritesScreen.Deleted) -> None:
+    async def _on_favorite_deleted(self, event: FavoritesScreen.Deleted) -> None:
         """Delete a favorite manga from the database then update in-memory copy."""
         manga_id, manga_title = (
             event.deleted_manga.id,
@@ -225,7 +232,7 @@ class MangaArchiverApp(App):
         )
 
         try:
-            self._favorite_repository.delete_by_id(manga_id)
+            await self._favorite_repository.delete_by_id(manga_id)
         except Exception as e:
             logger.error("Failed to remove %s from favorites: %s", manga_title, e)
             self.notify("Failed to remove favorite", severity="error")
@@ -245,12 +252,12 @@ class MangaArchiverApp(App):
         self.push_screen(SelectionScreen(manga_id, manga_title, self._provider_manager, source))
 
     @on(SearchScreen.FavoriteAdded)
-    def _on_favorite_added(self, event: SearchScreen.FavoriteAdded) -> None:
+    async def _on_favorite_added(self, event: SearchScreen.FavoriteAdded) -> None:
         """Add a favorite manga to the database then update in-memory copy."""
         favorite_manga: FavoriteManga = event.favorited_manga
 
         try:
-            was_created = self._favorite_repository.create_one(favorite_manga)
+            was_created = await self._favorite_repository.create_one(favorite_manga)
         except Exception as e:
             logger.error("Failed to add %s to favorites: %s", favorite_manga.title, e)
             self.notify("Failed to add favorite", severity="error")
