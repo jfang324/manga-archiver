@@ -86,7 +86,7 @@ class DownloadWorker(Worker):
                 urls, headers, semaphore
             )
         except Exception:
-            self._provider_manager.invalidate_cache(source, chapter_id)
+            await self._provider_manager.invalidate_cache(source, chapter_id)
             raise
 
         download_end = time.perf_counter_ns()

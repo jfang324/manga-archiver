@@ -136,7 +136,7 @@ class ContentProviderManager:
         if provider is None or semaphore is None:
             raise ValueError(f"Unsupported content source: {source}")
 
-        cached_urls = self._page_cache.get(source, chapter_id)
+        cached_urls = await self._page_cache.get(source, chapter_id)
         if cached_urls:
             return DownloadResource(urls=cached_urls, source=source)
 
@@ -144,7 +144,7 @@ class ContentProviderManager:
             result = await provider.get_download_resource(chapter_id)
 
         if result.urls:
-            self._page_cache.set(source, chapter_id, result.urls)
+            await self._page_cache.set(source, chapter_id, result.urls)
 
         return result
 
@@ -167,11 +167,11 @@ class ContentProviderManager:
 
         return semaphore
 
-    def invalidate_cache(self, source: ContentSource, chapter_id: str) -> None:
+    async def invalidate_cache(self, source: ContentSource, chapter_id: str) -> None:
         """Invalidate cached URLs for a chapter.
 
         Args:
             source: Which provider to invalidate
             chapter_id: ID of chapter to invalidate cache for
         """
-        self._page_cache.delete(source, chapter_id)
+        await self._page_cache.delete(source, chapter_id)

@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from ..db.database import get_connection
@@ -11,7 +12,7 @@ EVICT_COUNT = 1000  # number of oldest entries to remove when limit reached
 class PageCacheRepository:
     """Repository for caching page URLs to reduce API calls."""
 
-    def get(self, source: ContentSource, chapter_id: str) -> list[str] | None:
+    async def get(self, source: ContentSource, chapter_id: str) -> list[str] | None:
         """Retrieve cached URLs for a chapter.
 
         Args:
@@ -23,6 +24,11 @@ class PageCacheRepository:
         """
         if source not in SUPPORTED_SOURCES:
             return None
+
+        return await asyncio.to_thread(self._get, source, chapter_id)
+
+    def _get(self, source: ContentSource, chapter_id: str) -> list[str] | None:
+        should_delete = False
 
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -37,16 +43,19 @@ class PageCacheRepository:
             try:
                 urls = json.loads(row[0])
             except json.JSONDecodeError:
-                self.delete(source, chapter_id)
-                return None
+                should_delete = True
+            else:
+                if isinstance(urls, list) and all(isinstance(url, str) for url in urls):
+                    return urls
 
-            if not isinstance(urls, list) or not all(isinstance(url, str) for url in urls):
-                self.delete(source, chapter_id)
-                return None
+                should_delete = True
 
-            return urls
+        if should_delete:
+            self._delete(source, chapter_id)
 
-    def set(self, source: ContentSource, chapter_id: str, urls: list[str]) -> None:
+        return None
+
+    async def set(self, source: ContentSource, chapter_id: str, urls: list[str]) -> None:
         """Store URLs for a chapter in the cache.
 
         Args:
@@ -57,7 +66,10 @@ class PageCacheRepository:
         if source not in SUPPORTED_SOURCES:
             return
 
-        self._ensure_capacity()
+        await asyncio.to_thread(self._set, source, chapter_id, urls)
+
+    def _set(self, source: ContentSource, chapter_id: str, urls: list[str]) -> None:
+        self._ensure_capacity_sync()
 
         with get_connection() as conn:
             cursor = conn.cursor()
@@ -71,13 +83,16 @@ class PageCacheRepository:
             )
             conn.commit()
 
-    def delete(self, source: ContentSource, chapter_id: str) -> None:
+    async def delete(self, source: ContentSource, chapter_id: str) -> None:
         """Delete a cached entry.
 
         Args:
             source: Content source
             chapter_id: Chapter ID
         """
+        await asyncio.to_thread(self._delete, source, chapter_id)
+
+    def _delete(self, source: ContentSource, chapter_id: str) -> None:
         with get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -86,8 +101,11 @@ class PageCacheRepository:
             )
             conn.commit()
 
-    def _ensure_capacity(self) -> None:
+    async def _ensure_capacity(self) -> None:
         """Evict oldest entries if cache exceeds max size."""
+        await asyncio.to_thread(self._ensure_capacity_sync)
+
+    def _ensure_capacity_sync(self) -> None:
         with get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM page_cache")
