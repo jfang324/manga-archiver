@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added quick retry for failed downloads on the download screen (ctrl + r)
 - Added caching for AllManga integration
-- Fixed issue where downloads would fail caused by 1-bit black-and-white source images
+- Fixed issue where downloads would fail due to 1-bit black-and-white source images
 
 ## [1.3.0] - 2026-05-01
 
