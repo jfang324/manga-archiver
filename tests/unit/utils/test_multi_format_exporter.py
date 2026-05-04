@@ -96,8 +96,8 @@ class TestLoadImages:
 
     @pytest.mark.parametrize(
         ("mode",),
-        [("RGB",), ("RGBA",), ("P",)],
-        ids=["rgb", "rgba", "palette"],
+        [("RGB",), ("RGBA",), ("P",), ("1",)],
+        ids=["rgb", "rgba", "palette", "bilevel"],
     )
     def test_load_images_converts_modes(self, mode) -> None:
         exporter = MultiFormatExporter()
@@ -173,6 +173,24 @@ class TestGeneratePdf:
 
         assert output_file.exists()
         assert output_file.stat().st_size > 0
+
+    def test_generate_pdf_with_bilevel_image_and_quality(self, tmp_path) -> None:
+        exporter = MultiFormatExporter()
+        img = Image.new("1", (100, 100))
+        buf = BytesIO()
+        img.save(buf, format="PNG")
+
+        full_name, file_data = exporter.generate(
+            [buf.getvalue()],
+            tmp_path,
+            "test",
+            OutputFormat.PDF,
+            quality=75,
+            return_bytes=True,
+        )
+
+        assert full_name == "test.pdf"
+        assert file_data[:4] == b"%PDF"
 
 
 class TestGenerateCbz:
