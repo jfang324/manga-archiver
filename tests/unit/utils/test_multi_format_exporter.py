@@ -190,7 +190,7 @@ class TestGeneratePdf:
         )
 
         assert full_name == "test.pdf"
-        assert len(file_data) > 0
+        assert file_data[:4] == b"%PDF"
 
 
 class TestGenerateCbz:
