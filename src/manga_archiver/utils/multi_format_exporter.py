@@ -203,7 +203,7 @@ class MultiFormatExporter:
             except Exception as e:
                 raise ValueError(f"Invalid image data: {e}") from e
 
-            if img.mode in ("RGBA", "P"):
+            if img.mode != "RGB":
                 img = img.convert("RGB")
 
             images.append(img)
