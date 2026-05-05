@@ -80,10 +80,10 @@ class DownloadWorker(Worker):
         download_start = time.perf_counter_ns()
         await self._send_notification(job, JobStatus.DOWNLOADING, download_start)
 
-        semaphore = self._provider_manager.get_download_semaphore(source)
+        limiter = self._provider_manager.get_download_limiter(source)
         try:
             image_data: list[bytes] = await self._download_client.download_images(
-                urls, headers, semaphore
+                urls, limiter, headers
             )
         except Exception as download_error:
             try:

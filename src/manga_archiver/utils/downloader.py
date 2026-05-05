@@ -1,11 +1,9 @@
 import asyncio
-from asyncio import Semaphore
 
 from aiohttp import ClientSession
 
 from ..integrations.exceptions import BadGatewayError, NotFoundError, RateLimitError
-
-DEFAULT_CONCURRENCY: int = 40
+from .download_limiter import DownloadLimiter
 
 MAX_RETRIES: int = 3
 BASE_DELAY: int = 2
@@ -21,35 +19,26 @@ class DownloadClient:
     def __init__(
         self,
         session: ClientSession,
-        max_concurrent: int = DEFAULT_CONCURRENCY,
     ) -> None:
         """Initialize the downloader with an HTTP session.
 
         Args:
             session: The aiohttp ClientSession to use for requests
-            max_concurrent: Maximum concurrent downloads (default 40)
-
-        Raises:
-            ValueError: If max_concurrent is less than 1
         """
-        if max_concurrent < 1:
-            raise ValueError("max_concurrent must be greater than 0")
-
         self._session = session
-        self._semaphore = Semaphore(max_concurrent)
 
     async def download_image(
         self,
         url: str,
+        limiter: DownloadLimiter,
         headers: dict | None = None,
-        semaphore: Semaphore | None = None,
     ) -> bytes:
         """Download a single image from the given URL.
 
         Args:
             url: The URL of the image to download
+            limiter: Limiter for rate limiting
             headers: Optional headers to include in the request
-            semaphore: Optional semaphore for rate limiting (uses default if None)
 
         Returns:
             bytes: The binary data of the image
@@ -60,9 +49,10 @@ class DownloadClient:
             BadGatewayError: If the API is temporarily unavailable
             DownloadError: If the download fails
         """
-        sem = semaphore or self._semaphore
-
-        async with sem, self._session.get(url, headers=headers, timeout=5) as response:
+        async with (
+            limiter.acquire(),
+            self._session.get(url, headers=headers, timeout=5) as response,
+        ):
             if response.status == 200:
                 return await response.read()
 
@@ -83,14 +73,14 @@ class DownloadClient:
         self,
         url: str,
         headers: dict | None,
-        semaphore: Semaphore,
+        limiter: DownloadLimiter,
     ) -> bytes:
         """Download a single image with retry logic for transient errors.
 
         Args:
             url: The URL of the image to download
             headers: Optional headers to include in the request
-            semaphore: The semaphore for concurrency control
+            limiter: The limiter for concurrency control
 
         Returns:
             bytes: The binary data of the image
@@ -103,9 +93,14 @@ class DownloadClient:
         last_error: Exception | None = None
         for attempt in range(MAX_RETRIES):
             try:  # PERF203: Retry loop is intentional for transient errors
-                return await self.download_image(url, headers, semaphore)
+                image_data = await self.download_image(url, limiter, headers)
+                if attempt == 0:
+                    await limiter.record_success()
+
+                return image_data
             except (RateLimitError, BadGatewayError) as e:  # noqa: PERF203
                 last_error = e
+                await limiter.record_retryable_error()
 
                 if attempt < MAX_RETRIES - 1:
                     await asyncio.sleep(BASE_DELAY * (2**attempt))
@@ -119,15 +114,15 @@ class DownloadClient:
     async def download_images(
         self,
         urls: list[str],
+        limiter: DownloadLimiter,
         headers: dict | None = None,
-        semaphore: Semaphore | None = None,
     ) -> list[bytes]:
         """Download multiple images concurrently from the given URLs.
 
         Args:
             urls: The URLs of the images to download
+            limiter: Limiter for rate limiting
             headers: Optional headers to include in each request
-            semaphore: Optional semaphore for rate limiting (uses default if None)
 
         Returns:
             list[bytes]: List of binary data for each image
@@ -135,9 +130,9 @@ class DownloadClient:
         Raises:
             DownloadError: If the download fails
         """
-        sem = semaphore or self._semaphore
-
-        tasks = [asyncio.create_task(self._download_with_retry(url, headers, sem)) for url in urls]
+        tasks = [
+            asyncio.create_task(self._download_with_retry(url, headers, limiter)) for url in urls
+        ]
 
         try:
             return await asyncio.gather(*tasks)
