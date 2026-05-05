@@ -30,7 +30,6 @@ class TestParseArgs:
         assert args.benchmark is False
         assert args.backlog is False
         assert args.headless is False
-        assert args.auto_exit is False
 
     @pytest.mark.parametrize("preset", get_preset_names(), ids=get_preset_names())
     def test_parses_preset_option(self, preset: str) -> None:
@@ -63,7 +62,6 @@ class TestParseArgs:
                 "--benchmark",
                 "--backlog",
                 "--headless",
-                "--auto-exit",
             ]
         )
 
@@ -77,7 +75,6 @@ class TestParseArgs:
         assert args.benchmark is True
         assert args.backlog is True
         assert args.headless is True
-        assert args.auto_exit is True
 
     @pytest.mark.parametrize("auth_command", ["login", "logout"], ids=["login", "logout"])
     def test_parses_auth_subcommands(self, auth_command: str) -> None:
@@ -138,6 +135,12 @@ class TestParseArgs:
     def test_rejects_unknown_command(self) -> None:
         with pytest.raises(SystemExit) as exc_info:
             parse_args(["unknowncmd"])
+
+        assert exc_info.value.code == ARGPARSE_USAGE_ERROR
+
+    def test_rejects_removed_auto_exit_flag(self) -> None:
+        with pytest.raises(SystemExit) as exc_info:
+            parse_args(["--auto-exit"])
 
         assert exc_info.value.code == ARGPARSE_USAGE_ERROR
 

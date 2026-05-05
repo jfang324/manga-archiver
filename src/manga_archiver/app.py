@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from copy import deepcopy
 from typing import TYPE_CHECKING
@@ -7,10 +6,6 @@ from textual import on, work
 from textual.app import App
 from textual.reactive import reactive
 
-from .constants.defaults import (
-    DEFAULT_AUTO_EXIT_CONFIRM_COUNT,
-    DEFAULT_AUTO_EXIT_POLL_INTERVAL,
-)
 from .integrations.content_providers import ContentProviderManager
 from .models.app_config import AppConfig
 from .pipeline_manager import PipelineManager
@@ -43,8 +38,6 @@ class MangaArchiverApp(App):
         _favorite_repository (FavoriteRepository): The favorite repository
         _provider_manager (ContentProviderManager): The content provider manager
         _backlog (list[FetchingResourcesJob] | None): The backlog of missing chapters
-        _auto_exit (bool): Whether to automatically exit when all jobs are complete
-
     Reactive Attributes:
         _app_config (AppConfig): The application configuration
         _favorites (list[FavoriteManga]): List of favorited manga with manga_id and manga_title
@@ -69,7 +62,6 @@ class MangaArchiverApp(App):
         favorite_repository: FavoriteRepository,
         provider_manager: ContentProviderManager,
         backlog: list[FetchingResourcesJob] | None = None,
-        auto_exit: bool = False,
         **kwargs,
     ) -> None:
         """Initialize the MangaArchiverApp.
@@ -80,14 +72,12 @@ class MangaArchiverApp(App):
             favorite_repository: The favorite repository
             backlog: Pre-fetched jobs to enqueue when pipeline starts
             provider_manager: Content provider manager (injected)
-            auto_exit: Whether to automatically exit the application
         """
         super().__init__(**kwargs)
 
         self._pipeline_manager = pipeline_manager
         self._app_config = app_config
         self._backlog = backlog
-        self._auto_exit = auto_exit
 
         self._favorite_repository = favorite_repository
         self._provider_manager = provider_manager
@@ -108,26 +98,6 @@ class MangaArchiverApp(App):
         self.mutate_reactive(MangaArchiverApp._favorites)
 
     @work
-    async def _poll_pipeline_manager_is_done(self) -> None:
-        """Poll pipeline manager until all jobs are done."""
-        confirm_count = 0
-
-        while True:
-            await asyncio.sleep(DEFAULT_AUTO_EXIT_POLL_INTERVAL)
-
-            if self._pipeline_manager.is_done():
-                self.notify(
-                    f"auto exit confirm count: {confirm_count + 1}",
-                    severity="information",
-                )
-                confirm_count += 1
-
-            if confirm_count >= DEFAULT_AUTO_EXIT_CONFIRM_COUNT:
-                break
-
-        await self._on_quit(True)
-
-    @work
     async def _setup_pipeline_manager(self) -> None:
         """Start the pipeline manager and process backlog jobs."""
         if self._backlog:
@@ -135,9 +105,6 @@ class MangaArchiverApp(App):
                 f"Enqueueing {len(self._backlog)} jobs from backlog, this may take a while...",
                 severity="information",
             )
-
-        if self._auto_exit:
-            self._poll_pipeline_manager_is_done()
 
         await self._pipeline_manager.start(self._backlog)
 
