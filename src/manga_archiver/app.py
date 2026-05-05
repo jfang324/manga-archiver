@@ -8,7 +8,7 @@ from textual.reactive import reactive
 
 from .integrations.content_providers import ContentProviderManager
 from .models.app_config import AppConfig
-from .pipeline_manager import PipelineManager
+from .pipeline import PipelineManager
 from .repositories import FavoriteRepository
 from .repositories.types import FavoriteManga
 from .screens import (

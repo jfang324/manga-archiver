@@ -5,7 +5,7 @@ from src.manga_archiver.integrations.storage_providers.google_drive import Googl
 from src.manga_archiver.integrations.storage_providers.google_drive.types import (
     GoogleApiStoredToken,
 )
-from src.manga_archiver.workers import WorkerManager
+from src.manga_archiver.pipeline.worker_manager import WorkerManager
 
 
 def _token() -> GoogleApiStoredToken:
@@ -173,7 +173,7 @@ class TestWorkerManagerWiring:
             assert worker._output_queue is None
             assert worker._notification_queue is notify_q
 
-    @patch("src.manga_archiver.workers.worker_manager.GoogleDriveArchiveStore")
+    @patch("src.manga_archiver.pipeline.worker_manager.GoogleDriveArchiveStore")
     def test_upload_workers_wired_correctly_when_google_drive_enabled(
         self, mock_google_drive_archive_store: MagicMock
     ) -> None:
@@ -213,7 +213,7 @@ class TestWorkerManagerWiring:
             assert worker._output_queue is None
             assert worker._notification_queue is notify_q
 
-    @patch("src.manga_archiver.workers.worker_manager.GoogleDriveArchiveStore")
+    @patch("src.manga_archiver.pipeline.worker_manager.GoogleDriveArchiveStore")
     def test_merge_workers_route_to_upload_queue_when_google_drive_enabled(
         self, mock_google_drive_archive_store: MagicMock
     ) -> None:
