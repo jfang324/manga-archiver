@@ -7,7 +7,7 @@ from aiohttp import ClientSession
 from ...constants.defaults import DEFAULT_DOWNLOAD_RATE_LIMIT, DEFAULT_PROVIDER_RATE_LIMIT
 from ...models import Chapter, ContentSource, DownloadResource, Manga
 from ...repositories import PageCacheRepository
-from ...utils.download_limiter import DownloadLimiter, StaticDownloadLimiter
+from ...utils.download_limiter import DownloadLimiter
 from .allanime.client import AllMangaClient
 from .mangadex.client import MangaDexApiClient
 
@@ -45,7 +45,7 @@ class ContentProviderManager:
             source: Semaphore(resolve_rate_limit) for source in ContentSource
         }
         self._download_limiters: dict[ContentSource, DownloadLimiter] = {
-            source: StaticDownloadLimiter(download_rate_limit) for source in ContentSource
+            source: DownloadLimiter(download_rate_limit) for source in ContentSource
         }
         self._page_cache = PageCacheRepository()
 

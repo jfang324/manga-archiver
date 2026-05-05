@@ -83,7 +83,7 @@ class DownloadWorker(Worker):
         limiter = self._provider_manager.get_download_limiter(source)
         try:
             image_data: list[bytes] = await self._download_client.download_images(
-                urls, headers, limiter
+                urls, limiter, headers
             )
         except Exception as download_error:
             try:
