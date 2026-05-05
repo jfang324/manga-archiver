@@ -7,7 +7,7 @@ from aiohttp import ClientSession
 from ...constants.defaults import DEFAULT_DOWNLOAD_RATE_LIMIT, DEFAULT_PROVIDER_RATE_LIMIT
 from ...models import Chapter, ContentSource, DownloadResource, Manga
 from ...repositories import PageCacheRepository
-from ...utils.download_limiter import DownloadLimiter
+from ...utils.adaptive_limiter import AdaptiveLimiter
 from .allanime.client import AllMangaClient
 from .mangadex.client import MangaDexApiClient
 
@@ -44,8 +44,8 @@ class ContentProviderManager:
         self._resolve_semaphores: dict[ContentSource, Semaphore] = {
             source: Semaphore(resolve_rate_limit) for source in ContentSource
         }
-        self._download_limiters: dict[ContentSource, DownloadLimiter] = {
-            source: DownloadLimiter(download_rate_limit) for source in ContentSource
+        self._download_limiters: dict[ContentSource, AdaptiveLimiter] = {
+            source: AdaptiveLimiter(download_rate_limit) for source in ContentSource
         }
         self._page_cache = PageCacheRepository()
 
@@ -156,14 +156,14 @@ class ContentProviderManager:
 
         return result
 
-    def get_download_limiter(self, source: ContentSource) -> DownloadLimiter:
+    def get_download_limiter(self, source: ContentSource) -> AdaptiveLimiter:
         """Get the download limiter for a specific provider.
 
         Args:
             source: Which provider to get limiter for
 
         Returns:
-            DownloadLimiter: Limiter for rate limiting download operations
+            AdaptiveLimiter: Limiter for rate limiting download operations
 
         Raises:
             ValueError: If source is not supported

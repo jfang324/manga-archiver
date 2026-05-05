@@ -7,8 +7,8 @@ from contextlib import asynccontextmanager
 DEFAULT_TOKEN_TTL_SECONDS: float = 60.0
 
 
-class DownloadLimiter:
-    """Download limiter with fixed base capacity and expiring burst tokens."""
+class AdaptiveLimiter:
+    """Adaptive limiter with fixed base capacity and expiring burst tokens."""
 
     def __init__(
         self,
@@ -19,7 +19,7 @@ class DownloadLimiter:
         """Initialize the limiter.
 
         Args:
-            base_limit: Number of base concurrent downloads
+            base_limit: Number of base concurrent operations
             token_ttl_seconds: Seconds before clean-success burst tokens expire
             time_provider: Monotonic clock provider
 
@@ -63,7 +63,7 @@ class DownloadLimiter:
                     self._condition.notify_all()
 
     async def record_success(self) -> None:
-        """Record a clean download success as one expiring burst token."""
+        """Record a clean success as one expiring burst token."""
         async with self._condition:
             now = self._time_provider()
             self._expire_tokens(now)

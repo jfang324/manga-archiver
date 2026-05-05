@@ -63,4 +63,6 @@ jobs:
               uses: pypa/gh-action-pip-audit@v1.1.0
               with:
                   summary: true
-                  ignore-vulns: CVE-2026-3219 #pip 26.0.1 has vulnerability with no update as of 2026-04-26
+                  ignore-vulns: |
+                      CVE-2026-3219
+                      CVE-2026-6357                  #pip 26.0.1 has vulnerability with no update as of 2026-04-26
