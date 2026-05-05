@@ -46,7 +46,7 @@ manga-archiver/
 ├── src/manga_archiver/
 │   ├── main.py                 # CLI entry point
 │   ├── app.py                  # Textual app root
-│   ├── pipeline_manager.py     # Pipeline orchestration
+│   ├── pipeline/               # Pipeline orchestration
 │   ├── backlog_sync.py         # Backlog sync workflow
 │   ├── cli/                    # CLI parsing
 │   ├── constants/              # Shared constants
@@ -56,7 +56,7 @@ manga-archiver/
 │   ├── repositories/           # Persistence access
 │   ├── screens/                # Workflow orchestration
 │   ├── widgets/                # UI components
-│   ├── workers/                # Pipeline workers
+│   ├── workers/                # Worker implementations
 │   └── utils/                  # Shared utilities
 ├── tests/unit/                 # Unit tests
 ├── docs/                       # Documentation
