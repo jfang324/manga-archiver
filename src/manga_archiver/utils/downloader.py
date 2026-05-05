@@ -3,7 +3,7 @@ import asyncio
 from aiohttp import ClientSession
 
 from ..integrations.exceptions import BadGatewayError, NotFoundError, RateLimitError
-from .download_limiter import DownloadLimiter
+from .adaptive_limiter import AdaptiveLimiter
 
 MAX_RETRIES: int = 3
 BASE_DELAY: int = 2
@@ -30,7 +30,7 @@ class DownloadClient:
     async def download_image(
         self,
         url: str,
-        limiter: DownloadLimiter,
+        limiter: AdaptiveLimiter,
         headers: dict | None = None,
     ) -> bytes:
         """Download a single image from the given URL.
@@ -73,7 +73,7 @@ class DownloadClient:
         self,
         url: str,
         headers: dict | None,
-        limiter: DownloadLimiter,
+        limiter: AdaptiveLimiter,
     ) -> bytes:
         """Download a single image with retry logic for transient errors.
 
@@ -114,7 +114,7 @@ class DownloadClient:
     async def download_images(
         self,
         urls: list[str],
-        limiter: DownloadLimiter,
+        limiter: AdaptiveLimiter,
         headers: dict | None = None,
     ) -> list[bytes]:
         """Download multiple images concurrently from the given URLs.

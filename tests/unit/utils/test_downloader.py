@@ -7,7 +7,7 @@ from src.manga_archiver.integrations.exceptions import (
     NotFoundError,
     RateLimitError,
 )
-from src.manga_archiver.utils.download_limiter import DownloadLimiter
+from src.manga_archiver.utils.adaptive_limiter import AdaptiveLimiter
 from src.manga_archiver.utils.downloader import DownloadClient, DownloadError
 from tests.conftest import AsyncContextManagerMock
 
@@ -25,7 +25,7 @@ class TestDownloadClientDownloadImage:
 
         client = DownloadClient(mock_session)
         result = await client.download_image(
-            "https://test.com/image.jpg", DownloadLimiter(base_limit=1)
+            "https://test.com/image.jpg", AdaptiveLimiter(base_limit=1)
         )
 
         assert result == expected_result
@@ -49,7 +49,7 @@ class TestDownloadClientDownloadImage:
         client = DownloadClient(mock_session)
 
         with pytest.raises(expected_error):
-            await client.download_image("https://test.com/image.jpg", DownloadLimiter(base_limit=1))
+            await client.download_image("https://test.com/image.jpg", AdaptiveLimiter(base_limit=1))
 
 
 class TestDownloadClientDownloadImages:
@@ -72,7 +72,7 @@ class TestDownloadClientDownloadImages:
         mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
 
         client = DownloadClient(mock_session)
-        result = await client.download_images(urls, DownloadLimiter(base_limit=1))
+        result = await client.download_images(urls, AdaptiveLimiter(base_limit=1))
 
         assert len(result) == len(urls)
         assert result == expected_result
@@ -104,13 +104,13 @@ class TestDownloadClientDownloadImages:
 
         if expect_error:
             with pytest.raises(expect_error):
-                await client.download_images(urls, DownloadLimiter(base_limit=1))
+                await client.download_images(urls, AdaptiveLimiter(base_limit=1))
 
             for task in task_tracker.tasks:
                 if not task.done():
                     task.cancel.assert_called_once()
         else:
-            results = await client.download_images(urls, DownloadLimiter(base_limit=1))
+            results = await client.download_images(urls, AdaptiveLimiter(base_limit=1))
             assert len(results) == len(urls)
 
 
