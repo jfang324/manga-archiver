@@ -164,7 +164,6 @@ The following command-line arguments are available:
 | `--archive`             | flag | false   | Enable archive mode (upload to Google Drive instead of local save)                        |
 | `--backlog`             | flag | false   | Sync favorites with Google Drive and download missing chapters                            |
 | `--benchmark`           | flag | false   | Enable benchmark metrics collection, written to `~/.manga-archiver/benchmark/metrics.txt` |
-| `--auto-exit`           | flag | false   | Automatically exit when all jobs are complete                                             |
 | `--version`             | flag | -       | Show the current version and exit                                                         |
 | `--preset`              | str  | -       | Apply a built-in runtime tuning preset (`safe`, `slow`, `fast`)                           |
 | `--headless`            | flag | false   | Run without a TUI                                                                         |

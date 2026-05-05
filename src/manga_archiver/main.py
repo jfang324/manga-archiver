@@ -138,7 +138,6 @@ async def _async_main() -> None:
                 favorite_repository=favorite_repository,
                 backlog=backlog,
                 provider_manager=provider_manager,
-                auto_exit=args.auto_exit,
             )
 
             try:
@@ -276,7 +275,6 @@ def _build_app(
     favorite_repository: FavoriteRepository,
     backlog: list[FetchingResourcesJob] | None,
     provider_manager: ContentProviderManager,
-    auto_exit: bool,
 ) -> MangaArchiverApp:
     """Build the Textual application instance."""
     return MangaArchiverApp(
@@ -285,7 +283,6 @@ def _build_app(
         favorite_repository=favorite_repository,
         backlog=backlog,
         provider_manager=provider_manager,
-        auto_exit=auto_exit,
     )
 
 

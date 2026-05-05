@@ -127,12 +127,6 @@ def _build_parser() -> ArgumentParser:
         help="Run backlog processing without launching the Textual UI (requires --archive --backlog)",
     )
 
-    parser.add_argument(
-        "--auto-exit",
-        action="store_true",
-        help="Automatically exit when all jobs are complete",
-    )
-
     return parser
 
 
