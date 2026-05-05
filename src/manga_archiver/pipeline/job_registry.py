@@ -75,4 +75,7 @@ class PipelineJobRegistry:
                 break
 
             self._job_expiry_queue.popleft()
-            self._job_statuses.pop(oldest_job_id, None)
+            current = self._job_statuses.get(oldest_job_id)
+
+            if current is not None and current[0] in TERMINAL_STATUSES:
+                self._job_statuses.pop(oldest_job_id, None)
