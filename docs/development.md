@@ -47,6 +47,10 @@ manga-archiver/
 │   ├── main.py                 # CLI entry point
 │   ├── app.py                  # Textual app root
 │   ├── pipeline/               # Pipeline orchestration
+│   │   ├── manager.py          # Pipeline manager
+│   │   ├── worker_manager.py   # Worker pool orchestration
+│   │   ├── job_registry.py     # Job status and retry tracking
+│   │   └── benchmark.py        # Pipeline benchmark aggregation
 │   ├── backlog_sync.py         # Backlog sync workflow
 │   ├── cli/                    # CLI parsing
 │   ├── constants/              # Shared constants

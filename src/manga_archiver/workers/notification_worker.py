@@ -1,12 +1,18 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
 from asyncio import Queue
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
-from .benchmark import BenchmarkManager
 from .jobs import NotificationJob
 from .types import JobMetadata, JobStatus
+
+if TYPE_CHECKING:
+    # Importing Pipeline benchmark at runtime creates a pipeline -> workers -> pipeline cycle.
+    from ..pipeline.benchmark import BenchmarkManager
 
 logger = logging.getLogger(__name__)
 

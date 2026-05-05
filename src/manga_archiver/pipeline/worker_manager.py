@@ -14,11 +14,12 @@ from ..workers.base import WorkerConfig
 from ..workers.download_worker import DownloadWorker
 from ..workers.jobs import Job, NotificationJob
 from ..workers.merge_worker import MergeWorker
-from ..workers.notification_worker import BenchmarkManager, NotificationWorker
+from ..workers.notification_worker import NotificationWorker
 from ..workers.resolve_worker import ResolveWorker
 from ..workers.scheduler import SchedulerFeedback
 from ..workers.types import JobMetadata, JobStatus
 from ..workers.upload_worker import UploadWorker
+from .benchmark import BenchmarkManager
 
 logger = logging.getLogger(__name__)
 
