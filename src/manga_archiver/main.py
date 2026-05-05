@@ -27,7 +27,7 @@ from .integrations.storage_providers.google_drive import (
 )
 from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from .models.app_config import AppConfig
-from .pipeline_manager import PipelineConfig, PipelineManager
+from .pipeline import PipelineConfig, PipelineManager
 from .repositories import FavoriteRepository
 from .utils import DownloadClient, setup_logging
 from .utils.auth.google_drive import load_token

@@ -5,7 +5,7 @@ from contextlib import suppress
 from tqdm import tqdm
 
 from .constants.exit_codes import EXIT_RUNTIME_ERROR, EXIT_SUCCESS
-from .pipeline_manager import PipelineManager
+from .pipeline import PipelineManager
 from .utils.benchmark_report import write_benchmark_report
 from .workers.jobs import FetchingResourcesJob
 from .workers.types import JobStatus

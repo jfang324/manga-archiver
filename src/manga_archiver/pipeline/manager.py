@@ -1,34 +1,32 @@
 import asyncio
 import logging
-import time
 import tracemalloc
 from asyncio import Queue
-from collections import deque
 from dataclasses import dataclass, field
 
-from .constants.defaults import (
+from ..constants.defaults import (
     DEFAULT_DOWNLOAD_RATE_LIMIT,
     DEFAULT_DOWNLOAD_WORKERS,
-    DEFAULT_JOB_EXPIRY_SECONDS,
     DEFAULT_MERGE_WORKERS,
     DEFAULT_PROVIDER_RATE_LIMIT,
     DEFAULT_QUEUE_SIZE,
     DEFAULT_RESOLVE_WORKERS,
     DEFAULT_UPLOAD_WORKERS,
 )
-from .integrations.content_providers import ContentProviderManager
-from .integrations.storage_providers.google_drive import GoogleDriveFolderCache
-from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
-from .models.app_config import AppConfig
-from .utils import DownloadClient
-from .workers import WorkerManager
-from .workers.jobs import (
+from ..integrations.content_providers import ContentProviderManager
+from ..integrations.storage_providers.google_drive import GoogleDriveFolderCache
+from ..integrations.storage_providers.google_drive.types import GoogleApiStoredToken
+from ..models.app_config import AppConfig
+from ..utils import DownloadClient
+from ..workers.jobs import (
     FetchingResourcesJob,
     Job,
     NotificationJob,
 )
-from .workers.scheduler import RateLimitAwareScheduler, SchedulerConfig, SchedulerFeedback
-from .workers.types import JobMetadata, JobStatus
+from ..workers.scheduler import RateLimitAwareScheduler, SchedulerConfig, SchedulerFeedback
+from ..workers.types import JobMetadata, JobStatus
+from .job_registry import PipelineJobRegistry
+from .worker_manager import WorkerManager
 
 logger = logging.getLogger(__name__)
 
@@ -131,10 +129,7 @@ class PipelineManager:
                 config=config.resolve_scheduler_config,
             )
 
-        self._job_statuses: dict[str, tuple[JobStatus, JobMetadata]] = {}
-        self._failed_jobs: dict[str, FetchingResourcesJob] = {}
-        self._job_expiry_queue: deque[tuple[float, str]] = deque()
-        self._job_expiry_seconds: int = DEFAULT_JOB_EXPIRY_SECONDS
+        self._job_registry = PipelineJobRegistry()
 
         self._worker_manager = WorkerManager(
             resolve_queue=self._resolve_queue,
@@ -151,64 +146,19 @@ class PipelineManager:
             download_client=download_client,
             google_drive_token=google_drive_token,
             google_drive_folder_cache=google_drive_folder_cache,
-            on_status_update=self._on_status_update,
+            on_status_update=self._job_registry.record_status_update,
             resolve_scheduler_feedback_queue=self._resolve_scheduler_feedback_queue,
         )
 
         self._benchmark_enabled = config.benchmark_enabled
 
-    def _on_status_update(self, job_id: str, status: JobStatus, metadata: JobMetadata) -> None:
-        """Update job status in internal dict with automatic expiry.
-
-        Uses a queue to track completed jobs for efficient expiry checking.
-        Modification of state MUST be done here to avoid race conditions.
-        """
-        self._job_statuses[job_id] = (status, metadata)
-
-        # Track failed jobs for retry
-        if status == JobStatus.FAILED:
-            failed_job = FetchingResourcesJob(
-                id=job_id,
-                manga_title=metadata.manga_title,
-                chapter_id=metadata.chapter_id,
-                chapter_number=metadata.chapter_number,
-                chapter_title=metadata.chapter_title,
-                app_config=metadata.app_config,
-                source=metadata.source,
-            )
-            self._failed_jobs[job_id] = failed_job
-
-        # Remove from failed jobs if it succeeds (no longer needs retry)
-        if status == JobStatus.COMPLETED:
-            self._failed_jobs.pop(job_id, None)
-
-        # Add to expiry queue when job completes
-        if status in (JobStatus.COMPLETED, JobStatus.FAILED):
-            self._job_expiry_queue.append((time.time(), job_id))
-
-        # Check and remove expired jobs (O(1) amortized)
-        while self._job_expiry_queue:
-            oldest_timestamp, oldest_job_id = self._job_expiry_queue[0]
-
-            if time.time() - oldest_timestamp < self._job_expiry_seconds:
-                break
-
-            self._job_expiry_queue.popleft()
-            self._job_statuses.pop(oldest_job_id, None)
-
     def get_jobs(self) -> dict[str, tuple[JobStatus, JobMetadata]]:
         """Return a copy of the current job statuses."""
-        return self._job_statuses.copy()
+        return self._job_registry.get_jobs()
 
     def incomplete_job_count(self) -> int:
         """Return the number of jobs not in a terminal state."""
-        return sum(
-            [
-                1
-                for status, _ in self._job_statuses.values()
-                if status not in (JobStatus.COMPLETED, JobStatus.FAILED)
-            ]
-        )
+        return self._job_registry.incomplete_job_count()
 
     async def retry_failed_jobs(self) -> int:
         """Re-queue all failed jobs for retry through the scheduler.
@@ -216,13 +166,11 @@ class PipelineManager:
         Returns:
             int: Number of jobs re-queued
         """
-        if not self._failed_jobs:
+        jobs = self._job_registry.pop_failed_jobs()
+        if not jobs:
             return 0
 
-        jobs = list(self._failed_jobs.values())
-
         await self.enqueue_jobs(jobs)
-        self._failed_jobs.clear()
 
         return len(jobs)
 

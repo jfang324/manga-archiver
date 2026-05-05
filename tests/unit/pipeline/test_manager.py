@@ -6,7 +6,7 @@ import pytest
 from src.manga_archiver.models import ContentSource
 from src.manga_archiver.models.app_config import AppConfig
 from src.manga_archiver.models.output_format import OutputFormat
-from src.manga_archiver.pipeline_manager import PipelineConfig, PipelineManager
+from src.manga_archiver.pipeline import PipelineConfig, PipelineManager
 from src.manga_archiver.workers.jobs import FetchingResourcesJob
 
 
