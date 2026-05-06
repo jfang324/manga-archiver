@@ -43,3 +43,11 @@ def add_list_parser(subparsers: _SubParsersAction) -> ArgumentParser:
     list_subparsers.add_parser("presets", help="List runtime presets")
 
     return list_parser
+
+
+def add_health_parser(subparsers: _SubParsersAction) -> ArgumentParser:
+    """Register health subcommand."""
+    return subparsers.add_parser(
+        "health",
+        help="Check content provider API health",
+    )

@@ -13,7 +13,12 @@ from ..constants.defaults import (
     DEFAULT_RESOLVE_WORKERS,
 )
 from .presets import get_preset_names
-from .subcommands import add_auth_parser, add_list_parser, add_migrate_parser
+from .subcommands import (
+    add_auth_parser,
+    add_health_parser,
+    add_list_parser,
+    add_migrate_parser,
+)
 from .validators import positive_int
 
 FALLBACK_VERSION = "v0.0.0"
@@ -47,6 +52,7 @@ def _build_parser() -> ArgumentParser:
     add_auth_parser(subparsers)
     add_migrate_parser(subparsers)
     add_list_parser(subparsers)
+    add_health_parser(subparsers)
 
     parser.add_argument(
         "--version",
