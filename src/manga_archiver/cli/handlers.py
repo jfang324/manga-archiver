@@ -1,12 +1,16 @@
 from argparse import Namespace
 
+import aiohttp
+
 from ..constants.exit_codes import (
     EXIT_AUTH_ERROR,
+    EXIT_GENERAL_ERROR,
     EXIT_INIT_ERROR,
     EXIT_MIGRATION_ERROR,
     EXIT_SUCCESS,
 )
 from ..db.schema_manager import SchemaManager
+from ..health import ProviderHealthChecker, format_provider_health_check_result
 from ..utils.auth.google_drive import handle_auth_login, handle_auth_logout
 from .presets import format_presets
 
@@ -24,6 +28,10 @@ async def handle_subcommands(
         return exit_code
 
     handled, exit_code = _handle_auth(args)
+    if handled:
+        return exit_code
+
+    handled, exit_code = await _handle_health(args)
     if handled:
         return exit_code
 
@@ -69,6 +77,30 @@ def _handle_auth(args: Namespace) -> tuple[bool, int]:
         return True, handle_auth_logout()
 
     return True, EXIT_AUTH_ERROR
+
+
+async def _handle_health(args: Namespace) -> tuple[bool, int]:
+    """Handle provider health command."""
+    if args.command != "health":
+        return False, EXIT_SUCCESS
+
+    async with aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
+    ) as session:
+        results = []
+        first_result = True
+        async for result in ProviderHealthChecker(session).check_all_completed():
+            if not first_result:
+                print()
+
+            print(format_provider_health_check_result(result))
+            results.append(result)
+            first_result = False
+
+    if all(result.is_healthy for result in results):
+        return True, EXIT_SUCCESS
+
+    return True, EXIT_GENERAL_ERROR
 
 
 async def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[bool, int]:
