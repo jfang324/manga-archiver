@@ -170,6 +170,7 @@ The following command-line arguments are available:
 | `list presets`          | sub  | -       | List built-in runtime tuning presets                                                      |
 | `migrate`               | sub  | -       | Run database migrations (subcommands: `database`, `google-drive`)                         |
 | `auth`                  | sub  | -       | Google Drive authentication (subcommands: `login`, `logout`)                              |
+| `health`                | sub  | -       | Check provider API health                                                                 |
 
 ### Usage Examples
 

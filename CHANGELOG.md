@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed `--auto-exit`; use `--headless` for backlog/archive runs that exit when complete
 - Added adaptive download limiter, improving performance for local downloads
+- Added `health` subcommand to check provider API health
+- Fixed AllManga integration issue where download resources couldn't be retrieved
 
 ## [1.3.1] - 2026-05-04
 
