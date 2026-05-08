@@ -1,4 +1,3 @@
-import time
 from asyncio import Queue
 
 from ..integrations.content_providers import ContentProviderManager
@@ -48,6 +47,7 @@ class ResolveWorker(Worker):
             output_queue,
             config,
             notification_queue,
+            JobStatus.FETCHING_RESOURCES,
             scheduler_feedback_queue,
         )
 
@@ -87,15 +87,9 @@ class ResolveWorker(Worker):
         if not chapter_id:
             raise ValueError(f"Invalid FetchingResourcesJob missing chapter_id: {job}")
 
-        resolve_start = time.perf_counter_ns()
-        await self._send_notification(job, JobStatus.FETCHING_RESOURCES, resolve_start)
-
         resources: DownloadResource = await self._provider_manager.get_download_resource(
             job.source, job.chapter_id
         )
-
-        resolve_end = time.perf_counter_ns()
-        await self._send_notification(job, JobStatus.FETCHING_RESOURCES, resolve_start, resolve_end)
 
         return DownloadingJob(
             id=job_id,

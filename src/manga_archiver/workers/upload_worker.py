@@ -1,12 +1,8 @@
-import logging
-import time
 from asyncio import Queue
 
 from ..integrations.storage_providers.google_drive import GoogleDriveArchiveStore
 from .base import Worker, WorkerConfig
 from .jobs import Job, JobStatus, NotificationJob, UploadJob
-
-logger = logging.getLogger(__name__)
 
 
 class UploadWorker(Worker):
@@ -31,7 +27,9 @@ class UploadWorker(Worker):
             config: The configuration for the worker
             google_drive_archive_store: The Google Drive archive store for uploads
         """
-        super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
+        super().__init__(
+            worker_id, input_queue, output_queue, config, notification_queue, JobStatus.UPLOADING
+        )
 
         self._google_drive_archive_store = google_drive_archive_store
 
@@ -74,31 +72,18 @@ class UploadWorker(Worker):
                 f"Job {job_id} full_name '{full_name}' does not contain chapter_number '{job.chapter_number}'"
             )
 
-        upload_start = time.perf_counter_ns()
-        await self._send_notification(job, JobStatus.UPLOADING, upload_start)
-
         chapter_title = job.chapter_title if job.chapter_title else "untitled"
         chapter_num = f"{job.chapter_number:g}"
 
-        try:
-            uploaded_id = await self._google_drive_archive_store.upload_chapter(
-                file_data=complete_file_data,
-                file_name=full_name,
-                manga_title=manga_title,
-                source=job.source.value,
-                chapter_num=chapter_num,
-                chapter_title=chapter_title,
-                mimetype=app_config.output_format.mime_type,
-            )
+        uploaded_id = await self._google_drive_archive_store.upload_chapter(
+            file_data=complete_file_data,
+            file_name=full_name,
+            manga_title=manga_title,
+            source=job.source.value,
+            chapter_num=chapter_num,
+            chapter_title=chapter_title,
+            mimetype=app_config.output_format.mime_type,
+        )
 
-            upload_end = time.perf_counter_ns()
-
-            if uploaded_id:
-                await self._send_notification(job, JobStatus.UPLOADING, upload_start, upload_end)
-            else:
-                logger.error("Failed to upload %s to Google Drive", full_name)
-                await self._send_notification(job, JobStatus.FAILED)
-
-        except Exception as e:
-            logger.error("Upload error for %s: %s", job_id, e)
-            raise
+        if not uploaded_id:
+            raise RuntimeError(f"Failed to upload {full_name} to Google Drive")

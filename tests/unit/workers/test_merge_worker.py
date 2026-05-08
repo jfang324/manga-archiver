@@ -89,36 +89,6 @@ class TestMergeWorkerDoWork:
         )
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_status_change_merging(self, tmp_path) -> None:
-        mock_multi_format_exporter = MagicMock()
-        mock_multi_format_exporter.generate.return_value = ("test.pdf", [])
-
-        mock_notification_queue = AsyncMock()
-
-        job = MergingJob(
-            id="job_123",
-            manga_title="Test Manga",
-            chapter_number=1.0,
-            chapter_title="Introduction",
-            app_config=AppConfig(_output_path=tmp_path, _output_format=OutputFormat.PDF),
-            image_data=[b"image1", b"image2"],
-            source=ContentSource.MANGADEX,
-        )
-
-        worker = MergeWorker(
-            multi_format_exporter=mock_multi_format_exporter,
-            worker_id="merge_worker_0",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            notification_queue=mock_notification_queue,
-            config=MagicMock(),
-        )
-
-        await worker._do_work(job)
-
-        assert mock_notification_queue.put.call_count == 2
-
-    @pytest.mark.asyncio
     async def test_do_work_uses_chapter_number_from_job(self, tmp_path) -> None:
         mock_multi_format_exporter = MagicMock()
         mock_multi_format_exporter.generate.return_value = ("test.pdf", [])

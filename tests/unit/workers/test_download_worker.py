@@ -91,39 +91,6 @@ class TestDownloadWorkerDoWork:
         assert result.app_config is app_config
 
     @pytest.mark.asyncio
-    async def test_do_work_calls_status_change_downloading(self) -> None:
-        mock_download_client = MagicMock()
-        mock_download_client.download_images = AsyncMock(return_value=[b"image1"])
-        test_limiter = AdaptiveLimiter(5)
-        mock_notification_queue = AsyncMock()
-        app_config = AppConfig(optimize=True)
-
-        job = DownloadingJob(
-            id="job_123",
-            manga_title="Test Manga",
-            chapter_number=1.0,
-            chapter_title="Chapter 1",
-            app_config=app_config,
-            urls=["http://example.com/1.jpg", "http://example.com/2.jpg"],
-            chapter_id="test_manga:1",
-            source=ContentSource.MANGADEX,
-        )
-
-        worker = DownloadWorker(
-            download_client=mock_download_client,
-            provider_manager=self._create_mock_provider_manager(test_limiter),
-            worker_id="download_worker_0",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            notification_queue=mock_notification_queue,
-            config=MagicMock(),
-        )
-
-        await worker._do_work(job)
-
-        assert mock_notification_queue.put.call_count == 2
-
-    @pytest.mark.asyncio
     async def test_do_work_raises_error_for_missing_urls(self) -> None:
         mock_download_client = MagicMock(spec=DownloadClient)
         test_limiter = AdaptiveLimiter(5)

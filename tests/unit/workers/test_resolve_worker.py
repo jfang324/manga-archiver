@@ -89,35 +89,6 @@ class TestResolveWorkerDoWork:
         )
 
     @pytest.mark.asyncio
-    async def test_do_work_sends_notification(self) -> None:
-        mock_provider_manager = self._create_mock_provider_manager()
-
-        mock_notification_queue = AsyncMock()
-
-        job = FetchingResourcesJob(
-            id="job_123",
-            manga_title="Test Manga",
-            chapter_number=1.0,
-            chapter_title="Chapter 1",
-            chapter_id="chapter_456",
-            app_config=AppConfig(),
-            source=ContentSource.MANGADEX,
-        )
-
-        worker = ResolveWorker(
-            provider_manager=mock_provider_manager,
-            worker_id="resolve_worker_0",
-            input_queue=MagicMock(),
-            output_queue=MagicMock(),
-            notification_queue=mock_notification_queue,
-            config=MagicMock(),
-        )
-
-        await worker._do_work(job)
-
-        assert mock_notification_queue.put.call_count == 2
-
-    @pytest.mark.asyncio
     async def test_do_work_raises_error_for_missing_chapter_id(self) -> None:
         mock_provider_manager = AsyncMock()
 
