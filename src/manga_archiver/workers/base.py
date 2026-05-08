@@ -119,6 +119,7 @@ class Worker(ABC):
         await self._send_notification(job, self._work_status, work_start)
 
         max_attempts = max(self._config.max_retries + 1, 1)
+        max_retry_attempts = max_attempts - 1
 
         for attempt in range(max_attempts):
             is_final_attempt = attempt == max_attempts - 1
@@ -161,12 +162,12 @@ class Worker(ABC):
 
                 delay = self._calculate_backoff(attempt)
                 logger.error(
-                    "Worker %s: Job %s rate limited, retrying in %.1fs (attempt %d/%d)",
+                    "Worker %s: Job %s rate limited, retrying in %.1fs (retry %d/%d)",
                     self._id,
                     job.id,
                     delay,
                     attempt + 1,
-                    max_attempts,
+                    max_retry_attempts,
                 )
                 await asyncio.sleep(delay)
             except (TimeoutError, BadGatewayError, asyncio.TimeoutError, ClientError) as e:
@@ -183,13 +184,13 @@ class Worker(ABC):
 
                 delay = self._calculate_backoff(attempt)
                 logger.error(
-                    "Worker %s: Job %s network error: %s, retrying in %.1fs (attempt %d/%d)",
+                    "Worker %s: Job %s network error: %s, retrying in %.1fs (retry %d/%d)",
                     self._id,
                     job.id,
                     type(e).__name__,
                     delay,
                     attempt + 1,
-                    max_attempts,
+                    max_retry_attempts,
                 )
                 await asyncio.sleep(delay)
             except ValueError as e:
