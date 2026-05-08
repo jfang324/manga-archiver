@@ -51,6 +51,7 @@ class Worker(ABC):
         output_queue: Queue[Job] | None,
         config: WorkerConfig,
         notification_queue: Queue[NotificationJob],
+        work_status: JobStatus,
         scheduler_feedback_queue: Queue[SchedulerFeedback] | None = None,
     ) -> None:
         """Initialize the worker.
@@ -61,12 +62,14 @@ class Worker(ABC):
             output_queue: The output queue for the worker
             config: The configuration for the worker
             notification_queue: The queue for notification jobs
+            work_status: The active status represented by this worker phase
             scheduler_feedback_queue: Optional queue for scheduler result feedback
         """
         self._id = worker_id
         self._input_queue = input_queue
         self._output_queue = output_queue
         self._notification_queue = notification_queue
+        self._work_status = work_status
         self._scheduler_feedback_queue = scheduler_feedback_queue
 
         self._config = config
@@ -106,101 +109,111 @@ class Worker(ABC):
                 self._running = False
                 break
 
-    async def _process_job(self, job: Job, attempt: int = 0) -> None:
+    async def _process_job(self, job: Job) -> None:
         """Process a job and update the status accordingly.
 
         Args:
             job: The job to process
-            attempt: The current attempt number for retries
         """
-        try:
-            next_job: Job | None = await self._do_work(job)
+        work_start = time.perf_counter_ns()
+        await self._send_notification(job, self._work_status, work_start)
 
-            if not self._output_queue or not next_job:
-                await self._send_notification(job, JobStatus.COMPLETED)
-            else:
-                await self._output_queue.put(next_job)
+        max_attempts = max(self._config.max_retries + 1, 1)
+        max_retry_attempts = max_attempts - 1
 
-            await self._send_scheduler_feedback(job, was_rate_limited=False)
-        except NotFoundError:
-            # 404: Fail fast, don't retry
-            logger.error(
-                "Worker %s: Job %s failed with 404 NotFound - failing immediately",
-                self._id,
-                job.id,
-            )
-            await self._send_notification(job, JobStatus.FAILED)
-            return
-        except RateLimitError:
-            await self._send_scheduler_feedback(job, was_rate_limited=True)
+        for attempt in range(max_attempts):
+            is_final_attempt = attempt == max_attempts - 1
 
-            # 429: Retry with standard backoff
-            if attempt < self._config.max_retries:
+            try:
+                next_job: Job | None = await self._do_work(job)
+
+                work_end = time.perf_counter_ns()
+                await self._send_notification(job, self._work_status, work_start, work_end)
+
+                if not self._output_queue or not next_job:
+                    await self._send_notification(job, JobStatus.COMPLETED)
+                else:
+                    await self._output_queue.put(next_job)
+
+                await self._send_scheduler_feedback(job, was_rate_limited=False)
+                return
+            except NotFoundError:
+                # 404: Fail fast, don't retry
+                logger.error(
+                    "Worker %s: Job %s failed with 404 NotFound - failing immediately",
+                    self._id,
+                    job.id,
+                )
+                await self._send_notification(job, JobStatus.FAILED)
+                return
+            except RateLimitError:
+                await self._send_scheduler_feedback(job, was_rate_limited=True)
+
+                # 429: Retry with standard backoff
+                if is_final_attempt:
+                    logger.error(
+                        "Worker %s: Job %s rate limited after %d attempts - failing",
+                        self._id,
+                        job.id,
+                        max_attempts,
+                    )
+                    await self._send_notification(job, JobStatus.FAILED)
+                    return
+
                 delay = self._calculate_backoff(attempt)
                 logger.error(
-                    "Worker %s: Job %s rate limited, retrying in %.1fs (attempt %d/%d)",
+                    "Worker %s: Job %s rate limited, retrying in %.1fs (retry %d/%d)",
                     self._id,
                     job.id,
                     delay,
                     attempt + 1,
-                    self._config.max_retries,
+                    max_retry_attempts,
                 )
                 await asyncio.sleep(delay)
-                await self._process_job(job, attempt + 1)
-                return
-            logger.error(
-                "Worker %s: Job %s rate limited after %d attempts - failing",
-                self._id,
-                job.id,
-                self._config.max_retries,
-            )
-            await self._send_notification(job, JobStatus.FAILED)
-            return
-        except (TimeoutError, BadGatewayError, asyncio.TimeoutError, ClientError) as e:
-            # Transient network errors: retry normally
-            if attempt < self._config.max_retries:
+            except (TimeoutError, BadGatewayError, asyncio.TimeoutError, ClientError) as e:
+                # Transient network errors: retry normally
+                if is_final_attempt:
+                    logger.error(
+                        "Worker %s: Job %s network failed after %d attempts",
+                        self._id,
+                        job.id,
+                        max_attempts,
+                    )
+                    await self._send_notification(job, JobStatus.FAILED)
+                    return
+
                 delay = self._calculate_backoff(attempt)
                 logger.error(
-                    "Worker %s: Job %s network error: %s, retrying in %.1fs (attempt %d/%d)",
+                    "Worker %s: Job %s network error: %s, retrying in %.1fs (retry %d/%d)",
                     self._id,
                     job.id,
                     type(e).__name__,
                     delay,
                     attempt + 1,
-                    self._config.max_retries,
+                    max_retry_attempts,
                 )
                 await asyncio.sleep(delay)
-                await self._process_job(job, attempt + 1)
+            except ValueError as e:
+                # Data validation errors: don't retry
+                logger.error(
+                    "Worker %s: Job %s validation error: %s - failing immediately",
+                    self._id,
+                    job.id,
+                    e,
+                )
+                await self._send_notification(job, JobStatus.FAILED)
                 return
-            logger.error(
-                "Worker %s: Job %s network failed after %d attempts",
-                self._id,
-                job.id,
-                self._config.max_retries,
-            )
-            await self._send_notification(job, JobStatus.FAILED)
-            return
-        except ValueError as e:
-            # Data validation errors: don't retry
-            logger.error(
-                "Worker %s: Job %s validation error: %s - failing immediately",
-                self._id,
-                job.id,
-                e,
-            )
-            await self._send_notification(job, JobStatus.FAILED)
-            return
-        except Exception as e:
-            # Unknown errors: fail immediately (don't retry bugs)
-            logger.error(
-                "Worker %s: Job %s unexpected error: %s",
-                self._id,
-                job.id,
-                e,
-                exc_info=True,
-            )
-            await self._send_notification(job, JobStatus.FAILED)
-            return
+            except Exception as e:
+                # Unknown errors: fail immediately (don't retry bugs)
+                logger.error(
+                    "Worker %s: Job %s unexpected error: %s",
+                    self._id,
+                    job.id,
+                    e,
+                    exc_info=True,
+                )
+                await self._send_notification(job, JobStatus.FAILED)
+                return
 
     async def _send_scheduler_feedback(self, job: Job, was_rate_limited: bool) -> None:
         if self._scheduler_feedback_queue is None:

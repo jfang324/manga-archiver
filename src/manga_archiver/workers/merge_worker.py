@@ -1,5 +1,4 @@
 import asyncio
-import time
 from asyncio import Queue
 
 from ..models.app_config import AppConfig
@@ -36,7 +35,9 @@ class MergeWorker(Worker):
             config: The configuration for the worker
             multi_format_exporter: The exporter to use for merging
         """
-        super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
+        super().__init__(
+            worker_id, input_queue, output_queue, config, notification_queue, JobStatus.MERGING
+        )
 
         self._multi_format_exporter = multi_format_exporter
 
@@ -80,9 +81,6 @@ class MergeWorker(Worker):
         if not isinstance(app_config, AppConfig):
             raise ValueError("app_config must be an AppConfig instance")
 
-        merge_start = time.perf_counter_ns()
-        await self._send_notification(job, JobStatus.MERGING, merge_start)
-
         # need to delegate to thread pools to avoid blocking the event loop
         full_name, file_data = await asyncio.to_thread(
             self._multi_format_exporter.generate,
@@ -94,9 +92,6 @@ class MergeWorker(Worker):
             quality=app_config.quality,
             optimize=app_config.optimize,
         )
-
-        merge_end = time.perf_counter_ns()
-        await self._send_notification(job, JobStatus.MERGING, merge_start, merge_end)
 
         return UploadJob(
             id=job_id,

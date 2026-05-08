@@ -1,4 +1,3 @@
-import time
 from asyncio import Queue
 
 from ..integrations.content_providers import ContentProviderManager
@@ -32,7 +31,9 @@ class DownloadWorker(Worker):
             download_client: The client for downloading images
             provider_manager: The content provider manager (provides download rate limiting)
         """
-        super().__init__(worker_id, input_queue, output_queue, config, notification_queue)
+        super().__init__(
+            worker_id, input_queue, output_queue, config, notification_queue, JobStatus.DOWNLOADING
+        )
 
         self._download_client = download_client
         self._provider_manager = provider_manager
@@ -77,9 +78,6 @@ class DownloadWorker(Worker):
 
         headers = CDN_HEADERS.get(source, {})
 
-        download_start = time.perf_counter_ns()
-        await self._send_notification(job, JobStatus.DOWNLOADING, download_start)
-
         limiter = self._provider_manager.get_download_limiter(source)
         try:
             image_data: list[bytes] = await self._download_client.download_images(
@@ -92,9 +90,6 @@ class DownloadWorker(Worker):
                 raise download_error
 
             raise
-
-        download_end = time.perf_counter_ns()
-        await self._send_notification(job, JobStatus.DOWNLOADING, download_start, download_end)
 
         return MergingJob(
             id=job_id,

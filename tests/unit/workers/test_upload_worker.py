@@ -5,7 +5,7 @@ import pytest
 from src.manga_archiver.models import ContentSource
 from src.manga_archiver.models.app_config import AppConfig
 from src.manga_archiver.models.output_format import OutputFormat
-from src.manga_archiver.workers.jobs import JobStatus, UploadJob
+from src.manga_archiver.workers.jobs import UploadJob
 from src.manga_archiver.workers.upload_worker import UploadWorker
 
 
@@ -59,31 +59,12 @@ class TestUploadWorkerDoWork:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_do_work_sends_completed_notification(self) -> None:
-        mock_archive_store = self._create_mock_archive_store()
-        mock_notification_queue = AsyncMock()
-        worker = self._create_worker(mock_archive_store, mock_notification_queue)
-
-        await worker._do_work(self._create_job())
-
-        assert mock_notification_queue.put.call_count == 2
-        notifications = mock_notification_queue.put.call_args_list
-        assert notifications[0][0][0].status == JobStatus.UPLOADING
-        assert notifications[1][0][0].status == JobStatus.UPLOADING
-
-    @pytest.mark.asyncio
-    async def test_do_work_sends_failed_notification_when_upload_returns_none(self) -> None:
+    async def test_do_work_raises_when_upload_returns_none(self) -> None:
         mock_archive_store = self._create_mock_archive_store(uploaded_id=None)
-        mock_notification_queue = AsyncMock()
-        worker = self._create_worker(mock_archive_store, mock_notification_queue)
+        worker = self._create_worker(mock_archive_store)
 
-        result = await worker._do_work(self._create_job())
-
-        assert result is None
-        assert mock_notification_queue.put.call_count == 2
-        notifications = mock_notification_queue.put.call_args_list
-        assert notifications[0][0][0].status == JobStatus.UPLOADING
-        assert notifications[1][0][0].status == JobStatus.FAILED
+        with pytest.raises(RuntimeError, match="Failed to upload"):
+            await worker._do_work(self._create_job())
 
     @pytest.mark.asyncio
     async def test_do_work_raises_exception(self) -> None:
