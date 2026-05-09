@@ -31,6 +31,13 @@ make test
 make report
 ```
 
+Run a targeted test file or test case:
+
+```bash
+poetry run coverage run -m pytest tests/unit/workers/test_download_worker.py -v
+poetry run coverage run -m pytest tests/unit/workers/test_download_worker.py::TestDownloadWorkerDoWork::test_do_work_returns_merging_job -v
+```
+
 ## Code Quality
 
 Run linting, type checking, formatting:
@@ -44,28 +51,28 @@ make check
 ```text
 manga-archiver/
 ├── src/manga_archiver/
-│   ├── main.py                 # CLI entry point
 │   ├── app.py                  # Textual app root
-│   ├── pipeline/               # Pipeline orchestration
-│   │   ├── manager.py          # Pipeline manager
-│   │   ├── worker_manager.py   # Worker pool orchestration
-│   │   ├── job_registry.py     # Job status and retry tracking
-│   │   └── benchmark.py        # Pipeline benchmark aggregation
 │   ├── backlog_sync.py         # Backlog sync workflow
+│   ├── headless_runner.py      # Non-interactive run support
+│   ├── health.py               # Health check command support
+│   ├── main.py                 # CLI entry point
 │   ├── cli/                    # CLI parsing
 │   ├── constants/              # Shared constants
 │   ├── db/                     # SQLite setup and migrations
 │   ├── integrations/           # External providers
 │   ├── models/                 # Domain models
+│   ├── pipeline/               # Pipeline orchestration
 │   ├── repositories/           # Persistence access
-│   ├── screens/                # Workflow orchestration
+│   ├── screens/                # Textual screens
+│   ├── utils/                  # Shared utilities
 │   ├── widgets/                # UI components
-│   ├── workers/                # Worker implementations
-│   └── utils/                  # Shared utilities
+│   └── workers/                # Worker implementations
 ├── tests/unit/                 # Unit tests
 ├── docs/                       # Documentation
-├── pyproject.toml              # Project config
+├── CHANGELOG.md                # Release notes
+├── LICENSE                     # Project license
 ├── Makefile                    # Dev commands
+├── pyproject.toml              # Project config
 └── README.md                   # User guide
 ```
 
