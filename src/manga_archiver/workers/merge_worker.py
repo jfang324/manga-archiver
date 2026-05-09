@@ -102,4 +102,5 @@ class MergeWorker(Worker):
             complete_file_data=file_data,
             full_name=full_name,
             source=job.source,
+            payload_size=len(file_data),
         )

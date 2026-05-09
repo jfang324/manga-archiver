@@ -239,12 +239,8 @@ class Worker(ABC):
         await self._notification_queue.put(
             NotificationJob(
                 id=job.id,
-                manga_title=job.manga_title,
-                chapter_number=job.chapter_number,
-                chapter_title=job.chapter_title,
-                app_config=job.app_config,
-                source=job.source,
                 status=status,
+                metadata=job.to_metadata(),
                 start_time=start_time,
                 end_time=end_time,
             )

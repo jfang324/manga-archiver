@@ -100,4 +100,5 @@ class ResolveWorker(Worker):
             urls=resources.urls,
             chapter_id=job.chapter_id,
             source=job.source,
+            payload_size=sum(len(url.encode("utf-8")) for url in resources.urls),
         )
