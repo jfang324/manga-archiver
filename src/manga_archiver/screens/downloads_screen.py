@@ -58,7 +58,9 @@ class DownloadsScreen(Screen):
     def on_mount(self) -> None:
         """Set up polling for job status updates on mount."""
         table = self.query_one(DataTable)
-        table.add_columns("Job ID", "Manga", "Chapter #", "Chapter Title", "Completed At", "Status")
+        table.add_columns(
+            "Job ID", "Manga", "Chapter #", "Chapter Title", "Completed At", "Size (MB)", "Status"
+        )
 
         self.set_interval(1, self._poll_jobs)
 
@@ -72,6 +74,7 @@ class DownloadsScreen(Screen):
 
         for job_id, (status, metadata) in self.jobs.items():
             completed = "—"
+            size_mb = f"{metadata.payload_size / (1024 * 1024):.2f}"
 
             if metadata.completed_at != -1:
                 completed = datetime.fromtimestamp(metadata.completed_at).strftime("%H:%M:%S")
@@ -82,6 +85,7 @@ class DownloadsScreen(Screen):
                 f"{metadata.chapter_number:g}",
                 metadata.chapter_title,
                 completed,
+                size_mb,
                 status.value,
             )
 

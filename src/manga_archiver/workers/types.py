@@ -28,6 +28,7 @@ class JobMetadata:
         chapter_title (str): The title of the chapter
         app_config (AppConfig): Output settings for the job
         source (ContentSource): The content source (provider)
+        payload_size (int): Size of the latest job payload in bytes
         completed_at (float): Unix timestamp when job completed (set only on terminal status). Set to -1 if in progress
     """
 
@@ -37,4 +38,5 @@ class JobMetadata:
     chapter_title: str
     app_config: AppConfig
     source: ContentSource
+    payload_size: int = 0
     completed_at: float = -1

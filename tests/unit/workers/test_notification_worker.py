@@ -9,6 +9,17 @@ from src.manga_archiver.workers.notification_worker import NotificationWorker
 from src.manga_archiver.workers.types import JobMetadata, JobStatus
 
 
+def _job_metadata() -> JobMetadata:
+    return JobMetadata(
+        chapter_id="job_123",
+        manga_title="Test Manga",
+        chapter_number=1.0,
+        chapter_title="Chapter 1",
+        app_config=AppConfig(),
+        source=ContentSource.MANGADEX,
+    )
+
+
 class TestNotificationWorkerDoWork:
     @pytest.mark.asyncio
     async def test_do_work_passes_callback_args(self) -> None:
@@ -21,11 +32,7 @@ class TestNotificationWorkerDoWork:
 
         job = NotificationJob(
             id="job_123",
-            manga_title="Test Manga",
-            chapter_number=1.0,
-            chapter_title="Chapter 1",
-            app_config=AppConfig(),
-            source=ContentSource.MANGADEX,
+            metadata=_job_metadata(),
             start_time=1000,
             end_time=2000,
             status=JobStatus.COMPLETED,
@@ -62,11 +69,7 @@ async def test_do_work_completed_at_based_on_status(status, should_set_completed
 
     job = NotificationJob(
         id="job_123",
-        manga_title="Test Manga",
-        chapter_number=1.0,
-        chapter_title="Chapter 1",
-        app_config=AppConfig(),
-        source=ContentSource.MANGADEX,
+        metadata=_job_metadata(),
         status=status,
     )
 
@@ -99,11 +102,7 @@ async def test_do_work_records_benchmark_timing(status) -> None:
 
     job = NotificationJob(
         id="job_123",
-        manga_title="Test Manga",
-        chapter_number=1.0,
-        chapter_title="Chapter 1",
-        app_config=AppConfig(),
-        source=ContentSource.MANGADEX,
+        metadata=_job_metadata(),
         status=status,
         start_time=1000,
         end_time=2000,

@@ -99,4 +99,5 @@ class DownloadWorker(Worker):
             app_config=app_config,
             image_data=image_data,
             source=job.source,
+            payload_size=sum(len(image) for image in image_data),
         )

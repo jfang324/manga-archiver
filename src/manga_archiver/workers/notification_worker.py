@@ -70,14 +70,7 @@ class NotificationWorker:
         Args:
             job: The notification job containing status update information
         """
-        metadata = JobMetadata(
-            chapter_id=job.id,
-            manga_title=job.manga_title,
-            chapter_number=job.chapter_number,
-            chapter_title=job.chapter_title,
-            app_config=job.app_config,
-            source=job.source,
-        )
+        metadata = job.metadata
 
         # Set completed_at for terminal statuses
         if job.status in (JobStatus.COMPLETED, JobStatus.FAILED):

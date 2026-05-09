@@ -222,12 +222,8 @@ class PipelineManager:
 
             notification_job = NotificationJob(
                 id=job.chapter_id,
-                manga_title=job.manga_title,
-                chapter_number=job.chapter_number,
-                chapter_title=job.chapter_title,
-                app_config=job.app_config,
-                source=job.source,
                 status=JobStatus.QUEUED,
+                metadata=job.to_metadata(),
             )
 
             await asyncio.gather(
