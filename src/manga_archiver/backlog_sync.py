@@ -44,7 +44,6 @@ class BacklogSync:
         self._google_drive_archive_store = google_drive_archive_store
         self._provider_manager = provider_manager
         self._app_config = app_config
-        self._mangas: list[Manga] = []
 
     async def run(self) -> list[FetchingResourcesJob]:
         """Run the backlog sync process.
@@ -60,6 +59,8 @@ class BacklogSync:
         if not favorites:
             print("No favorites to sync")
             return []
+
+        mangas: list[Manga] = []
 
         for favorite in favorites:
             manga_id = favorite.id
@@ -88,7 +89,7 @@ class BacklogSync:
                 )
             print(status_message)
 
-            self._mangas.append(
+            mangas.append(
                 Manga(
                     manga_title=manga_title,
                     source=source,
@@ -97,12 +98,15 @@ class BacklogSync:
                 )
             )
 
-        print(f"\nScanned {len(self._mangas)} manga")
+        print(f"\nScanned {len(mangas)} manga")
 
-        return self._create_jobs()
+        return self._create_jobs(mangas)
 
-    def _calculate_diff(self) -> list[tuple[str, ContentSource, Chapter]]:
+    def _calculate_diff(self, mangas: list[Manga]) -> list[tuple[str, ContentSource, Chapter]]:
         """Calculate missing chapters by comparing API chapters vs Google Drive.
+
+        Args:
+            mangas: Manga chapter scan results to compare.
 
         Returns:
             list[tuple[str, ContentSource, Chapter]]: List of tuples containing
@@ -110,7 +114,7 @@ class BacklogSync:
         """
         missing_chapters: list[tuple[str, ContentSource, Chapter]] = []
 
-        for manga in self._mangas:
+        for manga in mangas:
             google_drive_set = set(manga.google_drive_chapters)
 
             for chapter in manga.api_chapters:
@@ -124,13 +128,16 @@ class BacklogSync:
 
         return missing_chapters
 
-    def _create_jobs(self) -> list[FetchingResourcesJob]:
+    def _create_jobs(self, mangas: list[Manga]) -> list[FetchingResourcesJob]:
         """Create FetchingResourcesJob for missing chapters.
+
+        Args:
+            mangas: Manga chapter scan results to convert into jobs.
 
         Returns:
             list[FetchingResourcesJob]: List of jobs to enqueue
         """
-        missing_chapters = self._calculate_diff()
+        missing_chapters = self._calculate_diff(mangas)
         jobs = [
             FetchingResourcesJob(
                 id=chapter.id,
