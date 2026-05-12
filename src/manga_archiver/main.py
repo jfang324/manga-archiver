@@ -134,8 +134,8 @@ async def _async_main() -> None:
                 exit_code = await HeadlessPipelineRunner(pipeline_manager).run(backlog)
                 sys.exit(exit_code)
 
-            resumable_jobs = resumable_jobs_store.get_resumable_jobs()
-            resumable_jobs_store.clear_resumable_jobs()
+            resumable_jobs = await resumable_jobs_store.get_resumable_jobs()
+            await resumable_jobs_store.clear_resumable_jobs()
 
             app = _build_app(
                 app_config=app_config,
@@ -165,7 +165,7 @@ async def _async_main() -> None:
                         "Incomplete jobs must contain only FetchingResourcesJob instances"
                     )
 
-                resumable_jobs_store.save_resumable_jobs(incomplete_jobs)
+                await resumable_jobs_store.save_resumable_jobs(incomplete_jobs)
             except Exception as e:
                 logger.error("Failed to save incomplete jobs: %s", e)
                 sys.exit(EXIT_GENERAL_ERROR)
