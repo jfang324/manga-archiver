@@ -1,6 +1,5 @@
 import logging
 from copy import deepcopy
-from typing import TYPE_CHECKING
 
 from textual import on, work
 from textual.app import App
@@ -22,11 +21,9 @@ from .screens import (
     SelectionScreen,
     SettingsScreen,
 )
+from .screens.selection_screen import PartialJob
 from .utils.benchmark_report import write_benchmark_report
 from .workers.jobs import FetchingResourcesJob
-
-if TYPE_CHECKING:
-    from .screens.selection_screen import PartialJob
 
 logger = logging.getLogger(__name__)
 
