@@ -16,6 +16,7 @@ from .screens import (
     FavoritesScreen,
     MenuScreen,
     QuitScreen,
+    ResumeJobsScreen,
     SearchScreen,
     SelectionScreen,
     SettingsScreen,
@@ -57,30 +58,33 @@ class MangaArchiverApp(App):
 
     def __init__(
         self,
-        pipeline_manager: PipelineManager,
         app_config: AppConfig,
+        pipeline_manager: PipelineManager,
         favorite_repository: FavoriteRepository,
         provider_manager: ContentProviderManager,
         backlog: list[FetchingResourcesJob] | None = None,
+        resumable_jobs: list[FetchingResourcesJob] | None = None,
         **kwargs,
     ) -> None:
         """Initialize the MangaArchiverApp.
 
         Args:
-            pipeline_manager: Un-started pipeline manager for the app lifecycle
             app_config: The application configuration
+            pipeline_manager: Un-started pipeline manager for the app lifecycle
             favorite_repository: The favorite repository
+            provider_manager: Content provider manager
             backlog: Pre-fetched jobs to enqueue when pipeline starts
-            provider_manager: Content provider manager (injected)
+            resumable_jobs: Jobs that can be resumed later
         """
         super().__init__(**kwargs)
 
-        self._pipeline_manager = pipeline_manager
         self._app_config = app_config
-        self._backlog = backlog
-
+        self._pipeline_manager = pipeline_manager
         self._favorite_repository = favorite_repository
         self._provider_manager = provider_manager
+
+        self._backlog = backlog
+        self._resumable_jobs = resumable_jobs
         self._favorites = []
 
         self.mutate_reactive(MangaArchiverApp._app_config)
@@ -153,6 +157,43 @@ class MangaArchiverApp(App):
         self._setup_pipeline_manager()
         self.push_screen("menu_screen")
 
+        if self._resumable_jobs:
+            self._prompt_resume_jobs()
+
+    def _prompt_resume_jobs(self) -> None:
+        """Prompt the user to resume jobs from a previous session."""
+        if not self._resumable_jobs:
+            return
+
+        self.push_screen(
+            ResumeJobsScreen(len(self._resumable_jobs)),
+            lambda confirmed: self._on_resume_jobs_prompt(confirmed),
+        )
+
+    async def _on_resume_jobs_prompt(self, confirmed: bool | None = False) -> None:
+        """Requeue resumable jobs when the user confirms."""
+        if not self._resumable_jobs:
+            return
+
+        resumable_jobs = self._resumable_jobs
+        self._resumable_jobs = None
+
+        if not confirmed:
+            return
+
+        result = await self._pipeline_manager.enqueue_jobs(resumable_jobs)
+        if result.skipped_count > 0:
+            self.notify(
+                (
+                    f"Resumed {result.accepted_count} jobs; "
+                    f"skipped {result.skipped_count} invalid jobs"
+                ),
+                severity="warning",
+            )
+            return
+
+        self.notify(f"Resumed {result.accepted_count} jobs", severity="information")
+
     async def _on_quit(self, confirmed: bool | None = False) -> None:
         """Stop all resources and exit the application."""
         if not confirmed:
@@ -164,14 +205,15 @@ class MangaArchiverApp(App):
         except Exception as e:
             logger.error("Error during shutdown: %s", e)
         finally:
-            self.exit()
+            self.exit(self._pipeline_manager.get_incomplete_jobs())
 
     def action_safe_pop_screen(self) -> None:
         """Check current screen safely before popping."""
         if isinstance(self.screen_stack[-1], MenuScreen):
-            incomplete_count = self._pipeline_manager.incomplete_job_count()
+            incomplete_jobs = self._pipeline_manager.get_incomplete_jobs()
+
             self.push_screen(
-                QuitScreen(incomplete_count),
+                QuitScreen(len(incomplete_jobs)),
                 lambda confirmed: self._on_quit(confirmed),
             )
             return

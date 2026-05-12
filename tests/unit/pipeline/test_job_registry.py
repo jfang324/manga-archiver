@@ -27,14 +27,17 @@ class TestPipelineJobRegistry:
 
         assert registry.get_jobs() == {"job_123": (JobStatus.DOWNLOADING, job_metadata)}
 
-    def test_incomplete_job_count_excludes_terminal_jobs(self, job_metadata: JobMetadata) -> None:
+    def test_get_incomplete_jobs_returns_incomplete_jobs(self, job_metadata: JobMetadata) -> None:
         registry = PipelineJobRegistry()
 
         registry.record_status_update("queued", JobStatus.QUEUED, job_metadata)
         registry.record_status_update("completed", JobStatus.COMPLETED, job_metadata)
         registry.record_status_update("failed", JobStatus.FAILED, job_metadata)
 
-        assert registry.incomplete_job_count() == 1
+        incomplete_jobs = registry.get_incomplete_jobs()
+
+        assert len(incomplete_jobs) == 1
+        assert incomplete_jobs[0].id == "queued"
 
     def test_pop_failed_jobs_returns_and_clears_failed_jobs(
         self, job_metadata: JobMetadata
