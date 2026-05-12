@@ -28,12 +28,11 @@ from .integrations.storage_providers.google_drive import (
 )
 from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from .models.app_config import AppConfig
-from .persistence import ResumableJobStore
+from .persistence import ResumableJobStore, SettingsStore
 from .pipeline import PipelineConfig, PipelineManager
 from .repositories import FavoriteRepository
 from .utils import DownloadClient, setup_logging
 from .utils.auth.google_drive import load_token
-from .utils.settings_manager import load_settings
 from .workers.jobs import FetchingResourcesJob
 
 logger = logging.getLogger(__name__)
@@ -103,8 +102,8 @@ async def _async_main() -> None:
         google_drive_token = init_result.token
 
     try:
-        (resumable_jobs_store,) = _build_persistence_stores()
-        pipeline_config, app_config = _build_configurations(args)
+        resumable_jobs_store, settings_store = _build_persistence_stores()
+        pipeline_config, app_config = await _build_configurations(args, settings_store)
         favorite_repository = FavoriteRepository()
 
         async with _create_client_session() as session:
@@ -143,6 +142,7 @@ async def _async_main() -> None:
                 pipeline_manager=pipeline_manager,
                 favorite_repository=favorite_repository,
                 provider_manager=provider_manager,
+                settings_store=settings_store,
                 backlog=backlog,
                 resumable_jobs=resumable_jobs,
             )
@@ -242,13 +242,15 @@ async def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDrive
     )
 
 
-def _build_persistence_stores() -> tuple[ResumableJobStore]:
+def _build_persistence_stores() -> tuple[ResumableJobStore, SettingsStore]:
     """Build persistence stores."""
 
-    return (ResumableJobStore(),)
+    return ResumableJobStore(), SettingsStore()
 
 
-def _build_configurations(args: Namespace) -> tuple[PipelineConfig, AppConfig]:
+async def _build_configurations(
+    args: Namespace, settings_store: SettingsStore
+) -> tuple[PipelineConfig, AppConfig]:
     """Build startup configuration objects."""
     preset = _get_runtime_preset(args)
     pipeline_config = PipelineConfig(
@@ -263,7 +265,7 @@ def _build_configurations(args: Namespace) -> tuple[PipelineConfig, AppConfig]:
         upload_queue_size=preset.queue_size if preset else args.queue_size,
         benchmark_enabled=args.benchmark,
     )
-    app_config = load_settings()
+    app_config = await settings_store.load()
 
     return pipeline_config, app_config
 
@@ -304,6 +306,7 @@ def _build_app(
     pipeline_manager: PipelineManager,
     favorite_repository: FavoriteRepository,
     provider_manager: ContentProviderManager,
+    settings_store: SettingsStore,
     backlog: list[FetchingResourcesJob] | None,
     resumable_jobs: list[FetchingResourcesJob] | None,
 ) -> MangaArchiverApp:
@@ -313,6 +316,7 @@ def _build_app(
         pipeline_manager=pipeline_manager,
         favorite_repository=favorite_repository,
         provider_manager=provider_manager,
+        settings_store=settings_store,
         backlog=backlog,
         resumable_jobs=resumable_jobs,
     )

@@ -35,8 +35,7 @@ def _make_args(**overrides: object) -> Namespace:
 
 
 class TestPresets:
-    @patch("src.manga_archiver.main.load_settings", return_value=AppConfig())
-    def test_build_configurations_uses_selected_preset(self, mock_load_settings) -> None:
+    async def test_build_configurations_uses_selected_preset(self) -> None:
         args = _make_args(
             preset="fast",
             resolve_workers=1,
@@ -47,10 +46,12 @@ class TestPresets:
             queue_size=1,
         )
         preset = get_preset("fast")
+        settings_store = MagicMock()
+        settings_store.load = AsyncMock(return_value=AppConfig())
 
-        pipeline_config, _ = _build_configurations(args)
+        pipeline_config, _ = await _build_configurations(args, settings_store)
 
-        mock_load_settings.assert_called_once_with()
+        settings_store.load.assert_awaited_once_with()
         assert pipeline_config.num_resolve_workers == preset.resolve_workers
         assert pipeline_config.num_download_workers == preset.download_workers
         assert pipeline_config.num_merge_workers == preset.merge_workers
@@ -61,10 +62,7 @@ class TestPresets:
         assert pipeline_config.merge_queue_size == preset.queue_size
         assert pipeline_config.upload_queue_size == preset.queue_size
 
-    @patch("src.manga_archiver.main.load_settings", return_value=AppConfig())
-    def test_build_configurations_keeps_manual_values_without_preset(
-        self, mock_load_settings
-    ) -> None:
+    async def test_build_configurations_keeps_manual_values_without_preset(self) -> None:
         args = _make_args(
             resolve_workers=3,
             download_workers=4,
@@ -74,10 +72,12 @@ class TestPresets:
             queue_size=8,
             benchmark=True,
         )
+        settings_store = MagicMock()
+        settings_store.load = AsyncMock(return_value=AppConfig())
 
-        pipeline_config, _ = _build_configurations(args)
+        pipeline_config, _ = await _build_configurations(args, settings_store)
 
-        mock_load_settings.assert_called_once_with()
+        settings_store.load.assert_awaited_once_with()
         assert pipeline_config.num_resolve_workers == 3
         assert pipeline_config.num_download_workers == 4
         assert pipeline_config.num_merge_workers == 5
