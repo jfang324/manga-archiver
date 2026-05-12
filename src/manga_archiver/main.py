@@ -13,6 +13,7 @@ from .cli.handlers import handle_subcommands
 from .cli.presets import RuntimePreset, get_preset
 from .constants.exit_codes import (
     EXIT_AUTH_ERROR,
+    EXIT_GENERAL_ERROR,
     EXIT_INIT_ERROR,
     EXIT_RUNTIME_ERROR,
     EXIT_VALIDATION_ERROR,
@@ -156,9 +157,18 @@ async def _async_main() -> None:
                 if not isinstance(incomplete_jobs, list):
                     raise ValueError("Incomplete jobs must be a list")
 
+                if not all(
+                    isinstance(incomplete_job, FetchingResourcesJob)
+                    for incomplete_job in incomplete_jobs
+                ):
+                    raise ValueError(
+                        "Incomplete jobs must contain only FetchingResourcesJob instances"
+                    )
+
                 resumable_jobs_store.save_resumable_jobs(incomplete_jobs)
-            except ValueError as e:
+            except Exception as e:
                 logger.error("Failed to save incomplete jobs: %s", e)
+                sys.exit(EXIT_GENERAL_ERROR)
     except Exception as e:
         logger.error("Failed to initialize: %s", e)
         sys.exit(EXIT_INIT_ERROR)
