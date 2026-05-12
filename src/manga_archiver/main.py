@@ -103,7 +103,7 @@ async def _async_main() -> None:
 
     try:
         resumable_jobs_store, settings_store = _build_persistence_stores()
-        pipeline_config, app_config = _build_configurations(args, settings_store)
+        pipeline_config, app_config = await _build_configurations(args, settings_store)
         favorite_repository = FavoriteRepository()
 
         async with _create_client_session() as session:
@@ -248,7 +248,7 @@ def _build_persistence_stores() -> tuple[ResumableJobStore, SettingsStore]:
     return ResumableJobStore(), SettingsStore()
 
 
-def _build_configurations(
+async def _build_configurations(
     args: Namespace, settings_store: SettingsStore
 ) -> tuple[PipelineConfig, AppConfig]:
     """Build startup configuration objects."""
@@ -265,7 +265,7 @@ def _build_configurations(
         upload_queue_size=preset.queue_size if preset else args.queue_size,
         benchmark_enabled=args.benchmark,
     )
-    app_config = settings_store.load()
+    app_config = await settings_store.load()
 
     return pipeline_config, app_config
 

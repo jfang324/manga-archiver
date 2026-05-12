@@ -224,11 +224,11 @@ class MangaArchiverApp(App):
         self.pop_screen()
 
     @on(SettingsScreen.Save)
-    def _on_schedule_settings_save(self, event: SettingsScreen.Save) -> None:
+    async def _on_schedule_settings_save(self, event: SettingsScreen.Save) -> None:
         """Save settings to settings.json."""
         try:
             new_settings: AppConfig = event.app_config
-            self._settings_store.save(new_settings)
+            await self._settings_store.save(new_settings)
 
             self._app_config = new_settings
             self.notify("Settings saved", severity="information")

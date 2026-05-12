@@ -1,6 +1,7 @@
+import asyncio
 import json
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, cast
 
 from ..constants.defaults import (
     DEFAULT_DATA_SAVER,
@@ -32,19 +33,22 @@ class SettingsStore:
     def __init__(self, settings_path: Path | None = None) -> None:
         self._settings_path = settings_path or get_root_path() / SETTINGS_FILENAME
 
-    def load(self) -> AppConfig:
+    async def load(self) -> AppConfig:
         """Load settings from the settings store."""
-        if not self._settings_path.exists():
-            self._settings_path.parent.mkdir(parents=True, exist_ok=True)
-            self._settings_path.write_text(json.dumps(_get_default_settings(), indent=2))
+        if not await asyncio.to_thread(self._settings_path.exists):
+            await asyncio.to_thread(self._settings_path.parent.mkdir, parents=True, exist_ok=True)
+            await asyncio.to_thread(
+                self._settings_path.write_text,
+                json.dumps(_get_default_settings(), indent=2),
+            )
 
-        settings_data = _parse_settings_file(self._settings_path)
+        settings_data = await _parse_settings_file(self._settings_path)
         if settings_data is None:
             settings_data = _get_default_settings()
 
         return _create_app_config(settings_data)
 
-    def save(self, app_config: AppConfig) -> None:
+    async def save(self, app_config: AppConfig) -> None:
         """Save settings to the settings store."""
         try:
             AppConfig(
@@ -66,7 +70,10 @@ class SettingsStore:
         )
 
         try:
-            self._settings_path.write_text(json.dumps(settings_data, indent=2))
+            await asyncio.to_thread(
+                self._settings_path.write_text,
+                json.dumps(settings_data, indent=2),
+            )
         except OSError as e:
             raise ValueError(f"Failed to save {SETTINGS_FILENAME}: {e}") from e
 
@@ -81,11 +88,16 @@ def _get_default_settings() -> SerializedSettings:
     )
 
 
-def _parse_settings_file(settings_path: Path) -> SerializedSettings | None:
+async def _parse_settings_file(settings_path: Path) -> SerializedSettings | None:
     try:
-        return json.loads(settings_path.read_text())
+        parsed_settings = json.loads(await asyncio.to_thread(settings_path.read_text))
     except (json.JSONDecodeError, OSError):
         return None
+
+    if not isinstance(parsed_settings, dict):
+        return None
+
+    return cast(SerializedSettings, parsed_settings)
 
 
 def _create_app_config(settings_data: SerializedSettings) -> AppConfig:
