@@ -8,6 +8,7 @@ from textual.reactive import reactive
 
 from .integrations.content_providers import ContentProviderManager
 from .models.app_config import AppConfig
+from .persistence import SettingsStore
 from .pipeline import PipelineManager
 from .repositories import FavoriteRepository
 from .repositories.types import FavoriteManga
@@ -22,7 +23,6 @@ from .screens import (
     SettingsScreen,
 )
 from .utils.benchmark_report import write_benchmark_report
-from .utils.settings_manager import save_settings
 from .workers.jobs import FetchingResourcesJob
 
 if TYPE_CHECKING:
@@ -62,6 +62,7 @@ class MangaArchiverApp(App):
         pipeline_manager: PipelineManager,
         favorite_repository: FavoriteRepository,
         provider_manager: ContentProviderManager,
+        settings_store: SettingsStore,
         backlog: list[FetchingResourcesJob] | None = None,
         resumable_jobs: list[FetchingResourcesJob] | None = None,
         **kwargs,
@@ -75,6 +76,7 @@ class MangaArchiverApp(App):
             provider_manager: Content provider manager
             backlog: Pre-fetched jobs to enqueue when pipeline starts
             resumable_jobs: Jobs that can be resumed later
+            settings_store: Store for persisted application settings
         """
         super().__init__(**kwargs)
 
@@ -82,6 +84,7 @@ class MangaArchiverApp(App):
         self._pipeline_manager = pipeline_manager
         self._favorite_repository = favorite_repository
         self._provider_manager = provider_manager
+        self._settings_store = settings_store
 
         self._backlog = backlog
         self._resumable_jobs = resumable_jobs
@@ -225,7 +228,7 @@ class MangaArchiverApp(App):
         """Save settings to settings.json."""
         try:
             new_settings: AppConfig = event.app_config
-            save_settings(new_settings)
+            self._settings_store.save(new_settings)
 
             self._app_config = new_settings
             self.notify("Settings saved", severity="information")
