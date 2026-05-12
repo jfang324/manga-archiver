@@ -51,11 +51,21 @@ class PipelineJobRegistry:
         """Return a copy of the current job statuses."""
         return self._job_statuses.copy()
 
-    def incomplete_job_count(self) -> int:
-        """Return the number of jobs not in a terminal state."""
-        return sum(
-            1 for status, _ in self._job_statuses.values() if status not in TERMINAL_STATUSES
-        )
+    def get_incomplete_jobs(self) -> list[FetchingResourcesJob]:
+        """Return a list of all incomplete jobs as FetchingResourcesJob instances."""
+        return [
+            FetchingResourcesJob(
+                id=job_id,
+                manga_title=metadata.manga_title,
+                chapter_id=metadata.chapter_id,
+                chapter_number=metadata.chapter_number,
+                chapter_title=metadata.chapter_title,
+                app_config=metadata.app_config,
+                source=metadata.source,
+            )
+            for job_id, (status, metadata) in self._job_statuses.items()
+            if status not in TERMINAL_STATUSES
+        ]
 
     def pop_failed_jobs(self) -> list[FetchingResourcesJob]:
         """Return and clear failed jobs available for retry."""

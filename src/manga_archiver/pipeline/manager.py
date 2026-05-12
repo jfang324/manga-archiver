@@ -156,9 +156,9 @@ class PipelineManager:
         """Return a copy of the current job statuses."""
         return self._job_registry.get_jobs()
 
-    def incomplete_job_count(self) -> int:
-        """Return the number of jobs not in a terminal state."""
-        return self._job_registry.incomplete_job_count()
+    def get_incomplete_jobs(self) -> list[FetchingResourcesJob]:
+        """Return a list of all incomplete jobs as FetchingResourcesJob instances."""
+        return self._job_registry.get_incomplete_jobs()
 
     async def retry_failed_jobs(self) -> int:
         """Re-queue all failed jobs for retry through the scheduler.

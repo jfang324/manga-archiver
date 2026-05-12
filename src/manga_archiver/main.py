@@ -27,6 +27,7 @@ from .integrations.storage_providers.google_drive import (
 )
 from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from .models.app_config import AppConfig
+from .persistence import ResumableJobStore
 from .pipeline import PipelineConfig, PipelineManager
 from .repositories import FavoriteRepository
 from .utils import DownloadClient, setup_logging
@@ -101,6 +102,7 @@ async def _async_main() -> None:
         google_drive_token = init_result.token
 
     try:
+        (resumable_jobs_store,) = _build_persistence_stores()
         pipeline_config, app_config = _build_configurations(args)
         favorite_repository = FavoriteRepository()
 
@@ -132,19 +134,31 @@ async def _async_main() -> None:
                 exit_code = await HeadlessPipelineRunner(pipeline_manager).run(backlog)
                 sys.exit(exit_code)
 
+            resumable_jobs = resumable_jobs_store.get_resumable_jobs()
+            resumable_jobs_store.clear_resumable_jobs()
+
             app = _build_app(
-                pipeline_manager=pipeline_manager,
                 app_config=app_config,
+                pipeline_manager=pipeline_manager,
                 favorite_repository=favorite_repository,
-                backlog=backlog,
                 provider_manager=provider_manager,
+                backlog=backlog,
+                resumable_jobs=resumable_jobs,
             )
 
             try:
-                await app.run_async()
+                incomplete_jobs = await app.run_async()
             except Exception as e:
                 logger.error("Runtime error during app execution: %s", e)
                 sys.exit(EXIT_RUNTIME_ERROR)
+
+            try:
+                if not isinstance(incomplete_jobs, list):
+                    raise ValueError("Incomplete jobs must be a list")
+
+                resumable_jobs_store.save_resumable_jobs(incomplete_jobs)
+            except ValueError as e:
+                logger.error("Failed to save incomplete jobs: %s", e)
     except Exception as e:
         logger.error("Failed to initialize: %s", e)
         sys.exit(EXIT_INIT_ERROR)
@@ -218,6 +232,12 @@ async def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDrive
     )
 
 
+def _build_persistence_stores() -> tuple[ResumableJobStore]:
+    """Build persistence stores."""
+
+    return (ResumableJobStore(),)
+
+
 def _build_configurations(args: Namespace) -> tuple[PipelineConfig, AppConfig]:
     """Build startup configuration objects."""
     preset = _get_runtime_preset(args)
@@ -270,19 +290,21 @@ def _build_async_dependencies(
 
 
 def _build_app(
-    pipeline_manager: PipelineManager,
     app_config: AppConfig,
+    pipeline_manager: PipelineManager,
     favorite_repository: FavoriteRepository,
-    backlog: list[FetchingResourcesJob] | None,
     provider_manager: ContentProviderManager,
+    backlog: list[FetchingResourcesJob] | None,
+    resumable_jobs: list[FetchingResourcesJob] | None,
 ) -> MangaArchiverApp:
     """Build the Textual application instance."""
     return MangaArchiverApp(
-        pipeline_manager=pipeline_manager,
         app_config=app_config,
+        pipeline_manager=pipeline_manager,
         favorite_repository=favorite_repository,
-        backlog=backlog,
         provider_manager=provider_manager,
+        backlog=backlog,
+        resumable_jobs=resumable_jobs,
     )
 
 
