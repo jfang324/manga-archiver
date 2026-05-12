@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [unreleased]
+
+- Fixed benchmarking to correctly account for time spent rate limited/retrying
+- Added memory usage of each individual chapter in the download screen
+- Added resumable downloads for when the app is exited with incomplete jobs
+
 ## [1.3.2] - 2026-05-05
 
 - Removed `--auto-exit`; use `--headless` for backlog/archive runs that exit when complete

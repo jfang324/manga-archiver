@@ -61,6 +61,7 @@ manga-archiver/
 │   ├── db/                     # SQLite setup and migrations
 │   ├── integrations/           # External providers
 │   ├── models/                 # Domain models
+│   ├── persistence/            # JSON-backed stores
 │   ├── pipeline/               # Pipeline orchestration
 │   ├── repositories/           # Persistence access
 │   ├── screens/                # Textual screens
