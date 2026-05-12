@@ -11,7 +11,7 @@ from .jobs import NotificationJob
 from .types import JobMetadata, JobStatus
 
 if TYPE_CHECKING:
-    # Importing Pipeline benchmark at runtime creates a pipeline -> workers -> pipeline cycle.
+    # Runtime import creates pipeline -> worker_manager -> notification_worker cycle.
     from ..pipeline.benchmark import BenchmarkManager
 
 logger = logging.getLogger(__name__)
