@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 from typing import TypedDict
@@ -47,7 +48,7 @@ class ResumableJobStore:
     def __init__(self, resume_store_path: Path | None = None) -> None:
         self._resume_store_path = resume_store_path or get_root_path() / RESUMABLE_JOBS_FILENAME
 
-    def save_resumable_jobs(self, jobs: list[FetchingResourcesJob]) -> None:
+    async def save_resumable_jobs(self, jobs: list[FetchingResourcesJob]) -> None:
         """Save resumable jobs to the resume store."""
         for job in jobs:
             if not isinstance(job, FetchingResourcesJob):
@@ -56,35 +57,40 @@ class ResumableJobStore:
         serialized_jobs = [_serialize_fetching_resources_job(job) for job in jobs]
 
         try:
-            self._resume_store_path.parent.mkdir(parents=True, exist_ok=True)
-            self._resume_store_path.write_text(json.dumps(serialized_jobs, indent=2))
+            await asyncio.to_thread(
+                self._resume_store_path.parent.mkdir, parents=True, exist_ok=True
+            )
+            await asyncio.to_thread(
+                self._resume_store_path.write_text,
+                json.dumps(serialized_jobs, indent=2),
+            )
         except OSError as e:
             raise ValueError(f"Failed to save {RESUMABLE_JOBS_FILENAME}: {e}") from e
 
-    def clear_resumable_jobs(self) -> None:
+    async def clear_resumable_jobs(self) -> None:
         """Clear resumable jobs from the resume store."""
         try:
-            self._resume_store_path.unlink(missing_ok=True)
+            await asyncio.to_thread(self._resume_store_path.unlink, missing_ok=True)
         except OSError as e:
             raise ValueError(f"Failed to clear {RESUMABLE_JOBS_FILENAME}: {e}") from e
 
-    def get_resumable_jobs(self) -> list[FetchingResourcesJob]:
+    async def get_resumable_jobs(self) -> list[FetchingResourcesJob]:
         """Get a list of resumable jobs from the resume store.
 
         Returns:
             list[FetchingResourcesJob]: Jobs that can be requeued.
         """
-        if not self._resume_store_path.exists():
+        if not await asyncio.to_thread(self._resume_store_path.exists):
             return []
 
         try:
-            raw_data = json.loads(self._resume_store_path.read_text())
+            raw_data = json.loads(await asyncio.to_thread(self._resume_store_path.read_text))
         except (json.JSONDecodeError, OSError):
-            self.clear_resumable_jobs()
+            await self.clear_resumable_jobs()
             return []
 
         if not isinstance(raw_data, list):
-            self.clear_resumable_jobs()
+            await self.clear_resumable_jobs()
             return []
 
         resumable_jobs: list[FetchingResourcesJob] = []
