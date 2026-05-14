@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypedDict
 
-from ....utils.auth.google_drive.types import GoogleApiStoredToken as GoogleApiStoredToken
-
 MAX_APP_PROPERTY_BYTES = 124
 
 

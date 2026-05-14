@@ -16,9 +16,9 @@ from src.manga_archiver.integrations.storage_providers.google_drive.folder_cache
 from src.manga_archiver.integrations.storage_providers.google_drive.types import (
     ArchivedChapterScanResult,
     ClientNotInitializedError,
-    GoogleApiStoredToken,
     GoogleDriveFile,
 )
+from src.manga_archiver.persistence.google_drive_token_store import GoogleApiStoredToken
 
 
 def _token() -> GoogleApiStoredToken:

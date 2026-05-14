@@ -6,6 +6,7 @@ import pytest
 from src.manga_archiver.cli.handlers import handle_workflow_subcommands
 from src.manga_archiver.cli.presets import get_preset
 from src.manga_archiver.constants.exit_codes import (
+    EXIT_AUTH_ERROR,
     EXIT_AUTH_LOGIN_FAILED,
     EXIT_AUTH_LOGOUT_FAILED,
     EXIT_MIGRATION_ERROR,
@@ -15,6 +16,7 @@ from src.manga_archiver.integrations.webhooks import WebhookProvider
 from src.manga_archiver.main import (
     _build_async_dependencies,
     _build_configurations,
+    _initialize_google_drive,
 )
 from src.manga_archiver.models.app_config import AppConfig
 
@@ -124,6 +126,18 @@ class TestPresets:
         assert download_client == mock_download_client.return_value
         assert webhook_client == mock_webhook_client.return_value
 
+    async def test_initialize_google_drive_returns_auth_error_when_no_token(self) -> None:
+        schema_manager = MagicMock()
+        token_store = MagicMock()
+        token_store.load = AsyncMock(return_value=None)
+
+        result = await _initialize_google_drive(schema_manager, token_store)
+
+        token_store.load.assert_awaited_once_with()
+        assert result.exit_code == EXIT_AUTH_ERROR
+        assert result.archive_store is None
+        assert result.folder_cache is None
+
     async def test_handle_list_presets_prints_presets_and_exits_successfully(self, capsys) -> None:
         args = _make_args(command="list", list_target="presets")
 
@@ -199,7 +213,7 @@ class TestPresets:
             else mock_handle_auth_logout
         )
 
-        def fake_handler() -> int:
+        async def fake_handler() -> int:
             print(message)
             return exit_code
 
@@ -213,7 +227,7 @@ class TestPresets:
         actual_exit_code = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
-        mock_handler.assert_called_once_with()
+        mock_handler.assert_awaited_once_with()
         assert actual_exit_code == exit_code
         assert message in captured.out
         assert captured.err == ""

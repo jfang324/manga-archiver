@@ -30,7 +30,7 @@ async def handle_workflow_subcommands(
     if handled:
         return exit_code
 
-    handled, exit_code = _handle_auth(args)
+    handled, exit_code = await _handle_auth(args)
     if handled:
         return exit_code
 
@@ -65,7 +65,7 @@ def _handle_list(args: Namespace) -> tuple[bool, int]:
     return True, EXIT_INIT_ERROR
 
 
-def _handle_auth(args: Namespace) -> tuple[bool, int]:
+async def _handle_auth(args: Namespace) -> tuple[bool, int]:
     """Handle authentication commands.
 
     Returns:
@@ -79,10 +79,10 @@ def _handle_auth(args: Namespace) -> tuple[bool, int]:
         return True, EXIT_AUTH_ERROR
 
     if args.auth_action == "login":
-        return True, handle_auth_login()
+        return True, await handle_auth_login()
 
     if args.auth_action == "logout":
-        return True, handle_auth_logout()
+        return True, await handle_auth_logout()
 
     return True, EXIT_AUTH_ERROR
 

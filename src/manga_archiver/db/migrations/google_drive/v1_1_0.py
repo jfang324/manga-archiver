@@ -18,7 +18,7 @@ from manga_archiver.integrations.storage_providers.google_drive.types import (
     GoogleDriveFileMetadata,
     GoogleDriveFolderMetadata,
 )
-from manga_archiver.utils.auth.google_drive import load_token
+from manga_archiver.persistence import GoogleDriveTokenStore
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ async def migrate(current: str, _cursor: Cursor) -> str | PreparedMigration:
     if _version_compare(MIGRATION_VERSION, current) <= 0:
         return f"Already at or above {MIGRATION_VERSION} - no migration needed"
 
-    token = load_token()
+    token = await GoogleDriveTokenStore().load()
     if token is None:
         logger.error("No Google Drive token found, skipping file migration")
         return _prepare_version_record_message(

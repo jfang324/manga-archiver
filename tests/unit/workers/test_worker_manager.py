@@ -2,9 +2,7 @@ from asyncio import Queue
 from unittest.mock import MagicMock, patch
 
 from src.manga_archiver.integrations.storage_providers.google_drive import GoogleDriveFolderCache
-from src.manga_archiver.integrations.storage_providers.google_drive.types import (
-    GoogleApiStoredToken,
-)
+from src.manga_archiver.persistence.google_drive_token_store import GoogleApiStoredToken
 from src.manga_archiver.pipeline.worker_manager import WorkerManager
 
 

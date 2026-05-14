@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import tracemalloc
 from asyncio import Queue
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from ..constants.defaults import (
     DEFAULT_DOWNLOAD_RATE_LIMIT,
@@ -15,7 +18,6 @@ from ..constants.defaults import (
 )
 from ..integrations.content_providers import ContentProviderManager
 from ..integrations.storage_providers.google_drive import GoogleDriveFolderCache
-from ..integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from ..models.app_config import AppConfig
 from ..utils import DownloadClient
 from ..workers.jobs import (
@@ -27,6 +29,9 @@ from ..workers.scheduler import RateLimitAwareScheduler, SchedulerConfig, Schedu
 from ..workers.types import JobMetadata, JobStatus
 from .job_registry import PipelineJobRegistry
 from .worker_manager import WorkerManager
+
+if TYPE_CHECKING:
+    from ..persistence.google_drive_token_store import GoogleApiStoredToken
 
 logger = logging.getLogger(__name__)
 
