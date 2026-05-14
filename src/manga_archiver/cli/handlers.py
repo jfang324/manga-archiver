@@ -92,8 +92,11 @@ async def _handle_config(
     webhook_config_store: WebhookConfigStore | None,
 ) -> tuple[bool, int]:
     """Handle configuration commands."""
-    if args.command != "config" or webhook_config_store is None:
+    if args.command != "config":
         return False, EXIT_SUCCESS
+
+    if webhook_config_store is None:
+        return True, EXIT_INIT_ERROR
 
     try:
         source = WebhookProvider(args.config_target)

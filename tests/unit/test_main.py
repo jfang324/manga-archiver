@@ -8,6 +8,7 @@ from src.manga_archiver.cli.presets import get_preset
 from src.manga_archiver.constants.exit_codes import (
     EXIT_AUTH_LOGIN_FAILED,
     EXIT_AUTH_LOGOUT_FAILED,
+    EXIT_INIT_ERROR,
     EXIT_MIGRATION_ERROR,
     EXIT_SUCCESS,
 )
@@ -135,6 +136,13 @@ class TestPresets:
         assert "safe" in captured.out
         assert "slow" in captured.out
         assert "fast" in captured.out
+
+    async def test_handle_config_without_store_exits_with_init_error(self) -> None:
+        args = _make_args(command="config", config_target="discord")
+
+        exit_code = await handle_subcommands(args)
+
+        assert exit_code == EXIT_INIT_ERROR
 
     @pytest.mark.parametrize(
         ("auth_command", "handler_name", "exit_code", "message"),

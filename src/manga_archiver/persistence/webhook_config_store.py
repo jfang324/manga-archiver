@@ -82,8 +82,13 @@ def _parse_webhook_configs(raw_config: object) -> WebhookConfigs:
     configs: WebhookConfigs = {}
 
     for raw_provider, raw_provider_config in raw_configs.items():
-        provider = WebhookProvider(str(raw_provider))
-        configs[provider] = _parse_webhook_config(raw_provider_config)
+        try:
+            provider = WebhookProvider(str(raw_provider))
+            provider_config = _parse_webhook_config(raw_provider_config)
+        except ValueError:
+            continue
+
+        configs[provider] = provider_config
 
     return configs
 
