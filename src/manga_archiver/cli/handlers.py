@@ -74,10 +74,13 @@ def _handle_auth(args: Namespace) -> tuple[bool, int]:
     if args.command != "auth":
         return False, EXIT_SUCCESS
 
-    if args.auth_command == "login":
+    if args.auth_provider != "google-drive":
+        return True, EXIT_AUTH_ERROR
+
+    if args.auth_action == "login":
         return True, handle_auth_login()
 
-    if args.auth_command == "logout":
+    if args.auth_action == "logout":
         return True, handle_auth_logout()
 
     return True, EXIT_AUTH_ERROR
@@ -91,12 +94,19 @@ async def _handle_config(
     if args.command != "config":
         return False, EXIT_SUCCESS
 
+    if args.config_category != "webhooks":
+        return True, EXIT_INIT_ERROR
+
     try:
         source = WebhookProvider(args.config_target)
     except ValueError:
         return True, EXIT_INIT_ERROR
 
     config = _prompt_webhook_config(source)
+    if not config["enabled"]:
+        existing_config = (await webhook_config_store.load()).get(source, {})
+        config["webhook_url"] = existing_config.get("webhook_url", "")
+
     try:
         await webhook_config_store.save_config(source, config)
     except ValueError as e:

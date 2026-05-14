@@ -3,15 +3,24 @@ from argparse import ArgumentParser, _SubParsersAction
 
 def add_auth_parser(subparsers: _SubParsersAction) -> ArgumentParser:
     """Register auth subcommands."""
-    auth_parser = subparsers.add_parser("auth", help="Google Drive authentication")
-    auth_subparsers = auth_parser.add_subparsers(
-        dest="auth_command",
+    auth_parser = subparsers.add_parser("auth", help="Authentication workflows")
+    auth_provider_subparsers = auth_parser.add_subparsers(
+        dest="auth_provider",
+        required=True,
+        metavar="{google-drive}",
+    )
+    google_drive_parser = auth_provider_subparsers.add_parser(
+        "google-drive",
+        help="Google Drive authentication",
+    )
+    auth_action_subparsers = google_drive_parser.add_subparsers(
+        dest="auth_action",
         required=True,
         metavar="{login, logout}",
     )
 
-    auth_subparsers.add_parser("login", help="Log in to Google Drive")
-    auth_subparsers.add_parser("logout", help="Log out of Google Drive")
+    auth_action_subparsers.add_parser("login", help="Log in to Google Drive")
+    auth_action_subparsers.add_parser("logout", help="Log out of Google Drive")
 
     return auth_parser
 
@@ -56,12 +65,21 @@ def add_health_parser(subparsers: _SubParsersAction) -> ArgumentParser:
 def add_config_parser(subparsers: _SubParsersAction) -> ArgumentParser:
     """Register config subcommands."""
     config_parser = subparsers.add_parser("config", help="Configure integrations")
-    config_subparsers = config_parser.add_subparsers(
+    config_category_subparsers = config_parser.add_subparsers(
+        dest="config_category",
+        required=True,
+        metavar="{webhooks}",
+    )
+    webhooks_parser = config_category_subparsers.add_parser(
+        "webhooks",
+        help="Configure webhook integrations",
+    )
+    webhook_subparsers = webhooks_parser.add_subparsers(
         dest="config_target",
         required=True,
         metavar="{discord}",
     )
 
-    config_subparsers.add_parser("discord", help="Configure Discord webhook notifications")
+    webhook_subparsers.add_parser("discord", help="Configure Discord webhook notifications")
 
     return config_parser

@@ -76,12 +76,13 @@ class TestParseArgs:
         assert args.backlog is True
         assert args.headless is True
 
-    @pytest.mark.parametrize("auth_command", ["login", "logout"], ids=["login", "logout"])
-    def test_parses_auth_subcommands(self, auth_command: str) -> None:
-        args = parse_args(["auth", auth_command])
+    @pytest.mark.parametrize("auth_action", ["login", "logout"], ids=["login", "logout"])
+    def test_parses_auth_subcommands(self, auth_action: str) -> None:
+        args = parse_args(["auth", "google-drive", auth_action])
 
         assert args.command == "auth"
-        assert args.auth_command == auth_command
+        assert args.auth_provider == "google-drive"
+        assert args.auth_action == auth_action
 
     @pytest.mark.parametrize(
         "migrate_system",
@@ -101,17 +102,30 @@ class TestParseArgs:
         assert args.list_target == "presets"
 
     def test_parses_config_discord_subcommand(self) -> None:
-        args = parse_args(["config", "discord"])
+        args = parse_args(["config", "webhooks", "discord"])
 
         assert args.command == "config"
+        assert args.config_category == "webhooks"
         assert args.config_target == "discord"
 
     @pytest.mark.parametrize(
-        ("argv", "expected_command", "expected_subcommand_name", "expected_subcommand"),
+        ("argv", "expected_command", "expected_subcommands"),
         [
-            (["--archive", "auth", "login"], "auth", "auth_command", "login"),
-            (["--archive", "migrate", "database"], "migrate", "migrate_system", "database"),
-            (["--archive", "config", "discord"], "config", "config_target", "discord"),
+            (
+                ["--archive", "auth", "google-drive", "login"],
+                "auth",
+                {"auth_provider": "google-drive", "auth_action": "login"},
+            ),
+            (
+                ["--archive", "migrate", "database"],
+                "migrate",
+                {"migrate_system": "database"},
+            ),
+            (
+                ["--archive", "config", "webhooks", "discord"],
+                "config",
+                {"config_category": "webhooks", "config_target": "discord"},
+            ),
         ],
         ids=["archive-auth-login", "archive-migrate-database", "archive-config-discord"],
     )
@@ -119,19 +133,25 @@ class TestParseArgs:
         self,
         argv: list[str],
         expected_command: str,
-        expected_subcommand_name: str,
-        expected_subcommand: str,
+        expected_subcommands: dict[str, str],
     ) -> None:
         args = parse_args(argv)
 
         assert args.archive is True
         assert args.command == expected_command
-        assert getattr(args, expected_subcommand_name) == expected_subcommand
+        for subcommand_name, subcommand in expected_subcommands.items():
+            assert getattr(args, subcommand_name) == subcommand
 
     @pytest.mark.parametrize(
         "argv",
-        [["auth"], ["migrate"], ["config"]],
-        ids=["missing-auth-subcommand", "missing-migrate-subcommand", "missing-config-subcommand"],
+        [["auth"], ["auth", "google-drive"], ["migrate"], ["config"], ["config", "webhooks"]],
+        ids=[
+            "missing-auth-provider",
+            "missing-auth-action",
+            "missing-migrate-subcommand",
+            "missing-config-category",
+            "missing-config-target",
+        ],
     )
     def test_requires_nested_subcommands(self, argv: list[str]) -> None:
         with pytest.raises(SystemExit) as exc_info:
