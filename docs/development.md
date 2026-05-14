@@ -117,5 +117,7 @@ manga-archiver/
 
 - **Logs**: `~/.manga-archiver/logs/`
 - **Settings**: `~/.manga-archiver/settings.json`
+- **Webhooks**: `~/.manga-archiver/webhooks.json`
+- **Resumable jobs**: `~/.manga-archiver/resumable-jobs.json`
 - **Benchmark output**: `~/.manga-archiver/benchmark/metrics.txt`
 - **Default download path**: `~/Downloads/`

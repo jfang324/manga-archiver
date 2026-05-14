@@ -167,10 +167,12 @@ The following command-line arguments are available:
 | `--version`             | flag | -       | Show the current version and exit                                                         |
 | `--preset`              | str  | -       | Apply a built-in runtime tuning preset (`safe`, `slow`, `fast`)                           |
 | `--headless`            | flag | false   | Run without a TUI                                                                         |
+| `--notify`              | flag | false   | Send configured webhook notifications after headless backlog processing                   |
 | `list presets`          | sub  | -       | List built-in runtime tuning presets                                                      |
 | `migrate`               | sub  | -       | Run database migrations (subcommands: `database`, `google-drive`)                         |
 | `auth`                  | sub  | -       | Google Drive authentication (subcommands: `login`, `logout`)                              |
 | `health`                | sub  | -       | Check provider API health                                                                 |
+| `config`                | sub  | -       | Configure integrations (subcommands: `discord`)                                           |
 
 ### Usage Examples
 
