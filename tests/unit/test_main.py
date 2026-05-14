@@ -28,7 +28,6 @@ def _make_args(**overrides: object) -> Namespace:
         "download_rate_limit": 20,
         "queue_size": 2,
         "benchmark": False,
-        "notify": False,
         "command": None,
     }
     defaults.update(overrides)

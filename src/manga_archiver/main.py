@@ -139,7 +139,7 @@ async def _async_main() -> None:
                 exit_code = await HeadlessPipelineRunner(
                     pipeline_manager=pipeline_manager,
                     webhook_client=webhook_client,
-                ).run(backlog, args.notify)
+                ).run(backlog)
                 sys.exit(exit_code)
 
             resumable_jobs = await resumable_jobs_store.get_resumable_jobs()
