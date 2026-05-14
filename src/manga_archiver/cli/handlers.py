@@ -75,6 +75,7 @@ def _handle_auth(args: Namespace) -> tuple[bool, int]:
         return False, EXIT_SUCCESS
 
     if args.auth_provider != "google-drive":
+        print(f'Unsupported auth provider: {args.auth_provider}. Only "google-drive" is supported.')
         return True, EXIT_AUTH_ERROR
 
     if args.auth_action == "login":
@@ -95,6 +96,7 @@ async def _handle_config(
         return False, EXIT_SUCCESS
 
     if args.config_category != "webhooks":
+        print(f'Unsupported config category: {args.config_category}. Only "webhooks" is supported.')
         return True, EXIT_INIT_ERROR
 
     try:
