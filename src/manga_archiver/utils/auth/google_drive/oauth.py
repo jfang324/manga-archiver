@@ -250,7 +250,12 @@ async def handle_auth_logout() -> int:
         )
 
         if response.status_code == 200:
-            await token_store.delete()
+            try:
+                await token_store.delete()
+            except OSError as e:
+                print(f"Failed to remove local credentials: {e}")
+                return EXIT_AUTH_LOGOUT_FAILED
+
             print("Successfully logged out.")
             return EXIT_SUCCESS
         print(f"Failed to revoke token: {response.text}")
