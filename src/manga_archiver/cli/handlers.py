@@ -159,11 +159,6 @@ async def _handle_migrations(args: Namespace) -> tuple[bool, int]:
     if args.command != "migrate":
         return False, EXIT_SUCCESS
 
-    print("Running migrations...")
-    # SchemaManager opens and initializes the SQLite database, so keep it lazy for
-    # migration workflows instead of touching the database for every subcommand.
-    schema_manager = SchemaManager()
-
     try:
         if args.migrate_system == "database":
             system = "database"
@@ -174,6 +169,10 @@ async def _handle_migrations(args: Namespace) -> tuple[bool, int]:
         else:
             return True, EXIT_MIGRATION_ERROR
 
+        print("Running migrations...")
+        # SchemaManager opens and initializes the SQLite database, so keep it lazy for
+        # migration workflows instead of touching the database for every subcommand.
+        schema_manager = SchemaManager()
         result = await schema_manager.run_migrations(system)
         print(f"  {result}")
 

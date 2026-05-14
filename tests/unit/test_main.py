@@ -182,19 +182,25 @@ class TestPresets:
         [("database", "database"), ("google-drive", "google_drive")],
         ids=["database", "google-drive"],
     )
+    @patch("src.manga_archiver.cli.handlers.SchemaManager")
     async def test_handle_migrate_runs_migration_and_exits_successfully(
-        self, migrate_system: str, expected_system: str, capsys
+        self,
+        mock_schema_manager: MagicMock,
+        migrate_system: str,
+        expected_system: str,
+        capsys,
     ) -> None:
         schema_manager = MagicMock()
         schema_manager.run_migrations = AsyncMock(
             return_value=f"{expected_system} migration complete"
         )
+        mock_schema_manager.return_value = schema_manager
         args = _make_args(command="migrate", migrate_system=migrate_system)
 
-        with patch("src.manga_archiver.cli.handlers.SchemaManager", return_value=schema_manager):
-            exit_code = await handle_workflow_subcommands(args, MagicMock())
+        exit_code = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
+        mock_schema_manager.assert_called_once_with()
         schema_manager.run_migrations.assert_awaited_once_with(expected_system)
         assert exit_code == EXIT_SUCCESS
         assert "Running migrations..." in captured.out
@@ -206,19 +212,25 @@ class TestPresets:
         [("database", "database"), ("google-drive", "google_drive")],
         ids=["database", "google-drive"],
     )
+    @patch("src.manga_archiver.cli.handlers.SchemaManager")
     async def test_handle_migrate_failure_exits_with_migration_error(
-        self, migrate_system: str, expected_system: str, capsys
+        self,
+        mock_schema_manager: MagicMock,
+        migrate_system: str,
+        expected_system: str,
+        capsys,
     ) -> None:
         schema_manager = MagicMock()
         schema_manager.run_migrations = AsyncMock(
             side_effect=RuntimeError(f"{expected_system} failed")
         )
+        mock_schema_manager.return_value = schema_manager
         args = _make_args(command="migrate", migrate_system=migrate_system)
 
-        with patch("src.manga_archiver.cli.handlers.SchemaManager", return_value=schema_manager):
-            exit_code = await handle_workflow_subcommands(args, MagicMock())
+        exit_code = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
+        mock_schema_manager.assert_called_once_with()
         schema_manager.run_migrations.assert_awaited_once_with(expected_system)
         assert exit_code == EXIT_MIGRATION_ERROR
         assert "Running migrations..." in captured.out
