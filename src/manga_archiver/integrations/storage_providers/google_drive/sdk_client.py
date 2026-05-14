@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import io
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -10,11 +13,13 @@ from googleapiclient.http import MediaIoBaseUpload
 from ...exceptions import ApiError, RateLimitError
 from .constants import DEFAULT_CHUNK_SIZE, DEFAULT_MAX_RETRIES, MULTIPART_UPLOAD_THRESHOLD
 from .types import (
-    GoogleApiStoredToken,
     GoogleDriveDirectory,
     GoogleDriveFile,
     GoogleDriveFolderMetadata,
 )
+
+if TYPE_CHECKING:
+    from ....persistence.google_drive_token_store import GoogleApiStoredToken
 
 
 def _escape_query_string(value: str) -> str:

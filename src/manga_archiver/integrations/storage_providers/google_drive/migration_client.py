@@ -1,13 +1,19 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from .constants import DEFAULT_MAX_RETRIES, DEFAULT_ROOT_PAGE_SIZE, ROOT_FOLDER_NAME, SYSTEM_SOURCE
 from .sdk_client import GoogleDriveSdkClient
 from .types import (
-    GoogleApiStoredToken,
     GoogleDriveDirectory,
     GoogleDriveFile,
     GoogleDriveFileMetadata,
     GoogleDriveFolderMetadata,
     InitResult,
 )
+
+if TYPE_CHECKING:
+    from ....persistence.google_drive_token_store import GoogleApiStoredToken
 
 
 class GoogleDriveMigrationClient:

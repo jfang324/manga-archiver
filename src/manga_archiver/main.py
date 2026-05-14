@@ -26,14 +26,18 @@ from .integrations.storage_providers.google_drive import (
     GoogleDriveArchiveStore,
     GoogleDriveFolderCache,
 )
-from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from .integrations.webhooks import WebhookClient
 from .models.app_config import AppConfig
-from .persistence import ResumableJobStore, SettingsStore, WebhookConfigStore
+from .persistence import (
+    GoogleDriveTokenStore,
+    ResumableJobStore,
+    SettingsStore,
+    WebhookConfigStore,
+)
+from .persistence.google_drive_token_store import GoogleApiStoredToken
 from .pipeline import PipelineConfig, PipelineManager
 from .repositories import FavoriteRepository
 from .utils import DownloadClient, setup_logging
-from .utils.auth.google_drive import load_token
 from .workers.jobs import FetchingResourcesJob
 
 logger = logging.getLogger(__name__)
@@ -67,7 +71,12 @@ def main() -> None:
 async def _async_main() -> None:
     """Set up dependencies and run the application."""
     args = parse_args()
-    resumable_jobs_store, settings_store, webhook_config_store = _build_persistence_stores()
+    (
+        resumable_jobs_store,
+        settings_store,
+        webhook_config_store,
+        google_drive_token_store,
+    ) = _build_persistence_stores()
 
     setup_logging()
 
@@ -92,7 +101,7 @@ async def _async_main() -> None:
     google_drive_token = None
 
     if google_drive_enabled:
-        init_result = await _initialize_google_drive(schema_manager)
+        init_result = await _initialize_google_drive(schema_manager, google_drive_token_store)
         if init_result.message is not None:
             print(init_result.message)
 
@@ -202,9 +211,12 @@ def _validate_schema_versions(
     return None
 
 
-async def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDriveInitResult:
+async def _initialize_google_drive(
+    schema_manager: SchemaManager,
+    google_drive_token_store: GoogleDriveTokenStore,
+) -> GoogleDriveInitResult:
     """Initialize Google Drive client for archive mode."""
-    token = load_token()
+    token = google_drive_token_store.load()
 
     if token is None:
         return GoogleDriveInitResult(
@@ -256,10 +268,15 @@ async def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDrive
     )
 
 
-def _build_persistence_stores() -> tuple[ResumableJobStore, SettingsStore, WebhookConfigStore]:
+def _build_persistence_stores() -> tuple[
+    ResumableJobStore,
+    SettingsStore,
+    WebhookConfigStore,
+    GoogleDriveTokenStore,
+]:
     """Build persistence stores."""
 
-    return ResumableJobStore(), SettingsStore(), WebhookConfigStore()
+    return ResumableJobStore(), SettingsStore(), WebhookConfigStore(), GoogleDriveTokenStore()
 
 
 async def _build_configurations(

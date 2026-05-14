@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 from asyncio import Queue
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from ..integrations.content_providers import ContentProviderManager
 from ..integrations.storage_providers.google_drive import (
     GoogleDriveArchiveStore,
     GoogleDriveFolderCache,
 )
-from ..integrations.storage_providers.google_drive.types import GoogleApiStoredToken
 from ..utils import DownloadClient, MultiFormatExporter
 from ..workers.base import WorkerConfig
 from ..workers.download_worker import DownloadWorker
@@ -20,6 +22,9 @@ from ..workers.scheduler import SchedulerFeedback
 from ..workers.types import JobMetadata, JobStatus
 from ..workers.upload_worker import UploadWorker
 from .benchmark import BenchmarkManager
+
+if TYPE_CHECKING:
+    from ..persistence.google_drive_token_store import GoogleApiStoredToken
 
 logger = logging.getLogger(__name__)
 

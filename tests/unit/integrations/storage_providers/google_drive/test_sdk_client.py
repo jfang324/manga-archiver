@@ -11,9 +11,9 @@ from src.manga_archiver.integrations.storage_providers.google_drive.sdk_client i
     GoogleDriveSdkClient,
 )
 from src.manga_archiver.integrations.storage_providers.google_drive.types import (
-    GoogleApiStoredToken,
     GoogleDriveFileMetadata,
 )
+from src.manga_archiver.persistence.google_drive_token_store import GoogleApiStoredToken
 
 
 def _token() -> GoogleApiStoredToken:
