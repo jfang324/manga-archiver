@@ -209,7 +209,9 @@ async def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDrive
     if token is None:
         return GoogleDriveInitResult(
             exit_code=EXIT_AUTH_ERROR,
-            message="Archive mode requires authentication. Run: manga-archiver auth login",
+            message=(
+                "Archive mode requires authentication. Run: manga-archiver auth google-drive login"
+            ),
         )
 
     try:
@@ -240,7 +242,11 @@ async def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDrive
         logger.error("Failed to initialize Google Drive: %s", e)
         return GoogleDriveInitResult(
             exit_code=EXIT_INIT_ERROR,
-            message="Failed to initialize Google Drive. Run: manga-archiver auth logout && auth login",
+            message=(
+                "Failed to initialize Google Drive. "
+                "Run: manga-archiver auth google-drive logout && "
+                "manga-archiver auth google-drive login"
+            ),
         )
 
     return GoogleDriveInitResult(

@@ -86,7 +86,7 @@ The application supports uploading downloaded manga directly to Google Drive for
 
 4. **Authenticate**
     ```sh
-    manga-archiver auth login
+    manga-archiver auth google-drive login
     ```
     This will initiate the OAuth device flow, follow the instructions in the terminal.
 
@@ -102,7 +102,7 @@ Once authenticated, you can:
 
 - **Logout** when you want to disconnect your account:
     ```sh
-    manga-archiver auth logout
+    manga-archiver auth google-drive logout
     ```
 
 ### How It Works
@@ -132,7 +132,7 @@ This will:
 
 **Note:** You must have:
 
-- Authenticated with Google Drive (`manga-archiver auth login`)
+- Authenticated with Google Drive (`manga-archiver auth google-drive login`)
 - Favorites saved in the app (add manga to favorites in the TUI)
 - Run with `--archive` to access Google Drive
 
@@ -169,9 +169,9 @@ The following command-line arguments are available:
 | `--headless`            | flag | false   | Run without a TUI                                                                         |
 | `list presets`          | sub  | -       | List built-in runtime tuning presets                                                      |
 | `migrate`               | sub  | -       | Run database migrations (subcommands: `database`, `google-drive`)                         |
-| `auth`                  | sub  | -       | Google Drive authentication (subcommands: `login`, `logout`)                              |
+| `auth google-drive`     | sub  | -       | Google Drive authentication (subcommands: `login`, `logout`)                              |
 | `health`                | sub  | -       | Check provider API health                                                                 |
-| `config`                | sub  | -       | Configure integrations (subcommands: `discord`)                                           |
+| `config webhooks`       | sub  | -       | Configure webhook integrations (subcommands: `discord`)                                   |
 
 ### Usage Examples
 

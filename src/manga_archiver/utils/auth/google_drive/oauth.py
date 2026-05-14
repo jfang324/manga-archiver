@@ -132,7 +132,7 @@ def _poll_for_token(
 
 
 def handle_auth_login() -> int:
-    """Handle the auth login command using device flow.
+    """Handle the auth google-drive login command using device flow.
 
     Initiates OAuth device flow authentication with Google Drive.
     Prompts user to visit a URL and enter a code, then polls for completion.
@@ -151,7 +151,7 @@ def handle_auth_login() -> int:
         return EXIT_AUTH_LOGIN_FAILED
 
     if load_token() is not None:
-        print("Already authenticated. Run 'auth logout' first to re-authenticate.")
+        print("Already authenticated. Run 'auth google-drive logout' first to re-authenticate.")
         return EXIT_SUCCESS
 
     try:
@@ -221,7 +221,7 @@ def handle_auth_login() -> int:
 
 
 def handle_auth_logout() -> int:
-    """Handle the auth logout command.
+    """Handle the auth google-drive logout command.
 
     Revokes the OAuth refresh token and deletes local credentials.
 
@@ -231,11 +231,11 @@ def handle_auth_logout() -> int:
     token = load_token()
 
     if not token:
-        print("Not authenticated. Run 'auth login' first.")
+        print("Not authenticated. Run 'auth google-drive login' first.")
         return EXIT_SUCCESS
 
     if not token.get("refresh_token"):
-        print("Not authenticated. Run 'auth login' first.")
+        print("Not authenticated. Run 'auth google-drive login' first.")
         return EXIT_SUCCESS
 
     try:

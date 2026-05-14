@@ -11,6 +11,7 @@ from src.manga_archiver.constants.exit_codes import (
     EXIT_MIGRATION_ERROR,
     EXIT_SUCCESS,
 )
+from src.manga_archiver.integrations.webhooks import WebhookProvider
 from src.manga_archiver.main import (
     _build_async_dependencies,
     _build_configurations,
@@ -135,8 +136,45 @@ class TestPresets:
         assert "slow" in captured.out
         assert "fast" in captured.out
 
+    @patch("builtins.input", return_value="no")
+    async def test_handle_config_disable_preserves_existing_webhook_url(
+        self, mock_input: MagicMock, capsys
+    ) -> None:
+        existing_url = "https://example.com/webhook"
+        args = _make_args(
+            command="config",
+            config_category="webhooks",
+            config_target="discord",
+        )
+        webhook_config_store = MagicMock()
+        webhook_config_store.load = AsyncMock(
+            return_value={
+                WebhookProvider.DISCORD: {
+                    "enabled": True,
+                    "webhook_url": existing_url,
+                }
+            }
+        )
+        webhook_config_store.save_config = AsyncMock()
+
+        exit_code = await handle_workflow_subcommands(args, webhook_config_store)
+
+        captured = capsys.readouterr()
+        mock_input.assert_called_once_with("Enable Discord webhook notifications? [y/n]: ")
+        webhook_config_store.load.assert_awaited_once_with()
+        webhook_config_store.save_config.assert_awaited_once_with(
+            WebhookProvider.DISCORD,
+            {
+                "enabled": False,
+                "webhook_url": existing_url,
+            },
+        )
+        assert exit_code == EXIT_SUCCESS
+        assert "Discord webhook config saved." in captured.out
+        assert captured.err == ""
+
     @pytest.mark.parametrize(
-        ("auth_command", "handler_name", "exit_code", "message"),
+        ("auth_action", "handler_name", "exit_code", "message"),
         [
             ("login", "handle_auth_login", EXIT_AUTH_LOGIN_FAILED, "login called"),
             ("logout", "handle_auth_logout", EXIT_AUTH_LOGOUT_FAILED, "logout called"),
@@ -149,7 +187,7 @@ class TestPresets:
         self,
         mock_handle_auth_login: MagicMock,
         mock_handle_auth_logout: MagicMock,
-        auth_command: str,
+        auth_action: str,
         handler_name: str,
         exit_code: int,
         message: str,
@@ -166,7 +204,11 @@ class TestPresets:
             return exit_code
 
         mock_handler.side_effect = fake_handler
-        args = _make_args(command="auth", auth_command=auth_command)
+        args = _make_args(
+            command="auth",
+            auth_provider="google-drive",
+            auth_action=auth_action,
+        )
 
         actual_exit_code = await handle_workflow_subcommands(args, MagicMock())
 
