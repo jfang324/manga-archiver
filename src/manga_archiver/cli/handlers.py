@@ -17,12 +17,11 @@ from ..utils.auth.google_drive import handle_auth_login, handle_auth_logout
 from .presets import format_presets
 
 
-async def handle_subcommands(
+async def handle_workflow_subcommands(
     args: Namespace,
-    schema_manager: SchemaManager | None = None,
-    webhook_config_store: WebhookConfigStore | None = None,
+    webhook_config_store: WebhookConfigStore,
 ) -> int | None:
-    """Handle CLI subcommands before normal app startup.
+    """Handle CLI subcommands that run separate workflows and exit.
 
     Returns:
         int | None: An exit code if the command was handled, None if not
@@ -43,10 +42,7 @@ async def handle_subcommands(
     if handled:
         return exit_code
 
-    if schema_manager is None:
-        return None
-
-    handled, exit_code = await _handle_migrations(args, schema_manager)
+    handled, exit_code = await _handle_migrations(args)
     if handled:
         return exit_code
 
@@ -89,14 +85,11 @@ def _handle_auth(args: Namespace) -> tuple[bool, int]:
 
 async def _handle_config(
     args: Namespace,
-    webhook_config_store: WebhookConfigStore | None,
+    webhook_config_store: WebhookConfigStore,
 ) -> tuple[bool, int]:
     """Handle configuration commands."""
     if args.command != "config":
         return False, EXIT_SUCCESS
-
-    if webhook_config_store is None:
-        return True, EXIT_INIT_ERROR
 
     try:
         source = WebhookProvider(args.config_target)
@@ -157,7 +150,7 @@ async def _handle_health(args: Namespace) -> tuple[bool, int]:
     return True, EXIT_GENERAL_ERROR
 
 
-async def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> tuple[bool, int]:
+async def _handle_migrations(args: Namespace) -> tuple[bool, int]:
     """Handle migration commands.
 
     Returns:
@@ -167,6 +160,9 @@ async def _handle_migrations(args: Namespace, schema_manager: SchemaManager) -> 
         return False, EXIT_SUCCESS
 
     print("Running migrations...")
+    # SchemaManager opens and initializes the SQLite database, so keep it lazy for
+    # migration workflows instead of touching the database for every subcommand.
+    schema_manager = SchemaManager()
 
     try:
         if args.migrate_system == "database":
