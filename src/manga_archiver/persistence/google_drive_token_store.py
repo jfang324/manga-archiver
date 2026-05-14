@@ -46,10 +46,7 @@ class GoogleDriveTokenStore:
 
     async def delete(self) -> None:
         """Delete stored token."""
-        try:
-            await asyncio.to_thread(self._token_path.unlink, missing_ok=True)
-        except OSError:
-            return
+        await asyncio.to_thread(self._token_path.unlink, missing_ok=True)
 
 
 def _parse_token(raw_token: object) -> GoogleApiStoredToken:
