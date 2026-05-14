@@ -15,6 +15,7 @@ from ..constants.defaults import (
 from .presets import get_preset_names
 from .subcommands import (
     add_auth_parser,
+    add_config_parser,
     add_health_parser,
     add_list_parser,
     add_migrate_parser,
@@ -50,6 +51,7 @@ def _build_parser() -> ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", title="commands", metavar="")
 
     add_auth_parser(subparsers)
+    add_config_parser(subparsers)
     add_migrate_parser(subparsers)
     add_list_parser(subparsers)
     add_health_parser(subparsers)
@@ -133,6 +135,12 @@ def _build_parser() -> ArgumentParser:
         help="Run backlog processing without launching the Textual UI (requires --archive --backlog)",
     )
 
+    parser.add_argument(
+        "--notify",
+        action="store_true",
+        help="Send configured webhook notifications after headless backlog processing",
+    )
+
     return parser
 
 
@@ -160,5 +168,8 @@ def parse_args(argv: Sequence[str] | None = None) -> Namespace:
 
     if args.headless and (not args.archive or not args.backlog):
         parser.error("--headless requires --archive and --backlog")
+
+    if args.notify and not args.headless:
+        parser.error("--notify requires --headless")
 
     return args

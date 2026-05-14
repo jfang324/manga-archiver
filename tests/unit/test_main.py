@@ -28,6 +28,7 @@ def _make_args(**overrides: object) -> Namespace:
         "download_rate_limit": 20,
         "queue_size": 2,
         "benchmark": False,
+        "notify": False,
         "command": None,
     }
     defaults.update(overrides)
@@ -90,15 +91,21 @@ class TestPresets:
         assert pipeline_config.benchmark_enabled is True
 
     @patch("src.manga_archiver.main.DownloadClient")
+    @patch("src.manga_archiver.main.WebhookClient")
     @patch("src.manga_archiver.main.ContentProviderManager")
-    def test_build_async_dependencies_uses_selected_preset_rate_limits(
-        self, mock_provider_manager, mock_download_client
+    async def test_build_async_dependencies_uses_selected_preset_rate_limits(
+        self, mock_provider_manager, mock_webhook_client, mock_download_client
     ) -> None:
         args = _make_args(preset="slow")
         preset = get_preset("slow")
         session = MagicMock()
+        webhook_config_store = MagicMock()
+        webhook_config_store.load = AsyncMock(return_value={})
+        webhook_config_store.get_enabled_webhooks.return_value = []
 
-        provider_manager, download_client = _build_async_dependencies(session, args)
+        provider_manager, download_client, webhook_client = await _build_async_dependencies(
+            session, args, webhook_config_store
+        )
 
         mock_provider_manager.assert_called_once_with(
             session,
@@ -106,8 +113,16 @@ class TestPresets:
             download_rate_limit=preset.download_rate_limit,
         )
         mock_download_client.assert_called_once_with(session)
+        webhook_config_store.load.assert_awaited_once_with()
+        webhook_config_store.get_enabled_webhooks.assert_called_once_with({})
+        mock_webhook_client.assert_called_once_with(
+            session=session,
+            providers=[],
+            config={},
+        )
         assert provider_manager == mock_provider_manager.return_value
         assert download_client == mock_download_client.return_value
+        assert webhook_client == mock_webhook_client.return_value
 
     async def test_handle_list_presets_prints_presets_and_exits_successfully(self, capsys) -> None:
         args = _make_args(command="list", list_target="presets")
