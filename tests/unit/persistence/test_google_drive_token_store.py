@@ -19,10 +19,10 @@ def _token() -> GoogleApiStoredToken:
 
 
 class TestGoogleDriveTokenStoreLoad:
-    def test_load_returns_none_when_file_missing(self, tmp_path: Path) -> None:
+    async def test_load_returns_none_when_file_missing(self, tmp_path: Path) -> None:
         store = GoogleDriveTokenStore(tmp_path / "token.json")
 
-        token = store.load()
+        token = await store.load()
 
         assert token is None
 
@@ -58,51 +58,53 @@ class TestGoogleDriveTokenStoreLoad:
             "non_string_refresh_token",
         ],
     )
-    def test_load_returns_none_for_invalid_token_json(self, raw_token: str, tmp_path: Path) -> None:
+    async def test_load_returns_none_for_invalid_token_json(
+        self, raw_token: str, tmp_path: Path
+    ) -> None:
         token_file = tmp_path / "token.json"
         token_file.write_text(raw_token)
         store = GoogleDriveTokenStore(token_file)
 
-        token = store.load()
+        token = await store.load()
 
         assert token is None
 
-    def test_load_returns_valid_token(self, tmp_path: Path) -> None:
+    async def test_load_returns_valid_token(self, tmp_path: Path) -> None:
         token_file = tmp_path / "token.json"
         expected_token = _token()
         token_file.write_text(json.dumps(expected_token))
         store = GoogleDriveTokenStore(token_file)
 
-        token = store.load()
+        token = await store.load()
 
         assert token == expected_token
 
 
 class TestGoogleDriveTokenStoreSave:
-    def test_save_writes_token_json(self, tmp_path: Path) -> None:
+    async def test_save_writes_token_json(self, tmp_path: Path) -> None:
         token_file = tmp_path / "nested" / "token.json"
         store = GoogleDriveTokenStore(token_file)
         token = _token()
 
-        store.save(token)
+        await store.save(token)
 
         assert json.loads(token_file.read_text()) == token
 
 
 class TestGoogleDriveTokenStoreDelete:
-    def test_delete_removes_existing_token_file(self, tmp_path: Path) -> None:
+    async def test_delete_removes_existing_token_file(self, tmp_path: Path) -> None:
         token_file = tmp_path / "token.json"
         token_file.write_text(json.dumps(_token()))
         store = GoogleDriveTokenStore(token_file)
 
-        store.delete()
+        await store.delete()
 
         assert not token_file.exists()
 
-    def test_delete_ignores_missing_token_file(self, tmp_path: Path) -> None:
+    async def test_delete_ignores_missing_token_file(self, tmp_path: Path) -> None:
         token_file = tmp_path / "token.json"
         store = GoogleDriveTokenStore(token_file)
 
-        store.delete()
+        await store.delete()
 
         assert not token_file.exists()

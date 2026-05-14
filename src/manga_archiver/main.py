@@ -216,7 +216,7 @@ async def _initialize_google_drive(
     google_drive_token_store: GoogleDriveTokenStore,
 ) -> GoogleDriveInitResult:
     """Initialize Google Drive client for archive mode."""
-    token = google_drive_token_store.load()
+    token = await google_drive_token_store.load()
 
     if token is None:
         return GoogleDriveInitResult(

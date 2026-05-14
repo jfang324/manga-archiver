@@ -126,14 +126,14 @@ class TestPresets:
         assert download_client == mock_download_client.return_value
         assert webhook_client == mock_webhook_client.return_value
 
-    async def test_initialize_google_drive_uses_injected_token_store(self) -> None:
+    async def test_initialize_google_drive_returns_auth_error_when_no_token(self) -> None:
         schema_manager = MagicMock()
         token_store = MagicMock()
-        token_store.load.return_value = None
+        token_store.load = AsyncMock(return_value=None)
 
         result = await _initialize_google_drive(schema_manager, token_store)
 
-        token_store.load.assert_called_once_with()
+        token_store.load.assert_awaited_once_with()
         assert result.exit_code == EXIT_AUTH_ERROR
         assert result.archive_store is None
         assert result.folder_cache is None
@@ -213,7 +213,7 @@ class TestPresets:
             else mock_handle_auth_logout
         )
 
-        def fake_handler() -> int:
+        async def fake_handler() -> int:
             print(message)
             return exit_code
 
@@ -227,7 +227,7 @@ class TestPresets:
         actual_exit_code = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
-        mock_handler.assert_called_once_with()
+        mock_handler.assert_awaited_once_with()
         assert actual_exit_code == exit_code
         assert message in captured.out
         assert captured.err == ""

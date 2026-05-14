@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 from typing import TypedDict
@@ -23,13 +24,13 @@ class GoogleDriveTokenStore:
     def __init__(self, token_path: Path | None = None) -> None:
         self._token_path = token_path or get_root_path() / TOKEN_FILENAME
 
-    def load(self) -> GoogleApiStoredToken | None:
+    async def load(self) -> GoogleApiStoredToken | None:
         """Load stored token from disk."""
-        if not self._token_path.exists():
+        if not await asyncio.to_thread(self._token_path.exists):
             return None
 
         try:
-            parsed_token = json.loads(self._token_path.read_text())
+            parsed_token = json.loads(await asyncio.to_thread(self._token_path.read_text))
         except (json.JSONDecodeError, OSError):
             return None
 
@@ -38,15 +39,17 @@ class GoogleDriveTokenStore:
         except ValueError:
             return None
 
-    def save(self, token: GoogleApiStoredToken) -> None:
+    async def save(self, token: GoogleApiStoredToken) -> None:
         """Store token to disk."""
-        self._token_path.parent.mkdir(parents=True, exist_ok=True)
-        self._token_path.write_text(json.dumps(token, indent=2))
+        await asyncio.to_thread(self._token_path.parent.mkdir, parents=True, exist_ok=True)
+        await asyncio.to_thread(self._token_path.write_text, json.dumps(token, indent=2))
 
-    def delete(self) -> None:
+    async def delete(self) -> None:
         """Delete stored token."""
-        if self._token_path.exists():
-            self._token_path.unlink()
+        try:
+            await asyncio.to_thread(self._token_path.unlink, missing_ok=True)
+        except OSError:
+            return
 
 
 def _parse_token(raw_token: object) -> GoogleApiStoredToken:

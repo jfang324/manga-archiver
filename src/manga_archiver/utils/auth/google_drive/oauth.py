@@ -132,7 +132,7 @@ def _poll_for_token(
     return GoogleAuthDeviceFlowResult.TIMEOUT
 
 
-def handle_auth_login() -> int:
+async def handle_auth_login() -> int:
     """Handle the auth google-drive login command using device flow.
 
     Initiates OAuth device flow authentication with Google Drive.
@@ -152,7 +152,7 @@ def handle_auth_login() -> int:
         )
         return EXIT_AUTH_LOGIN_FAILED
 
-    if token_store.load() is not None:
+    if await token_store.load() is not None:
         print("Already authenticated. Run 'auth google-drive logout' first to re-authenticate.")
         return EXIT_SUCCESS
 
@@ -197,7 +197,7 @@ def handle_auth_login() -> int:
             return EXIT_AUTH_LOGIN_FAILED
 
         if result:
-            token_store.save(
+            await token_store.save(
                 GoogleApiStoredToken(
                     token_uri=TOKEN_URL,
                     client_id=client_id,
@@ -222,7 +222,7 @@ def handle_auth_login() -> int:
         return EXIT_AUTH_LOGIN_FAILED
 
 
-def handle_auth_logout() -> int:
+async def handle_auth_logout() -> int:
     """Handle the auth google-drive logout command.
 
     Revokes the OAuth refresh token and deletes local credentials.
@@ -231,7 +231,7 @@ def handle_auth_logout() -> int:
         int: EXIT_SUCCESS on success, EXIT_AUTH_LOGOUT_FAILED on failure
     """
     token_store = GoogleDriveTokenStore()
-    token = token_store.load()
+    token = await token_store.load()
 
     if not token:
         print("Not authenticated. Run 'auth google-drive login' first.")
@@ -250,7 +250,7 @@ def handle_auth_logout() -> int:
         )
 
         if response.status_code == 200:
-            token_store.delete()
+            await token_store.delete()
             print("Successfully logged out.")
             return EXIT_SUCCESS
         print(f"Failed to revoke token: {response.text}")
