@@ -135,12 +135,6 @@ def _build_parser() -> ArgumentParser:
         help="Run backlog processing without launching the Textual UI (requires --archive --backlog)",
     )
 
-    parser.add_argument(
-        "--notify",
-        action="store_true",
-        help="Send configured webhook notifications after headless backlog processing",
-    )
-
     return parser
 
 
@@ -168,8 +162,5 @@ def parse_args(argv: Sequence[str] | None = None) -> Namespace:
 
     if args.headless and (not args.archive or not args.backlog):
         parser.error("--headless requires --archive and --backlog")
-
-    if args.notify and not args.headless:
-        parser.error("--notify requires --headless")
 
     return args

@@ -31,7 +31,7 @@ class HeadlessPipelineRunner:
         self._webhook_client = webhook_client
         self._poll_interval_seconds = poll_interval_seconds
 
-    async def run(self, backlog: list[FetchingResourcesJob] | None, notify: bool = False) -> int:
+    async def run(self, backlog: list[FetchingResourcesJob] | None) -> int:
         """Run backlog jobs through the pipeline."""
         jobs = backlog or []
         if not jobs:
@@ -82,7 +82,7 @@ class HeadlessPipelineRunner:
                 f"Completed: {len(completed_ids)}, Failed: {len(failed_ids)}, "
                 f"Skipped: {skipped_count}, Total: {len(jobs)}"
             )
-            if notify and self._webhook_client is not None and completed_ids:
+            if self._webhook_client is not None and completed_ids:
                 try:
                     await self._webhook_client.notify(
                         _format_download_notification(completed_metadata)
