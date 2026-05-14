@@ -27,8 +27,9 @@ from .integrations.storage_providers.google_drive import (
     GoogleDriveFolderCache,
 )
 from .integrations.storage_providers.google_drive.types import GoogleApiStoredToken
+from .integrations.webhooks import WebhookClient
 from .models.app_config import AppConfig
-from .persistence import ResumableJobStore, SettingsStore
+from .persistence import ResumableJobStore, SettingsStore, WebhookConfigStore
 from .pipeline import PipelineConfig, PipelineManager
 from .repositories import FavoriteRepository
 from .utils import DownloadClient, setup_logging
@@ -66,15 +67,23 @@ def main() -> None:
 async def _async_main() -> None:
     """Set up dependencies and run the application."""
     args = parse_args()
+    resumable_jobs_store, settings_store, webhook_config_store = _build_persistence_stores()
 
-    exit_code = await handle_subcommands(args)
+    exit_code = await handle_subcommands(
+        args,
+        webhook_config_store=webhook_config_store,
+    )
     if exit_code is not None:
         sys.exit(exit_code)
 
     setup_logging()
     schema_manager = SchemaManager()
 
-    exit_code = await handle_subcommands(args, schema_manager)
+    exit_code = await handle_subcommands(
+        args,
+        schema_manager,
+        webhook_config_store,
+    )
     if exit_code is not None:
         sys.exit(exit_code)
 
@@ -102,12 +111,15 @@ async def _async_main() -> None:
         google_drive_token = init_result.token
 
     try:
-        resumable_jobs_store, settings_store = _build_persistence_stores()
         pipeline_config, app_config = await _build_configurations(args, settings_store)
         favorite_repository = FavoriteRepository()
 
         async with _create_client_session() as session:
-            provider_manager, download_client = _build_async_dependencies(session, args)
+            (
+                provider_manager,
+                download_client,
+                webhook_client,
+            ) = await _build_async_dependencies(session, args, webhook_config_store)
             backlog_result = await _load_backlog(
                 args=args,
                 favorite_repository=favorite_repository,
@@ -131,7 +143,10 @@ async def _async_main() -> None:
             )
 
             if args.headless:
-                exit_code = await HeadlessPipelineRunner(pipeline_manager).run(backlog)
+                exit_code = await HeadlessPipelineRunner(
+                    pipeline_manager=pipeline_manager,
+                    webhook_client=webhook_client,
+                ).run(backlog, args.notify)
                 sys.exit(exit_code)
 
             resumable_jobs = await resumable_jobs_store.get_resumable_jobs()
@@ -242,10 +257,10 @@ async def _initialize_google_drive(schema_manager: SchemaManager) -> GoogleDrive
     )
 
 
-def _build_persistence_stores() -> tuple[ResumableJobStore, SettingsStore]:
+def _build_persistence_stores() -> tuple[ResumableJobStore, SettingsStore, WebhookConfigStore]:
     """Build persistence stores."""
 
-    return ResumableJobStore(), SettingsStore()
+    return ResumableJobStore(), SettingsStore(), WebhookConfigStore()
 
 
 async def _build_configurations(
@@ -286,9 +301,11 @@ def _create_client_session() -> aiohttp.ClientSession:
     )
 
 
-def _build_async_dependencies(
-    session: aiohttp.ClientSession, args: Namespace
-) -> tuple[ContentProviderManager, DownloadClient]:
+async def _build_async_dependencies(
+    session: aiohttp.ClientSession,
+    args: Namespace,
+    webhook_config_store: WebhookConfigStore,
+) -> tuple[ContentProviderManager, DownloadClient, WebhookClient]:
     """Build session-bound async dependencies."""
     preset = _get_runtime_preset(args)
     provider_manager = ContentProviderManager(
@@ -297,8 +314,15 @@ def _build_async_dependencies(
         download_rate_limit=preset.download_rate_limit if preset else args.download_rate_limit,
     )
     download_client = DownloadClient(session)
+    webhook_config = await webhook_config_store.load()
+    providers = webhook_config_store.get_enabled_webhooks(webhook_config)
+    webhook_client = WebhookClient(
+        session=session,
+        providers=providers,
+        config=webhook_config,
+    )
 
-    return provider_manager, download_client
+    return provider_manager, download_client, webhook_client
 
 
 def _build_app(

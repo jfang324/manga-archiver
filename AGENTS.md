@@ -131,6 +131,11 @@ if TYPE_CHECKING:
 - Modules: snake_case (`api_access_service.py`)
 - Private methods/attributes: leading underscore (`_private_method`, `_cache`)
 
+### Call Argument Style
+- Use named arguments for constructors by default.
+- For normal function/method calls, prefer positional arguments unless named arguments materially improve clarity or prevent mistakes.
+- Do not convert existing positional calls to named arguments without a specific readability or correctness reason.
+
 ### Types and Annotations
 - All functions MUST have type annotations (no exceptions)
 - Use specific types instead of generic `Any`

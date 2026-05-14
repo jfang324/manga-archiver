@@ -11,12 +11,16 @@ from ..constants.exit_codes import (
 )
 from ..db.schema_manager import SchemaManager
 from ..health import ProviderHealthChecker, format_provider_health_check_result
+from ..integrations.webhooks import WebhookProvider
+from ..persistence.webhook_config_store import WebhookConfig, WebhookConfigStore
 from ..utils.auth.google_drive import handle_auth_login, handle_auth_logout
 from .presets import format_presets
 
 
 async def handle_subcommands(
-    args: Namespace, schema_manager: SchemaManager | None = None
+    args: Namespace,
+    schema_manager: SchemaManager | None = None,
+    webhook_config_store: WebhookConfigStore | None = None,
 ) -> int | None:
     """Handle CLI subcommands before normal app startup.
 
@@ -32,6 +36,10 @@ async def handle_subcommands(
         return exit_code
 
     handled, exit_code = await _handle_health(args)
+    if handled:
+        return exit_code
+
+    handled, exit_code = await _handle_config(args, webhook_config_store)
     if handled:
         return exit_code
 
@@ -77,6 +85,52 @@ def _handle_auth(args: Namespace) -> tuple[bool, int]:
         return True, handle_auth_logout()
 
     return True, EXIT_AUTH_ERROR
+
+
+async def _handle_config(
+    args: Namespace,
+    webhook_config_store: WebhookConfigStore | None,
+) -> tuple[bool, int]:
+    """Handle configuration commands."""
+    if args.command != "config":
+        return False, EXIT_SUCCESS
+
+    if webhook_config_store is None:
+        return True, EXIT_INIT_ERROR
+
+    try:
+        source = WebhookProvider(args.config_target)
+    except ValueError:
+        return True, EXIT_INIT_ERROR
+
+    config = _prompt_webhook_config(source)
+    try:
+        await webhook_config_store.save_config(source, config)
+    except ValueError as e:
+        print(f"Failed to save {source.value.title()} webhook config: {e}")
+        return True, EXIT_INIT_ERROR
+
+    print(f"{source.value.title()} webhook config saved.")
+    return True, EXIT_SUCCESS
+
+
+def _prompt_webhook_config(source: WebhookProvider) -> WebhookConfig:
+    """Prompt for webhook configuration for a provider."""
+    label = source.value.title()
+
+    enabled_response = ""
+    while enabled_response not in {"y", "yes", "n", "no"}:
+        enabled_response = input(f"Enable {label} webhook notifications? [y/n]: ").strip().lower()
+
+    enabled = enabled_response in {"y", "yes"}
+    webhook_url = ""
+    if enabled:
+        webhook_url = input(f"{label} webhook URL: ").strip()
+
+    return WebhookConfig(
+        enabled=enabled,
+        webhook_url=webhook_url,
+    )
 
 
 async def _handle_health(args: Namespace) -> tuple[bool, int]:

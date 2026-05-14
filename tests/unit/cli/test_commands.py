@@ -30,6 +30,7 @@ class TestParseArgs:
         assert args.benchmark is False
         assert args.backlog is False
         assert args.headless is False
+        assert args.notify is False
 
     @pytest.mark.parametrize("preset", get_preset_names(), ids=get_preset_names())
     def test_parses_preset_option(self, preset: str) -> None:
@@ -62,6 +63,7 @@ class TestParseArgs:
                 "--benchmark",
                 "--backlog",
                 "--headless",
+                "--notify",
             ]
         )
 
@@ -75,6 +77,7 @@ class TestParseArgs:
         assert args.benchmark is True
         assert args.backlog is True
         assert args.headless is True
+        assert args.notify is True
 
     @pytest.mark.parametrize("auth_command", ["login", "logout"], ids=["login", "logout"])
     def test_parses_auth_subcommands(self, auth_command: str) -> None:
@@ -100,13 +103,20 @@ class TestParseArgs:
         assert args.command == "list"
         assert args.list_target == "presets"
 
+    def test_parses_config_discord_subcommand(self) -> None:
+        args = parse_args(["config", "discord"])
+
+        assert args.command == "config"
+        assert args.config_target == "discord"
+
     @pytest.mark.parametrize(
         ("argv", "expected_command", "expected_subcommand_name", "expected_subcommand"),
         [
             (["--archive", "auth", "login"], "auth", "auth_command", "login"),
             (["--archive", "migrate", "database"], "migrate", "migrate_system", "database"),
+            (["--archive", "config", "discord"], "config", "config_target", "discord"),
         ],
-        ids=["archive-auth-login", "archive-migrate-database"],
+        ids=["archive-auth-login", "archive-migrate-database", "archive-config-discord"],
     )
     def test_parses_global_flags_with_subcommands(
         self,
@@ -123,8 +133,8 @@ class TestParseArgs:
 
     @pytest.mark.parametrize(
         "argv",
-        [["auth"], ["migrate"]],
-        ids=["missing-auth-subcommand", "missing-migrate-subcommand"],
+        [["auth"], ["migrate"], ["config"]],
+        ids=["missing-auth-subcommand", "missing-migrate-subcommand", "missing-config-subcommand"],
     )
     def test_requires_nested_subcommands(self, argv: list[str]) -> None:
         with pytest.raises(SystemExit) as exc_info:
@@ -197,11 +207,12 @@ class TestParseArgs:
         assert exc_info.value.code == ARGPARSE_USAGE_ERROR
 
     def test_parses_headless_with_archive_and_backlog(self) -> None:
-        args = parse_args(["--archive", "--backlog", "--headless"])
+        args = parse_args(["--archive", "--backlog", "--headless", "--notify"])
 
         assert args.archive is True
         assert args.backlog is True
         assert args.headless is True
+        assert args.notify is True
 
     @pytest.mark.parametrize(
         "argv",
@@ -215,5 +226,11 @@ class TestParseArgs:
     def test_rejects_headless_without_archive_and_backlog(self, argv: list[str]) -> None:
         with pytest.raises(SystemExit) as exc_info:
             parse_args(argv)
+
+        assert exc_info.value.code == ARGPARSE_USAGE_ERROR
+
+    def test_rejects_notify_without_headless(self) -> None:
+        with pytest.raises(SystemExit) as exc_info:
+            parse_args(["--notify"])
 
         assert exc_info.value.code == ARGPARSE_USAGE_ERROR

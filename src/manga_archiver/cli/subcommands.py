@@ -51,3 +51,17 @@ def add_health_parser(subparsers: _SubParsersAction) -> ArgumentParser:
         "health",
         help="Check content provider API health",
     )
+
+
+def add_config_parser(subparsers: _SubParsersAction) -> ArgumentParser:
+    """Register config subcommands."""
+    config_parser = subparsers.add_parser("config", help="Configure integrations")
+    config_subparsers = config_parser.add_subparsers(
+        dest="config_target",
+        required=True,
+        metavar="{discord}",
+    )
+
+    config_subparsers.add_parser("discord", help="Configure Discord webhook notifications")
+
+    return config_parser
