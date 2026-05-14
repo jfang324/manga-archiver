@@ -106,35 +106,27 @@ class HeadlessPipelineRunner:
 
 def _format_download_notification(completed_metadata: list[JobMetadata]) -> str:
     """Format downloaded chapter metadata for webhook notifications."""
-    chapter_count = len(completed_metadata)
-    chapter_label = "chapter" if chapter_count == 1 else "chapters"
-    lines = [f"Downloaded {chapter_count} {chapter_label}:"]
-
     chapters_by_manga: dict[str, list[JobMetadata]] = defaultdict(list)
     for metadata in completed_metadata:
         chapters_by_manga[metadata.manga_title].append(metadata)
 
-    sorted_metadata = sorted(
-        (
-            metadata
-            for manga_chapters in chapters_by_manga.values()
-            for metadata in sorted(
-                manga_chapters,
-                key=lambda chapter: (chapter.chapter_number, chapter.chapter_title.lower()),
-            )
-        ),
-        key=lambda metadata: metadata.manga_title.lower(),
-    )
-    previous_manga_title = ""
-    for metadata in sorted_metadata[:MAX_WEBHOOK_CHAPTER_LINES]:
-        if metadata.manga_title != previous_manga_title:
-            lines.append(f"\n{metadata.manga_title}:")
-            previous_manga_title = metadata.manga_title
+    for manga_title in chapters_by_manga:
+        chapters_by_manga[manga_title].sort(key=lambda m: m.chapter_number)
 
-        lines.append(f"- Ch. {metadata.chapter_number:g} - {metadata.chapter_title}")
+    series_count = len(chapters_by_manga)
+    total_count = len(completed_metadata)
+    lines = [f"Downloaded {total_count} chapters from {series_count} series:"]
 
-    remaining_count = chapter_count - MAX_WEBHOOK_CHAPTER_LINES
-    if remaining_count > 0:
-        lines.append(f"...and {remaining_count} more.")
+    for manga_title, chapters in sorted(chapters_by_manga.items(), key=lambda x: x[0].lower()):
+        lines.append(f"\n{manga_title}")
+
+        lines.extend(
+            f"Ch. {metadata.chapter_number:g} - {metadata.chapter_title}"
+            for metadata in chapters[:MAX_WEBHOOK_CHAPTER_LINES]
+        )
+
+        remaining = len(chapters) - MAX_WEBHOOK_CHAPTER_LINES
+        if remaining > 0:
+            lines.append(f"...and {remaining} more")
 
     return "\n".join(lines)
