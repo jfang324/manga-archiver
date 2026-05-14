@@ -3,12 +3,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.manga_archiver.cli.handlers import handle_subcommands
+from src.manga_archiver.cli.handlers import handle_workflow_subcommands
 from src.manga_archiver.cli.presets import get_preset
 from src.manga_archiver.constants.exit_codes import (
     EXIT_AUTH_LOGIN_FAILED,
     EXIT_AUTH_LOGOUT_FAILED,
-    EXIT_INIT_ERROR,
     EXIT_MIGRATION_ERROR,
     EXIT_SUCCESS,
 )
@@ -128,7 +127,7 @@ class TestPresets:
     async def test_handle_list_presets_prints_presets_and_exits_successfully(self, capsys) -> None:
         args = _make_args(command="list", list_target="presets")
 
-        exit_code = await handle_subcommands(args)
+        exit_code = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
         assert exit_code == EXIT_SUCCESS
@@ -136,13 +135,6 @@ class TestPresets:
         assert "safe" in captured.out
         assert "slow" in captured.out
         assert "fast" in captured.out
-
-    async def test_handle_config_without_store_exits_with_init_error(self) -> None:
-        args = _make_args(command="config", config_target="discord")
-
-        exit_code = await handle_subcommands(args)
-
-        assert exit_code == EXIT_INIT_ERROR
 
     @pytest.mark.parametrize(
         ("auth_command", "handler_name", "exit_code", "message"),
@@ -177,7 +169,7 @@ class TestPresets:
         mock_handler.side_effect = fake_handler
         args = _make_args(command="auth", auth_command=auth_command)
 
-        actual_exit_code = await handle_subcommands(args)
+        actual_exit_code = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
         mock_handler.assert_called_once_with()
@@ -190,18 +182,25 @@ class TestPresets:
         [("database", "database"), ("google-drive", "google_drive")],
         ids=["database", "google-drive"],
     )
+    @patch("src.manga_archiver.cli.handlers.SchemaManager")
     async def test_handle_migrate_runs_migration_and_exits_successfully(
-        self, migrate_system: str, expected_system: str, capsys
+        self,
+        mock_schema_manager: MagicMock,
+        migrate_system: str,
+        expected_system: str,
+        capsys,
     ) -> None:
         schema_manager = MagicMock()
         schema_manager.run_migrations = AsyncMock(
             return_value=f"{expected_system} migration complete"
         )
+        mock_schema_manager.return_value = schema_manager
         args = _make_args(command="migrate", migrate_system=migrate_system)
 
-        exit_code = await handle_subcommands(args, schema_manager)
+        exit_code = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
+        mock_schema_manager.assert_called_once_with()
         schema_manager.run_migrations.assert_awaited_once_with(expected_system)
         assert exit_code == EXIT_SUCCESS
         assert "Running migrations..." in captured.out
@@ -213,18 +212,25 @@ class TestPresets:
         [("database", "database"), ("google-drive", "google_drive")],
         ids=["database", "google-drive"],
     )
+    @patch("src.manga_archiver.cli.handlers.SchemaManager")
     async def test_handle_migrate_failure_exits_with_migration_error(
-        self, migrate_system: str, expected_system: str, capsys
+        self,
+        mock_schema_manager: MagicMock,
+        migrate_system: str,
+        expected_system: str,
+        capsys,
     ) -> None:
         schema_manager = MagicMock()
         schema_manager.run_migrations = AsyncMock(
             side_effect=RuntimeError(f"{expected_system} failed")
         )
+        mock_schema_manager.return_value = schema_manager
         args = _make_args(command="migrate", migrate_system=migrate_system)
 
-        exit_code = await handle_subcommands(args, schema_manager)
+        exit_code = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
+        mock_schema_manager.assert_called_once_with()
         schema_manager.run_migrations.assert_awaited_once_with(expected_system)
         assert exit_code == EXIT_MIGRATION_ERROR
         assert "Running migrations..." in captured.out

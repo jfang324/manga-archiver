@@ -9,7 +9,7 @@ import aiohttp
 from .app import MangaArchiverApp
 from .backlog_sync import BacklogSync
 from .cli import parse_args
-from .cli.handlers import handle_subcommands
+from .cli.handlers import handle_workflow_subcommands
 from .cli.presets import RuntimePreset, get_preset
 from .constants.exit_codes import (
     EXIT_AUTH_ERROR,
@@ -69,23 +69,16 @@ async def _async_main() -> None:
     args = parse_args()
     resumable_jobs_store, settings_store, webhook_config_store = _build_persistence_stores()
 
-    exit_code = await handle_subcommands(
-        args,
-        webhook_config_store=webhook_config_store,
-    )
-    if exit_code is not None:
-        sys.exit(exit_code)
-
     setup_logging()
-    schema_manager = SchemaManager()
 
-    exit_code = await handle_subcommands(
+    exit_code = await handle_workflow_subcommands(
         args,
-        schema_manager,
         webhook_config_store,
     )
     if exit_code is not None:
         sys.exit(exit_code)
+
+    schema_manager = SchemaManager()
 
     google_drive_enabled = args.archive
     validation_result = _validate_schema_versions(schema_manager, google_drive_enabled)
