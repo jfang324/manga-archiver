@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 - Added support for Discord webhook notifications
+- Added selection ranges for chapter selection page
+- Simplified CLI arguments
 
 ## [1.3.3] - 2026-05-12
 
