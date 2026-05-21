@@ -36,7 +36,6 @@ asyncio_mode = "auto"
 
 [tool.coverage.run]
 omit = [
-    "*/cli/*",
     "*/tests/*",
     "*/screens/*",
     "*/db/*",
@@ -46,11 +45,9 @@ source = ["src"]
 
 [tool.coverage.report]
 omit = [
-    "*/cli/*",
     "*/screens/*",
     "*/db/*",
     "*/repositories/*",
-    "*/app.py",
 ]
 exclude_lines = [
     "pragma: no cover",

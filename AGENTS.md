@@ -5,13 +5,16 @@ This document provides guidelines and instructions for agents working on the man
 ## Build, Lint, and Test Commands
 
 ### Poetry Workflow
+
 This project uses Poetry for dependency management:
+
 - Install dependencies: `poetry install`
 - Install dev dependencies: `poetry install --with dev`
 - Run the application: `poetry run manga-archiver`
 - Run commands in virtual env: `poetry run <command>`
 
 ### Running Tests
+
 - Run all tests: `coverage run -m pytest -v`
 - Run a single test file: `coverage run -m pytest tests/unit/workers/test_download_worker.py -v`
 - Run a specific test class: `coverage run -m pytest tests/unit/workers/test_download_worker.py::TestDownload -v`
@@ -23,56 +26,23 @@ This project uses Poetry for dependency management:
 ### Code Quality Tools
 
 #### Ruff (Linting & Formatting)
+
 - Lint all files: `ruff check .`
 - Lint with auto-fix: `ruff check --fix .`
 - Format code: `ruff format .`
 
 #### Pyright (Type Checking)
+
 - Run type checking: `poetry run pyright`
 
 ## Project Structure
-```
-manga-archiver/
-├── src/manga_archiver/
-│   ├── __init__.py
-│   ├── main.py                 # Entry point
-│   ├── app.py                  # Main Textual application
-│   ├── backlog_sync.py
-│   ├── pipeline_manager.py
-│   ├── cli/
-│   ├── constants/
-│   ├── db/
-│   │   └── migrations/
-│   ├── integrations/
-│   │   ├── exceptions.py
-│   │   ├── content_providers/  # MangaDex, AnimeLab
-│   │   └── storage_providers/ # Google Drive
-│   ├── models/
-│   ├── repositories/
-│   ├── screens/
-│   ├── utils/
-│   │   └── auth/
-│   ├── widgets/
-│   └── workers/
-├── tests/
-│   └── unit/                   # Mirrors source structure
-│       ├── workers/
-│       ├── widgets/
-│       ├── utils/
-│       │   └── auth/
-│       ├── integrations/
-│       │   ├── mangadex/
-│       │   ├── Allanime/
-│       │   └── storage_providers/
-│       ├── db/
-│       └── test_pipeline_manager.py
-├── pyproject.toml
-└── README.md
-```
+
+For the most accurate project layout, see `docs/development.md`.
 
 ## Code Style Guidelines
 
 ### Imports
+
 - Source files: use relative imports (e.g., `from .mangadex.client import ...`)
 - Test files: use absolute imports (e.g., `from src.manga_archiver...`)
 - When importing from external modules, prefer barrel imports unless being explicit makes sense
@@ -80,6 +50,7 @@ manga-archiver/
 ### Import Patterns and Type Hints
 
 **Top-level imports are mandatory:**
+
 ```python
 # ✅ GOOD - clear, explicit dependencies
 from aiohttp import ClientSession
@@ -93,6 +64,7 @@ class ContentProviderManager:
 ```
 
 **In-function imports are prohibited except for documented reasons:**
+
 ```python
 # ❌ BAD - hides dependencies, poor testability
 class ContentProviderManager:
@@ -120,11 +92,13 @@ if TYPE_CHECKING:
 ```
 
 **Verification steps before committing:**
+
 1. Run `python -c "import your_module"` - No ImportError
 2. Run `ruff check .` - Passes linting
 3. Run test suite - All tests pass
 
 ### Naming Conventions
+
 - Variables/functions: snake_case (`user_input`, `manga_data`)
 - Classes: PascalCase (`SessionManager`, `UserInterface`)
 - Constants: UPPER_CASE (`MAX_RETRIES`, `DEFAULT_LIMIT`)
@@ -132,11 +106,13 @@ if TYPE_CHECKING:
 - Private methods/attributes: leading underscore (`_private_method`, `_cache`)
 
 ### Call Argument Style
+
 - Use named arguments for constructors by default.
 - For normal function/method calls, prefer positional arguments unless named arguments materially improve clarity or prevent mistakes.
 - Do not convert existing positional calls to named arguments without a specific readability or correctness reason.
 
 ### Types and Annotations
+
 - All functions MUST have type annotations (no exceptions)
 - Use specific types instead of generic `Any`
 - Collection types: `list[str]`, `dict[str, int]`, `set[str]`
@@ -158,10 +134,12 @@ def __init__(self, session: ClientSession) -> None:
 ### Docstrings
 
 Use Google-style docstrings, but be pragmatic:
+
 - Document public APIs, complex logic, non-obvious behavior
 - Skip docstrings on test methods (test name is sufficient)
 - Skip docstrings on obvious functions (name explains itself)
 - 1-liner for simple things (exceptions, basic dataclasses)
+
 ```python
 """
 Short description of function purpose.
@@ -177,6 +155,7 @@ Returns:
 ### Logging Patterns
 
 **Module-level logger:**
+
 - Always use module-level logger: `logger = logging.getLogger(__name__)`
 - Never use root logger (`logging.error(...)`) — it loses module context
 - Use `%s` formatting, not f-strings: `logger.error("Context: %s", e)`
@@ -201,6 +180,7 @@ logger.error(f"Failed to process: {e}")   # Extra string interpolation
 **Core Principle: Low-level modules raise, don't log.** Modules should be self-contained and not log — consumers handle logging appropriately for their context.
 
 **Exception hierarchy:**
+
 ```python
 class ApiError(Exception): ...
 class NotFoundError(ApiError): ...
@@ -209,6 +189,7 @@ class BadGatewayError(ApiError): ...
 ```
 
 **Consumer handling:**
+
 - Workers: log errors for audit trail
 - UI: show user-friendly notifications
 - ContentProviderManager: return errors in result tuples
@@ -234,6 +215,7 @@ Use `isinstance()` over casts — provides runtime validation with clear error m
 Use `from_dict` class methods with fail-fast validation for parsing external data (API responses, config files).
 
 **Dataclass patterns:**
+
 - Use `frozen=True` for immutable data models
 - Fail-fast with clear error messages in validation
 
@@ -242,6 +224,7 @@ Use `from_dict` class methods with fail-fast validation for parsing external dat
 Target quality level for new code: **9/10**
 
 This means:
+
 - Build UI in `compose()`, not in `on_mount()`
 - Use reactive properties and built-in widget APIs (e.g., `ListView.index` instead of manual iteration)
 - Modern type hints: use `int | None` instead of `Union[int, None]`
@@ -252,18 +235,21 @@ This means:
 - Remove all dead code when making sweeping revisions
 
 ## Async/Await Patterns
+
 - All I/O operations use async/await
 - Use `asyncio.gather()` for concurrent operations
 - Always pass session objects to async functions
 - Never block the event loop with synchronous operations
 
 ## Service Architecture
+
 - All services in `src/manga_archiver/` (grouped by function)
 - Workers in `workers/` - each worker has single responsibility
 - Workers communicate via asyncio Queues
 - Use dependency injection (pass sessions, managers as parameters)
 
 ## Session Management
+
 - Always use the SessionManager for aiohttp.ClientSession
 - Sessions should be created once and reused
 - Close sessions when done to release resources
@@ -272,23 +258,26 @@ This means:
 
 ### Core Principles
 
-**Test behavior, not infrastructure.** Focus on what the code *does* (callback invoked
-with correct data, file written with correct content) rather than *how* it does it
+**Test behavior, not infrastructure.** Focus on what the code _does_ (callback invoked
+with correct data, file written with correct content) rather than _how_ it does it
 (queue processing, thread management).
 
 **Never adjust tests to make new code pass.** Only change tests if the expected behavior is supposed to have changed.
 
 **No fake tests.** A test that doesn't actually run the code being tested is worthless:
+
 - Manually invoking a callback instead of letting the worker invoke it
 - Creating a worker but never calling `run()` or `_do_work()`
 - Mocking queue.get() to return a value, then manually calling the callback instead
   of letting the worker call it
 
 **No half-baked assertions.** Verify actual values, not just types or existence:
+
 - Good: `assert config.quality == 75` or `mock_callback.assert_called_once_with(...)`
 - Bad: `assert isinstance(config, AppConfig)` (only checks type, not values)
 
 **No pointless tests.** Don't test framework behavior:
+
 - Don't test dataclass default values (Python handles this)
 - Don't test exception inheritance
 - Don't test that `pytest.raises` works
@@ -346,12 +335,14 @@ assert config.quality == default_config.quality
 ## Special Considerations
 
 ### Curses/Textual UI Application
+
 - This is a terminal UI application using Textual
 - On Windows, uses `windows-curses` package
 - Always restore terminal state on exit
 - Screen dimensions may vary - use dynamic sizing
 
 ### API Integration
+
 - Content Providers: MangaDex, AnimeLab
 - Storage Providers: Google Drive
 - Base URLs defined in `src/manga_archiver/constants.py`
@@ -359,6 +350,7 @@ assert config.quality == default_config.quality
 - Retry logic with exponential backoff and jitter
 
 ## Development Workflow
+
 1. Run existing tests to establish baseline
 2. Make changes following code style guidelines
 3. Run relevant tests, ensure all pass
@@ -369,6 +361,7 @@ assert config.quality == default_config.quality
 ## Collaboration
 
 When working together on a task:
+
 1. **Always outline a plan first** — never jump straight to implementation
 2. **Iterate on the plan** — we'll fine-tune until you're confident it will produce the desired result
 3. **Implement incrementally** — small, verifiable commits rather than large sweeping changes
