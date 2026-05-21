@@ -27,6 +27,7 @@ from ..workers.jobs import (
 )
 from ..workers.scheduler import RateLimitAwareScheduler, SchedulerConfig, SchedulerFeedback
 from ..workers.types import JobMetadata, JobStatus
+from .benchmark import BenchmarkReport, format_benchmark_results
 from .job_registry import PipelineJobRegistry
 from .worker_manager import WorkerManager
 
@@ -273,11 +274,11 @@ class PipelineManager:
 
         self._worker_manager.stop()
 
-    def get_benchmark_results(self) -> dict | None:
+    def get_benchmark_results(self) -> BenchmarkReport | None:
         """Get benchmark results if benchmarking is enabled.
 
         Returns:
-            dict[str, Any] | None: Dictionary with benchmark metrics, or None if benchmarking is not enabled
+            BenchmarkReport | None: Benchmark metrics, or None if benchmarking is not enabled
         """
         if not self._benchmark_enabled:
             return None
@@ -286,29 +287,4 @@ class PipelineManager:
         if benchmark is None:
             return None
 
-        aggregates = benchmark.get_aggregates()
-        return {
-            "total_job_count": aggregates.total_job_count,
-            "fetching_total_ms": aggregates.total_time_per_phase.get(
-                JobStatus.FETCHING_RESOURCES, 0
-            )
-            / 1_000_000,
-            "fetching_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.FETCHING_RESOURCES, 0)
-            / 1_000_000,
-            "downloading_total_ms": aggregates.total_time_per_phase.get(JobStatus.DOWNLOADING, 0)
-            / 1_000_000,
-            "downloading_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.DOWNLOADING, 0)
-            / 1_000_000,
-            "merging_total_ms": aggregates.total_time_per_phase.get(JobStatus.MERGING, 0)
-            / 1_000_000,
-            "merging_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.MERGING, 0) / 1_000_000,
-            "uploading_total_ms": aggregates.total_time_per_phase.get(JobStatus.UPLOADING, 0)
-            / 1_000_000,
-            "uploading_avg_ms": aggregates.avg_time_per_phase.get(JobStatus.UPLOADING, 0)
-            / 1_000_000,
-            "avg_total_time_ms": aggregates.avg_total_time / 1_000_000,
-            "peak_memory_mb": aggregates.peak_memory_mb,
-            "highest_perceived_download_time_ms": aggregates.highest_perceived_download_time
-            / 1_000_000,
-            "highest_perceived_end_to_end_ms": aggregates.highest_perceived_end_to_end / 1_000_000,
-        }
+        return format_benchmark_results(benchmark.get_aggregates())
