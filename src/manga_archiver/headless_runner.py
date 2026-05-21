@@ -8,7 +8,7 @@ from tqdm import tqdm
 from .constants.exit_codes import EXIT_RUNTIME_ERROR, EXIT_SUCCESS
 from .integrations.webhooks import WebhookClient
 from .pipeline import PipelineManager
-from .utils.benchmark_report import write_benchmark_report
+from .pipeline.benchmark import write_benchmark_report
 from .workers.jobs import FetchingResourcesJob
 from .workers.types import JobMetadata, JobStatus
 
@@ -91,7 +91,12 @@ class HeadlessPipelineRunner:
                     logger.error("Failed to send webhook notification: %s", e)
                     print("Warning: failed to send webhook notification.")
 
-            write_benchmark_report(self._pipeline_manager.get_benchmark_results())
+            try:
+                write_benchmark_report(self._pipeline_manager.get_benchmark_results())
+            except Exception as e:
+                logger.error("Failed to write benchmark report: %s", e)
+                print("Warning: failed to write benchmark report.")
+
             return EXIT_SUCCESS
         except Exception as e:
             logger.error("Runtime error during headless pipeline execution: %s", e)

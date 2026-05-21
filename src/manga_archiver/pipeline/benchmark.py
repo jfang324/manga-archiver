@@ -1,8 +1,14 @@
 import tracemalloc
 from dataclasses import dataclass
-from typing import TypedDict
+from pathlib import Path
+from typing import TypeAlias, TypedDict
 
 from ..workers.jobs import JobStatus
+
+NANOSECONDS_PER_MILLISECOND = 1_000_000
+BYTES_PER_MEGABYTE = 1024 * 1024
+
+BenchmarkReport: TypeAlias = dict[str, float | int]
 
 
 class PhaseTimings(TypedDict):
@@ -86,19 +92,16 @@ class BenchmarkManager:
     def _get_memory(self) -> float:
         """Get peak memory in MB using tracemalloc."""
         _, peak = tracemalloc.get_traced_memory()
-        return peak / (1024 * 1024)
+        return peak / BYTES_PER_MEGABYTE
 
-    def _calculate_phase_times(
-        self,
-    ) -> tuple[dict[JobStatus, int], dict[JobStatus, int], list[int]]:
-        """Calculate timing aggregates per phase.
-
-        Returns:
-            tuple[dict[JobStatus, int], dict[JobStatus, int], list[int]]: Tuple of (total_time_per_phase, count_per_phase, total_times_per_job)
-        """
-        total_time_per_phase = dict.fromkeys(self._TRACKED_PHASES, 0)
-        count_per_phase = dict.fromkeys(self._TRACKED_PHASES, 0)
+    def _aggregate_metrics(self) -> BenchmarkAggregates:
+        """Aggregate all recorded benchmark metrics in one pass."""
+        total_time_per_phase: dict[JobStatus, int] = dict.fromkeys(self._TRACKED_PHASES, 0)
+        count_per_phase: dict[JobStatus, int] = dict.fromkeys(self._TRACKED_PHASES, 0)
         total_times: list[int] = []
+        earliest_resolve: float | None = None
+        latest_merge: float = 0
+        latest_upload: float = 0
 
         for metric in self._metrics.values():
             job_total = 0
@@ -106,120 +109,125 @@ class BenchmarkManager:
 
             for phase in self._TRACKED_PHASES:
                 phase_timings = timings.get(phase)
-                if phase_timings and phase_timings["start_ns"] and phase_timings["end_ns"]:
-                    duration = int(phase_timings["end_ns"] - phase_timings["start_ns"])
-                    total_time_per_phase[phase] += duration
-                    count_per_phase[phase] += 1
-                    job_total += duration
+                if phase_timings is None:
+                    continue
+
+                start_ns = phase_timings["start_ns"]
+                end_ns = phase_timings["end_ns"]
+                if start_ns is None or end_ns is None:
+                    continue
+
+                duration = int(end_ns - start_ns)
+                total_time_per_phase[phase] += duration
+                count_per_phase[phase] += 1
+                job_total += duration
 
             if job_total > 0:
                 total_times.append(job_total)
 
-        return total_time_per_phase, count_per_phase, total_times
-
-    def _calculate_global_markers(self) -> tuple[float | None, float, float]:
-        """Calculate global timing markers across all jobs.
-
-        Returns:
-            tuple[float | None, float, float]: Tuple of (earliest_resolve, latest_merge, latest_upload)
-        """
-        earliest_resolve: float | None = None
-        latest_merge: float = 0
-        latest_upload: float = 0
-
-        for metric in self._metrics.values():
-            timings = metric["timings"]
-
-            # Track earliest resolve (FETCHING_RESOURCES start)
             fetching = timings.get(JobStatus.FETCHING_RESOURCES)
-            if (
-                fetching
-                and fetching["start_ns"]
-                and (earliest_resolve is None or fetching["start_ns"] < earliest_resolve)
+            fetching_start_ns = fetching["start_ns"] if fetching else None
+            if fetching_start_ns is not None and (
+                earliest_resolve is None or fetching_start_ns < earliest_resolve
             ):
-                earliest_resolve = fetching["start_ns"]
+                earliest_resolve = fetching_start_ns
 
-            # Track latest merge end
             merging = timings.get(JobStatus.MERGING)
-            if merging and merging["end_ns"] and merging["end_ns"] > latest_merge:
-                latest_merge = merging["end_ns"]
+            merging_end_ns = merging["end_ns"] if merging else None
+            if merging_end_ns is not None and merging_end_ns > latest_merge:
+                latest_merge = merging_end_ns
 
-            # Track latest upload end
             uploading = timings.get(JobStatus.UPLOADING)
-            if uploading and uploading["end_ns"] and uploading["end_ns"] > latest_upload:
-                latest_upload = uploading["end_ns"]
+            uploading_end_ns = uploading["end_ns"] if uploading else None
+            if uploading_end_ns is not None and uploading_end_ns > latest_upload:
+                latest_upload = uploading_end_ns
 
-        return earliest_resolve, latest_merge, latest_upload
-
-    def _compute_averages(
-        self, total_time: dict[JobStatus, int], count: dict[JobStatus, int]
-    ) -> dict[JobStatus, int]:
-        """Compute average times per phase.
-
-        Args:
-            total_time: Total time per phase
-            count: Count of jobs per phase
-
-        Returns:
-            dict[JobStatus, int]: Dictionary of average times per phase
-        """
-        return {
-            phase: total_time[phase] // count[phase] if count[phase] > 0 else 0
+        avg_time_per_phase = {
+            phase: total_time_per_phase[phase] // count_per_phase[phase]
+            if count_per_phase[phase] > 0
+            else 0
             for phase in self._TRACKED_PHASES
         }
-
-    def _compute_avg_total(self, total_times: list[int]) -> int:
-        """Compute average total time across all jobs.
-
-        Args:
-            total_times: List of total times per job
-
-        Returns:
-            int: Average total time in nanoseconds
-        """
-        return sum(total_times) // len(total_times) if total_times else 0
-
-    def _compute_highest_times(
-        self, earliest_resolve: float | None, latest_merge: float, latest_upload: float
-    ) -> tuple[int, int]:
-        """Compute highest perceived times.
-
-        Args:
-            earliest_resolve: Earliest resolve start time
-            latest_merge: Latest merge end time
-            latest_upload: Latest upload end time
-
-        Returns:
-            tuple[int, int]: Tuple of (highest_perceived_download_time, highest_perceived_end_to_end)
-        """
-        highest_download = 0
-        if earliest_resolve is not None and latest_merge > 0:
-            highest_download = int(latest_merge - earliest_resolve)
-
-        highest_e2e = 0
-        if earliest_resolve is not None and latest_upload > 0:
-            highest_e2e = int(latest_upload - earliest_resolve)
-
-        return highest_download, highest_e2e
-
-    def get_aggregates(self) -> BenchmarkAggregates:
-        """Calculate aggregate metrics from all recorded jobs."""
-        peak_memory_mb = self._get_memory()
-        total_time_per_phase, count_per_phase, total_times = self._calculate_phase_times()
-        earliest_resolve, latest_merge, latest_upload = self._calculate_global_markers()
-
-        avg_time_per_phase = self._compute_averages(total_time_per_phase, count_per_phase)
-        avg_total = self._compute_avg_total(total_times)
-        highest_download, highest_e2e = self._compute_highest_times(
-            earliest_resolve, latest_merge, latest_upload
+        avg_total_time = sum(total_times) // len(total_times) if total_times else 0
+        highest_download = (
+            int(latest_merge - earliest_resolve)
+            if earliest_resolve is not None and latest_merge > 0
+            else 0
+        )
+        highest_e2e = (
+            int(latest_upload - earliest_resolve)
+            if earliest_resolve is not None and latest_upload > 0
+            else 0
         )
 
         return BenchmarkAggregates(
             total_time_per_phase=total_time_per_phase,
             avg_time_per_phase=avg_time_per_phase,
-            avg_total_time=avg_total,
-            peak_memory_mb=peak_memory_mb,
+            avg_total_time=avg_total_time,
+            peak_memory_mb=self._get_memory(),
             total_job_count=len(self._metrics),
             highest_perceived_download_time=highest_download,
             highest_perceived_end_to_end=highest_e2e,
         )
+
+    def get_aggregates(self) -> BenchmarkAggregates:
+        """Calculate aggregate metrics from all recorded jobs."""
+        return self._aggregate_metrics()
+
+
+PHASE_REPORT_PREFIXES: tuple[tuple[JobStatus, str], ...] = (
+    (JobStatus.FETCHING_RESOURCES, "fetching"),
+    (JobStatus.DOWNLOADING, "downloading"),
+    (JobStatus.MERGING, "merging"),
+    (JobStatus.UPLOADING, "uploading"),
+)
+
+
+def format_benchmark_results(aggregates: BenchmarkAggregates) -> BenchmarkReport:
+    """Convert aggregate benchmark metrics to report-ready values."""
+    report: BenchmarkReport = {
+        "total_job_count": aggregates.total_job_count,
+    }
+
+    for phase, prefix in PHASE_REPORT_PREFIXES:
+        report[f"{prefix}_total_ms"] = (
+            aggregates.total_time_per_phase.get(phase, 0) / NANOSECONDS_PER_MILLISECOND
+        )
+        report[f"{prefix}_avg_ms"] = (
+            aggregates.avg_time_per_phase.get(phase, 0) / NANOSECONDS_PER_MILLISECOND
+        )
+
+    report.update(
+        {
+            "avg_total_time_ms": aggregates.avg_total_time / NANOSECONDS_PER_MILLISECOND,
+            "peak_memory_mb": aggregates.peak_memory_mb,
+            "highest_perceived_download_time_ms": aggregates.highest_perceived_download_time
+            / NANOSECONDS_PER_MILLISECOND,
+            "highest_perceived_end_to_end_ms": aggregates.highest_perceived_end_to_end
+            / NANOSECONDS_PER_MILLISECOND,
+        }
+    )
+
+    return report
+
+
+def write_benchmark_report(benchmark_results: BenchmarkReport | None) -> None:
+    """Write benchmark results to disk."""
+    if not benchmark_results:
+        return
+
+    benchmark_dir = Path("~/.manga-archiver/benchmark").expanduser()
+    metrics_file = benchmark_dir / "metrics.txt"
+
+    benchmark_dir.mkdir(parents=True, exist_ok=True)
+
+    with metrics_file.open("w") as f:
+        f.write("Benchmark Results\n")
+        f.write("=" * 40 + "\n")
+        for key, value in benchmark_results.items():
+            if "ms" in key:
+                f.write(f"{key}: {value:.2f} ms\n")
+            elif "memory" in key:
+                f.write(f"{key}: {value:.2f} MB\n")
+            else:
+                f.write(f"{key}: {value}\n")

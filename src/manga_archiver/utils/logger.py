@@ -12,7 +12,7 @@ def setup_logging() -> None:
     Creates three log files with daily rotation:
     - debug.log: All DEBUG and above messages
     - error.log: Only ERROR and above messages
-    - info.log: INFO and above messages (for benchmark output)
+    - info.log: INFO and above messages
 
     Keeps 2 days of log history (auto-deletes older logs).
     """

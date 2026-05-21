@@ -9,6 +9,7 @@ from .integrations.content_providers import ContentProviderManager
 from .models.app_config import AppConfig
 from .persistence import SettingsStore
 from .pipeline import PipelineManager
+from .pipeline.benchmark import write_benchmark_report
 from .repositories import FavoriteRepository
 from .repositories.types import FavoriteManga
 from .screens import (
@@ -22,7 +23,6 @@ from .screens import (
     SettingsScreen,
 )
 from .screens.selection_screen import PartialJob
-from .utils.benchmark_report import write_benchmark_report
 from .workers.jobs import FetchingResourcesJob
 
 logger = logging.getLogger(__name__)
@@ -201,7 +201,10 @@ class MangaArchiverApp(App):
 
         try:
             self._pipeline_manager.stop()
-            write_benchmark_report(self._pipeline_manager.get_benchmark_results())
+            try:
+                write_benchmark_report(self._pipeline_manager.get_benchmark_results())
+            except Exception as e:
+                logger.error("Failed to write benchmark report: %s", e)
         except Exception as e:
             logger.error("Error during shutdown: %s", e)
         finally:
