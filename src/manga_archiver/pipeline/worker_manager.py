@@ -21,7 +21,7 @@ from ..workers.resolve_worker import ResolveWorker
 from ..workers.scheduler import SchedulerFeedback
 from ..workers.types import JobMetadata, JobStatus
 from ..workers.upload_worker import UploadWorker
-from .benchmark import BenchmarkManager
+from .benchmark import BenchmarkAggregates, BenchmarkManager
 
 if TYPE_CHECKING:
     from ..persistence.google_drive_token_store import GoogleApiStoredToken
@@ -171,6 +171,10 @@ class WorkerManager:
     def notification_worker(self) -> NotificationWorker:
         """Get the notification worker."""
         return self._notification_worker
+
+    def get_benchmark_aggregates(self) -> BenchmarkAggregates | None:
+        """Return benchmark aggregates from the notification worker."""
+        return self._notification_worker.get_benchmark_aggregates()
 
     async def start(self) -> None:
         """Start all workers in the pipeline."""

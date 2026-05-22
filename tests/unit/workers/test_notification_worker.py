@@ -115,3 +115,28 @@ async def test_do_work_records_benchmark_timing(status) -> None:
     await worker._do_work(job)
 
     benchmark.record.assert_called_once_with("job_123", status, 1000, 2000)
+
+
+def test_get_benchmark_aggregates_returns_none_without_benchmark() -> None:
+    worker = NotificationWorker(
+        worker_id="test_notification_worker",
+        input_queue=MagicMock(),
+        on_status_update=MagicMock(),
+    )
+
+    assert worker.get_benchmark_aggregates() is None
+
+
+def test_get_benchmark_aggregates_delegates_to_benchmark() -> None:
+    benchmark = MagicMock()
+    aggregates = MagicMock()
+    benchmark.get_aggregates.return_value = aggregates
+    worker = NotificationWorker(
+        worker_id="test_notification_worker",
+        input_queue=MagicMock(),
+        on_status_update=MagicMock(),
+        benchmark=benchmark,
+    )
+
+    assert worker.get_benchmark_aggregates() is aggregates
+    benchmark.get_aggregates.assert_called_once_with()

@@ -56,7 +56,7 @@ class TestWorkerManagerInit:
         assert len(manager.merge_pool) == 2
         assert len(manager.upload_pool) == 0
 
-    def test_creates_benchmark_when_enabled(self) -> None:
+    def test_exposes_benchmark_aggregates_when_enabled(self) -> None:
         mock_provider_manager = MagicMock()
         mock_download_client = MagicMock()
         mock_callback = MagicMock()
@@ -78,7 +78,9 @@ class TestWorkerManagerInit:
             on_status_update=mock_callback,
         )
 
-        assert manager.notification_worker._benchmark is not None
+        aggregates = manager.get_benchmark_aggregates()
+        assert aggregates is not None
+        assert aggregates.total_job_count == 0
 
 
 class TestWorkerManagerWiring:
