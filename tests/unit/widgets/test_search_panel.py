@@ -59,7 +59,7 @@ class TestSearchPanel:
             search_input: Input = app.query_one("#search-input", Input)
 
             search_input.value = "test"
-            await asyncio.sleep(0.1)
+            await asyncio.sleep((DEBOUNCE_DURATION * 4) / 1000)
 
             search_records = app.search_records
             assert len(search_records) == 1
