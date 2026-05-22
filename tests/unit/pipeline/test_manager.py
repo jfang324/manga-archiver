@@ -7,7 +7,31 @@ from src.manga_archiver.models import ContentSource
 from src.manga_archiver.models.app_config import AppConfig
 from src.manga_archiver.models.output_format import OutputFormat
 from src.manga_archiver.pipeline import PipelineConfig, PipelineManager
+from src.manga_archiver.pipeline.benchmark import BenchmarkAggregates
 from src.manga_archiver.workers.jobs import FetchingResourcesJob
+from src.manga_archiver.workers.types import JobStatus
+
+
+def _benchmark_aggregates() -> BenchmarkAggregates:
+    return BenchmarkAggregates(
+        total_time_per_phase={
+            JobStatus.FETCHING_RESOURCES: 1_000_000,
+            JobStatus.DOWNLOADING: 2_000_000,
+            JobStatus.MERGING: 3_000_000,
+            JobStatus.UPLOADING: 4_000_000,
+        },
+        avg_time_per_phase={
+            JobStatus.FETCHING_RESOURCES: 1_000_000,
+            JobStatus.DOWNLOADING: 2_000_000,
+            JobStatus.MERGING: 3_000_000,
+            JobStatus.UPLOADING: 4_000_000,
+        },
+        avg_total_time=10_000_000,
+        peak_memory_mb=12.5,
+        total_job_count=3,
+        highest_perceived_download_time=5_000_000,
+        highest_perceived_end_to_end=6_000_000,
+    )
 
 
 class TestPipelineValidation:
@@ -121,3 +145,45 @@ class TestPipelineEnqueue:
 
         assert result.accepted_count == 1
         assert result.skipped_count == 1
+
+
+class TestPipelineBenchmark:
+    def test_get_benchmark_results_returns_none_when_disabled(self) -> None:
+        pm = PipelineManager(
+            provider_manager=MagicMock(),
+            download_client=MagicMock(),
+            config=PipelineConfig(benchmark_enabled=False),
+            google_drive_token=None,
+        )
+
+        assert pm.get_benchmark_results() is None
+
+    def test_get_benchmark_results_uses_worker_manager_aggregates(self) -> None:
+        pm = PipelineManager(
+            provider_manager=MagicMock(),
+            download_client=MagicMock(),
+            config=PipelineConfig(benchmark_enabled=True),
+            google_drive_token=None,
+        )
+        pm._worker_manager.get_benchmark_aggregates = MagicMock(
+            return_value=_benchmark_aggregates()
+        )
+
+        result = pm.get_benchmark_results()
+
+        assert result == {
+            "total_job_count": 3,
+            "fetching_total_ms": 1.0,
+            "fetching_avg_ms": 1.0,
+            "downloading_total_ms": 2.0,
+            "downloading_avg_ms": 2.0,
+            "merging_total_ms": 3.0,
+            "merging_avg_ms": 3.0,
+            "uploading_total_ms": 4.0,
+            "uploading_avg_ms": 4.0,
+            "avg_total_time_ms": 10.0,
+            "peak_memory_mb": 12.5,
+            "highest_perceived_download_time_ms": 5.0,
+            "highest_perceived_end_to_end_ms": 6.0,
+        }
+        pm._worker_manager.get_benchmark_aggregates.assert_called_once_with()

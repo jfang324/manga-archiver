@@ -12,7 +12,7 @@ from .types import JobMetadata, JobStatus
 
 if TYPE_CHECKING:
     # Runtime import creates pipeline -> worker_manager -> notification_worker cycle.
-    from ..pipeline.benchmark import BenchmarkManager
+    from ..pipeline.benchmark import BenchmarkAggregates, BenchmarkManager
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +95,13 @@ class NotificationWorker:
                 aggregates.avg_time_per_phase.get(JobStatus.UPLOADING, 0) / 1_000_000,
                 aggregates.peak_memory_mb,
             )
+
+    def get_benchmark_aggregates(self) -> BenchmarkAggregates | None:
+        """Return benchmark aggregates when benchmarking is enabled."""
+        if self._benchmark is None:
+            return None
+
+        return self._benchmark.get_aggregates()
 
     def stop(self) -> None:
         """Stop the notification worker."""

@@ -283,8 +283,8 @@ class PipelineManager:
         if not self._benchmark_enabled:
             return None
 
-        benchmark = self._worker_manager.notification_worker._benchmark
-        if benchmark is None:
+        aggregates = self._worker_manager.get_benchmark_aggregates()
+        if aggregates is None:
             return None
 
-        return format_benchmark_results(benchmark.get_aggregates())
+        return format_benchmark_results(aggregates)
