@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 
 - Updated dependencies
+- Fixed issue with selection panel where unselected indexes would still be used for range selection
 
 ## [1.4.0] - 2026-05-18
 
