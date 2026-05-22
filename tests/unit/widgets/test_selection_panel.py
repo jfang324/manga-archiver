@@ -94,7 +94,7 @@ class TestSelectionPanel:
                 ),
             ]
 
-    async def test_shift_enter_selects_range_from_anchor(self) -> None:
+    async def test_ctrl_r_selects_range_from_anchor(self) -> None:
         app = SelectionPanelApp()
         app.mock_options = [
             ("Title 1", "Value 1", 1.0),
@@ -112,7 +112,7 @@ class TestSelectionPanel:
             await pilot.press("down")
             await pilot.press("down")
             await pilot.press("down")
-            await pilot.press("shift+enter")
+            await pilot.press("ctrl+r")
             await pilot.press("ctrl+s")
 
             selection_records = app.selection_records
@@ -128,7 +128,7 @@ class TestSelectionPanel:
                 for option in app.mock_options
             ]
 
-    async def test_shift_enter_ignores_deselected_anchor(self) -> None:
+    async def test_ctrl_r_ignores_deselected_anchor(self) -> None:
         app = SelectionPanelApp()
         app.mock_options = [
             ("Title 1", "Value 1", 1.0),
@@ -147,7 +147,7 @@ class TestSelectionPanel:
             await pilot.press("down")
             await pilot.press("down")
             await pilot.press("down")
-            await pilot.press("shift+enter")
+            await pilot.press("ctrl+r")
             await pilot.press("ctrl+s")
 
             selection_records = app.selection_records
@@ -156,7 +156,7 @@ class TestSelectionPanel:
             message = selection_records.pop()
             assert message.selected_pairs == []
 
-    async def test_shift_enter_uses_previous_anchor_when_newest_is_deselected(self) -> None:
+    async def test_ctrl_r_uses_previous_anchor_when_newest_is_deselected(self) -> None:
         app = SelectionPanelApp()
         app.mock_options = [
             ("Title 1", "Value 1", 1.0),
@@ -176,7 +176,7 @@ class TestSelectionPanel:
             await pilot.press("enter")
             await pilot.press("down")
             await pilot.press("down")
-            await pilot.press("shift+enter")
+            await pilot.press("ctrl+r")
             await pilot.press("ctrl+s")
 
             selection_records = app.selection_records
