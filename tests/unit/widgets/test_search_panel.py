@@ -157,11 +157,18 @@ class TestSearchPanel:
     async def test_new_search_resets_page_to_one(self) -> None:
         app = SearchPanelApp()
 
-        async with app.run_test():
+        async with app.run_test() as pilot:
             panel = app.query_one(SearchPanel)
 
             panel._current_page = 2
             panel._debounce_duration = 0
-            await panel._delayed_search_task("new query")
+
+            input_field = panel.query_one("#search-input", Input)
+            input_field.value = "new query"
+            await pilot.pause()
+
+            debounce_task = panel._debounce_task
+            assert debounce_task is not None
+            await debounce_task
 
             assert panel._current_page == 1
