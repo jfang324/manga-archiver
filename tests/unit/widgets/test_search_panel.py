@@ -161,9 +161,7 @@ class TestSearchPanel:
             panel = app.query_one(SearchPanel)
 
             panel._current_page = 2
-
-            input_field = app.query_one("#search-input", Input)
-            input_field.value = "new query"
-            await asyncio.sleep(0.05)
+            panel._debounce_duration = 0
+            await panel._delayed_search_task("new query")
 
             assert panel._current_page == 1
