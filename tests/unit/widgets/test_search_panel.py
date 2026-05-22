@@ -59,7 +59,7 @@ class TestSearchPanel:
             search_input: Input = app.query_one("#search-input", Input)
 
             search_input.value = "test"
-            await asyncio.sleep(0.1)
+            await asyncio.sleep((DEBOUNCE_DURATION * 4) / 1000)
 
             search_records = app.search_records
             assert len(search_records) == 1
@@ -157,13 +157,18 @@ class TestSearchPanel:
     async def test_new_search_resets_page_to_one(self) -> None:
         app = SearchPanelApp()
 
-        async with app.run_test():
+        async with app.run_test() as pilot:
             panel = app.query_one(SearchPanel)
 
             panel._current_page = 2
+            panel._debounce_duration = 0
 
-            input_field = app.query_one("#search-input", Input)
+            input_field = panel.query_one("#search-input", Input)
             input_field.value = "new query"
-            await asyncio.sleep(0.05)
+            await pilot.pause()
+
+            debounce_task = panel._debounce_task
+            assert debounce_task is not None
+            await debounce_task
 
             assert panel._current_page == 1
