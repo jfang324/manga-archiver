@@ -128,6 +128,70 @@ class TestSelectionPanel:
                 for option in app.mock_options
             ]
 
+    async def test_shift_enter_ignores_deselected_anchor(self) -> None:
+        app = SelectionPanelApp()
+        app.mock_options = [
+            ("Title 1", "Value 1", 1.0),
+            ("Title 2", "Value 2", 2.0),
+            ("Title 3", "Value 3", 3.0),
+            ("Title 4", "Value 4", 4.0),
+        ]
+
+        async with app.run_test() as pilot:
+            selection_list: SelectionList = app.query_one("#selection-list", SelectionList)
+
+            selection_list.focus()
+            await pilot.press("down")
+            await pilot.press("enter")
+            await pilot.press("enter")
+            await pilot.press("down")
+            await pilot.press("down")
+            await pilot.press("down")
+            await pilot.press("shift+enter")
+            await pilot.press("ctrl+s")
+
+            selection_records = app.selection_records
+            assert len(selection_records) == 1
+
+            message = selection_records.pop()
+            assert message.selected_pairs == []
+
+    async def test_shift_enter_uses_previous_anchor_when_newest_is_deselected(self) -> None:
+        app = SelectionPanelApp()
+        app.mock_options = [
+            ("Title 1", "Value 1", 1.0),
+            ("Title 2", "Value 2", 2.0),
+            ("Title 3", "Value 3", 3.0),
+            ("Title 4", "Value 4", 4.0),
+        ]
+
+        async with app.run_test() as pilot:
+            selection_list: SelectionList = app.query_one("#selection-list", SelectionList)
+
+            selection_list.focus()
+            await pilot.press("down")
+            await pilot.press("enter")
+            await pilot.press("down")
+            await pilot.press("enter")
+            await pilot.press("enter")
+            await pilot.press("down")
+            await pilot.press("down")
+            await pilot.press("shift+enter")
+            await pilot.press("ctrl+s")
+
+            selection_records = app.selection_records
+            assert len(selection_records) == 1
+
+            message = selection_records.pop()
+            assert message.selected_pairs == [
+                (
+                    self._get_clean_title(option),
+                    option[1],
+                    option[2],
+                )
+                for option in app.mock_options
+            ]
+
     async def test_selection_options_displays_options(self) -> None:
         app = SelectionPanelApp()
 

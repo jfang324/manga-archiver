@@ -70,7 +70,7 @@ class SelectionPanel(Widget):
 
         self._title = f"\\[{source}] {title}"
         self._selected_values: list[str] = []
-        self._range_anchor_index: int | None = None
+        self._range_anchor_indices: list[int] = []
 
         # SelectionList only returns a list of values, so we need to map the values to their names
         self._name_map: dict[str, tuple[str, float]] = {}
@@ -83,7 +83,7 @@ class SelectionPanel(Widget):
     def _build_selection_options(self, options: list[tuple[str | None, str, float]]) -> None:
         selection_list: SelectionList = self.query_one("#selection-list", SelectionList)
         selection_items: list[Selection] = []
-        self._range_anchor_index = None
+        self._range_anchor_indices = []
 
         for title, value, chapter in options:
             display_title = title if title else "untitled"
@@ -105,7 +105,12 @@ class SelectionPanel(Widget):
 
     @on(SelectionList.SelectionToggled, "#selection-list")
     def _update_range_anchor(self, event: SelectionList.SelectionToggled) -> None:
-        self._range_anchor_index = event.selection_index
+        selection_index = event.selection_index
+        if selection_index in self._range_anchor_indices:
+            self._range_anchor_indices.remove(selection_index)
+
+        if event.selection.value in event.selection_list.selected:
+            self._range_anchor_indices.append(selection_index)
 
     def action_request_download(self) -> None:
         name_and_id_pairs: list[tuple[str, str, float]] = []
@@ -127,11 +132,12 @@ class SelectionPanel(Widget):
         selection_list: SelectionList = self.query_one("#selection-list", SelectionList)
         highlighted_index = selection_list.highlighted
 
-        if self._range_anchor_index is None or highlighted_index is None:
+        if not self._range_anchor_indices or highlighted_index is None:
             return
 
-        start_index = min(self._range_anchor_index, highlighted_index)
-        end_index = max(self._range_anchor_index, highlighted_index)
+        range_anchor_index = self._range_anchor_indices[-1]
+        start_index = min(range_anchor_index, highlighted_index)
+        end_index = max(range_anchor_index, highlighted_index)
 
         for index in range(start_index, end_index + 1):
             selection = selection_list.get_option_at_index(index)
