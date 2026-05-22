@@ -38,7 +38,7 @@ class SelectionPanel(Widget):
     BINDINGS = [
         ("ctrl+s", "request_download", "Download chapters"),
         ("ctrl+a", "select_all", "Select all"),
-        ("shift+enter", "select_range", "Select range"),
+        ("ctrl+r", "select_range", "Select range"),
     ]
 
     class Selected(Message):
