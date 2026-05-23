@@ -8,6 +8,15 @@ Install dependencies including dev dependencies:
 poetry install --with dev
 ```
 
+Install both Git hook stages:
+
+```bash
+poetry run pre-commit install
+poetry run pre-commit install --hook-type pre-push
+```
+
+The pre-push hook runs heavier local checks like Pyright and pytest before pushing.
+
 ## Running the App
 
 Enter the virtual environment:
