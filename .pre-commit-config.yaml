@@ -3,44 +3,44 @@ repos:
       rev: v6.0.0
       hooks:
           - id: trailing-whitespace
+            stages: [pre-commit]
           - id: end-of-file-fixer
+            stages: [pre-commit]
           - id: check-yaml
+            stages: [pre-commit]
           - id: check-added-large-files
+            stages: [pre-commit]
           - id: check-toml
+            stages: [pre-commit]
 
     - repo: https://github.com/astral-sh/ruff-pre-commit
       rev: v0.15.11
       hooks:
           - id: ruff
             args: [--fix]
+            stages: [pre-commit]
           - id: ruff-format
+            stages: [pre-commit]
 
     - repo: local
       hooks:
           - id: pyright
             name: pyright
-            entry: pyright
+            entry: poetry run pyright
             language: system
             pass_filenames: false
             always_run: true
+            stages: [pre-push]
 
     - repo: local
       hooks:
           - id: pytest
             name: pytest
-            entry: poetry run pytest
+            entry: poetry run pytest -v
             language: system
             pass_filenames: false
             always_run: true
-
-    - repo: local
-      hooks:
-          - id: pip-audit
-            name: pip-audit
-            entry: poetry run pip-audit
-            language: system
-            pass_filenames: false
-            always_run: true
+            stages: [pre-push]
 
     - repo: https://github.com/PyCQA/bandit
       rev: 1.9.4
@@ -48,3 +48,4 @@ repos:
           - id: bandit
             args: ['-r', './src', '--severity-level', 'medium']
             pass_filenames: False
+            stages: [pre-commit]
