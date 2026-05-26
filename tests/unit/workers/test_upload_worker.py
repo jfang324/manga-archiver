@@ -9,6 +9,13 @@ from src.manga_archiver.workers.jobs import UploadJob
 from src.manga_archiver.workers.upload_worker import UploadWorker
 
 
+def _with_invalid_fields(job: UploadJob, invalid_fields: dict[str, object]) -> UploadJob:
+    for key, value in invalid_fields.items():
+        object.__setattr__(job, key, value)
+
+    return job
+
+
 class TestUploadWorkerDoWork:
     def _create_mock_archive_store(self, uploaded_id: str | None = "file_123") -> MagicMock:
         archive_store = MagicMock()
@@ -100,8 +107,7 @@ class TestUploadWorkerDoWork:
 
         job = self._create_job()
 
-        for key, value in invalid_fields.items():
-            setattr(job, key, value)
+        job = _with_invalid_fields(job, invalid_fields)
 
         worker = self._create_worker(mock_archive_store)
 

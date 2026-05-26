@@ -5,7 +5,7 @@ from ..models.app_config import AppConfig
 from .types import JobMetadata, JobStatus
 
 
-@dataclass
+@dataclass(frozen=True)
 class Job:
     """Base class for all jobs.
 
@@ -59,7 +59,7 @@ class NotificationJob:
     end_time: float = -1
 
 
-@dataclass
+@dataclass(frozen=True)
 class FetchingResourcesJob(Job):
     """Job for fetching chapter resources from a content provider.
 
@@ -70,7 +70,7 @@ class FetchingResourcesJob(Job):
     chapter_id: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class DownloadingJob(Job):
     """Job for downloading images from URLs.
 
@@ -83,7 +83,7 @@ class DownloadingJob(Job):
     chapter_id: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class MergingJob(Job):
     """Job for merging images into output format.
 
@@ -94,7 +94,7 @@ class MergingJob(Job):
     image_data: list[bytes]
 
 
-@dataclass
+@dataclass(frozen=True)
 class UploadJob(Job):
     """Job for uploading merged files to a cloud storage provider.
 
