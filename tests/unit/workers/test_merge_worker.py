@@ -9,6 +9,13 @@ from src.manga_archiver.workers.jobs import MergingJob, UploadJob
 from src.manga_archiver.workers.merge_worker import MergeWorker
 
 
+def _with_invalid_fields(job: MergingJob, invalid_fields: dict[str, object]) -> MergingJob:
+    for key, value in invalid_fields.items():
+        object.__setattr__(job, key, value)
+
+    return job
+
+
 class TestMergeWorkerDoWork:
     @pytest.mark.asyncio
     async def test_do_work_returns_upload_job(self, tmp_path) -> None:
@@ -147,8 +154,7 @@ class TestMergeWorkerDoWork:
             source=ContentSource.MANGADEX,
         )
 
-        for key, value in invalid_fields.items():
-            setattr(job, key, value)
+        job = _with_invalid_fields(job, invalid_fields)
 
         worker = MergeWorker(
             multi_format_exporter=mock_multi_format_exporter,

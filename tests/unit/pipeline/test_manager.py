@@ -12,6 +12,15 @@ from src.manga_archiver.workers.jobs import FetchingResourcesJob
 from src.manga_archiver.workers.types import JobStatus
 
 
+def _with_invalid_fields(
+    job: FetchingResourcesJob, invalid_fields: dict[str, object]
+) -> FetchingResourcesJob:
+    for key, value in invalid_fields.items():
+        object.__setattr__(job, key, value)
+
+    return job
+
+
 def _benchmark_aggregates() -> BenchmarkAggregates:
     return BenchmarkAggregates(
         total_time_per_phase={
@@ -69,8 +78,7 @@ class TestPipelineValidation:
             source=ContentSource.MANGADEX,
         )
 
-        for key, value in invalid_fields.items():
-            setattr(job, key, value)
+        job = _with_invalid_fields(job, invalid_fields)
 
         pm = PipelineManager(
             provider_manager=MagicMock(),
