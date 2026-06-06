@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from asyncio import Queue
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -14,17 +13,17 @@ from ..integrations.storage_providers.google_drive import (
 from ..utils import DownloadClient, MultiFormatExporter
 from ..workers.base import WorkerConfig
 from ..workers.download_worker import DownloadWorker
-from ..workers.jobs import Job, NotificationJob
 from ..workers.merge_worker import MergeWorker
 from ..workers.notification_worker import NotificationWorker
 from ..workers.resolve_worker import ResolveWorker
-from ..workers.scheduler import SchedulerFeedback
 from ..workers.types import JobMetadata, JobStatus
 from ..workers.upload_worker import UploadWorker
 from .benchmark import BenchmarkAggregates, BenchmarkManager
+from .queues import PipelineQueues
 
 if TYPE_CHECKING:
     from ..persistence.google_drive_token_store import GoogleApiStoredToken
+    from .manager import PipelineConfig
 
 logger = logging.getLogger(__name__)
 
@@ -42,79 +41,61 @@ class WorkerManager:
 
     def __init__(
         self,
-        resolve_queue: Queue[Job],
-        download_queue: Queue[Job],
-        merge_queue: Queue[Job],
-        upload_queue: Queue[Job],
-        notification_queue: Queue[NotificationJob],
-        num_resolve_workers: int,
-        num_download_workers: int,
-        num_merge_workers: int,
-        num_upload_workers: int,
-        benchmark_enabled: bool,
+        queues: PipelineQueues,
+        config: PipelineConfig,
         provider_manager: ContentProviderManager,
         download_client: DownloadClient,
-        google_drive_token: GoogleApiStoredToken | None,
         on_status_update: Callable[[str, JobStatus, JobMetadata], None],
+        google_drive_token: GoogleApiStoredToken | None = None,
         google_drive_folder_cache: GoogleDriveFolderCache | None = None,
-        resolve_scheduler_feedback_queue: Queue[SchedulerFeedback] | None = None,
     ) -> None:
         """Initialize the worker manager.
 
         Args:
-            resolve_queue: Queue for resolve jobs
-            download_queue: Queue for download jobs
-            merge_queue: Queue for merge jobs
-            upload_queue: Queue for upload jobs
-            notification_queue: Queue for notification jobs
-            num_resolve_workers: Number of resolve workers to create
-            num_download_workers: Number of download workers to create
-            num_merge_workers: Number of merge workers to create
-            num_upload_workers: Number of upload workers to create
-            benchmark_enabled: Whether to enable benchmarking
-            provider_manager: Content provider manager
-            download_client: Client for downloading images
-            google_drive_token: Token for creating Google Drive upload clients
-            google_drive_folder_cache: Shared cache for upload clients
+            queues: The queue topology connecting the worker stages
+            config: The pipeline configuration (worker counts, benchmark flag, etc.)
+            provider_manager: The content provider manager (used by resolve and download workers)
+            download_client: The client for downloading images (used by download workers)
             on_status_update: Callback for status updates
-            resolve_scheduler_feedback_queue: Optional queue for resolve scheduler feedback
+            google_drive_token: Optional token for creating Google Drive upload clients
+            google_drive_folder_cache: Shared cache for upload clients, required with google_drive_token
         """
         self._resolve_pool: list[ResolveWorker] = [
             ResolveWorker(
                 worker_id=f"resolve_worker_{index}",
-                input_queue=resolve_queue,
-                output_queue=download_queue,
-                notification_queue=notification_queue,
+                input_queue=queues.resolve,
+                output_queue=queues.download,
+                notification_queue=queues.notification,
                 config=WorkerConfig(),
                 provider_manager=provider_manager,
-                scheduler_feedback_queue=resolve_scheduler_feedback_queue,
+                scheduler_feedback_queue=queues.resolve_scheduler_feedback,
             )
-            for index in range(num_resolve_workers)
+            for index in range(config.num_resolve_workers)
         ]
 
         self._download_pool: list[DownloadWorker] = [
             DownloadWorker(
                 worker_id=f"download_worker_{index}",
-                input_queue=download_queue,
-                output_queue=merge_queue,
-                notification_queue=notification_queue,
+                input_queue=queues.download,
+                output_queue=queues.merge,
+                notification_queue=queues.notification,
                 config=WorkerConfig(),
                 download_client=download_client,
                 provider_manager=provider_manager,
             )
-            for index in range(num_download_workers)
+            for index in range(config.num_download_workers)
         ]
 
         self._merge_pool: list[MergeWorker] = [
             MergeWorker(
                 worker_id=f"merge_worker_{index}",
-                input_queue=merge_queue,
-                output_queue=upload_queue if google_drive_token else None,
-                notification_queue=notification_queue,
+                input_queue=queues.merge,
+                output_queue=queues.upload if google_drive_token else None,
+                notification_queue=queues.notification,
                 config=WorkerConfig(),
                 multi_format_exporter=MultiFormatExporter(),
             )
-            for index in range(num_merge_workers)
+            for index in range(config.num_merge_workers)
         ]
 
         self._upload_pool: list[UploadWorker] = []
@@ -129,22 +110,22 @@ class WorkerManager:
             self._upload_pool = [
                 UploadWorker(
                     worker_id=f"upload_worker_{index}",
-                    input_queue=upload_queue,
+                    input_queue=queues.upload,
                     output_queue=None,
-                    notification_queue=notification_queue,
+                    notification_queue=queues.notification,
                     config=WorkerConfig(),
                     google_drive_archive_store=GoogleDriveArchiveStore(
                         google_drive_token, folder_cache=google_drive_folder_cache
                     ),
                 )
-                for index in range(num_upload_workers)
+                for index in range(config.num_upload_workers)
             ]
 
         self._notification_worker = NotificationWorker(
             worker_id="notification_worker",
-            input_queue=notification_queue,
+            input_queue=queues.notification,
             on_status_update=on_status_update,
-            benchmark=BenchmarkManager() if benchmark_enabled else None,
+            benchmark=BenchmarkManager() if config.benchmark_enabled else None,
         )
 
     @property
