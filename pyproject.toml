@@ -8,7 +8,7 @@ repository = "https://github.com/jfang324/manga-archiver"
 
 [tool.poetry.dependencies]
 python = ">=3.10 ,<4.0"
-aiohttp = {extras = ["speedups"], version = "^3.10.5"}
+aiohttp = {extras = ["speedups"], version = "^3.14.0"}
 pillow = "^12.2.0"
 textual = "^8.1.1"
 google-auth = "^2.35.0"
