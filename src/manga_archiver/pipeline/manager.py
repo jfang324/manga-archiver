@@ -29,6 +29,7 @@ from ..workers.scheduler import RateLimitAwareScheduler, SchedulerConfig, Schedu
 from ..workers.types import JobMetadata, JobStatus
 from .benchmark import BenchmarkReport, format_benchmark_results
 from .job_registry import PipelineJobRegistry
+from .queues import PipelineQueues
 from .worker_manager import WorkerManager
 
 if TYPE_CHECKING:
@@ -137,23 +138,23 @@ class PipelineManager:
 
         self._job_registry = PipelineJobRegistry()
 
+        queues = PipelineQueues(
+            resolve=self._resolve_queue,
+            download=self._download_queue,
+            merge=self._merge_queue,
+            upload=self._upload_queue,
+            notification=self._notification_queue,
+            resolve_scheduler_feedback=self._resolve_scheduler_feedback_queue,
+        )
+
         self._worker_manager = WorkerManager(
-            resolve_queue=self._resolve_queue,
-            download_queue=self._download_queue,
-            merge_queue=self._merge_queue,
-            upload_queue=self._upload_queue,
-            notification_queue=self._notification_queue,
-            num_resolve_workers=config.num_resolve_workers,
-            num_download_workers=config.num_download_workers,
-            num_merge_workers=config.num_merge_workers,
-            num_upload_workers=config.num_upload_workers,
-            benchmark_enabled=config.benchmark_enabled,
+            queues=queues,
+            config=config,
             provider_manager=provider_manager,
             download_client=download_client,
+            on_status_update=self._job_registry.record_status_update,
             google_drive_token=google_drive_token,
             google_drive_folder_cache=google_drive_folder_cache,
-            on_status_update=self._job_registry.record_status_update,
-            resolve_scheduler_feedback_queue=self._resolve_scheduler_feedback_queue,
         )
 
         self._benchmark_enabled = config.benchmark_enabled
