@@ -176,7 +176,6 @@ class BacklogSync:
             return await provider_manager.get_chapters(source, manga_id)
         except Exception as e:
             logger.error("Failed to get chapters for %s: %s", manga_title, e)
-            print(f"ERROR: Failed to get chapters for '{manga_title}'")
             return None
 
     async def _fetch_google_drive_chapters(
