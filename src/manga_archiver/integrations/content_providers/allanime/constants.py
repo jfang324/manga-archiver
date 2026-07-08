@@ -3,7 +3,7 @@ ALLANIME_API_URL: str = "https://api.allanime.day/api"
 # GraphQL persisted query hashes (from reverse-engineered API)
 SEARCH_HASH: str = "2d48e19fb67ddcac42fbb885204b6abb0a84f406f15ef83f36de4a66f49f651a"
 MANGA_HASH: str = "d77781dcf964b97aea0be621dbde430e89e200b58526823ee6010dd11c3ca96a"
-CHAPTER_HASH: str = "466783e19a7540387e34265be906bebbe853857088d45d28af922ab8668ebb31"
+CHAPTER_HASH: str = "fe1f609dfea8a85618039516b01aa5c7979e9b13d5f3a2a7aaa31d09e5af0d51"
 
 # CDN base URL for image downloads
 CDN_BASE_URL: str = "https://ytimgf.youtube-anime.com/"
