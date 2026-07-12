@@ -16,7 +16,7 @@ from .constants import (
     SEARCH_HASH,
     SEARCH_QUERY,
 )
-from .decode import decode_tobeparsed, generate_aareq
+from .decode import decode_tobeparsed
 from .types import AllMangaChapterResponse, AllMangaSearchResponse, DownloadResourceResponse
 
 
@@ -88,12 +88,7 @@ class AllMangaClient(Provider):
             limit=page_size,
             page=page,
         )
-        extensions = json.dumps(
-            {
-                "persistedQuery": {"version": 1, "sha256Hash": SEARCH_HASH},
-                "aaReq": generate_aareq(SEARCH_HASH),
-            }
-        )
+        extensions = json.dumps({"persistedQuery": {"version": 1, "sha256Hash": SEARCH_HASH}})
         params = {
             "variables": variables,
             "extensions": extensions,
@@ -141,12 +136,7 @@ class AllMangaClient(Provider):
             ApiError: If the API returns any other error
         """
         variables = MANGA_DETAILS_QUERY.format(manga_id=manga_id)
-        extensions = json.dumps(
-            {
-                "persistedQuery": {"version": 1, "sha256Hash": MANGA_HASH},
-                "aaReq": generate_aareq(MANGA_HASH),
-            }
-        )
+        extensions = json.dumps({"persistedQuery": {"version": 1, "sha256Hash": MANGA_HASH}})
         params = {
             "variables": variables,
             "extensions": extensions,
@@ -214,12 +204,7 @@ class AllMangaClient(Provider):
             manga_id=manga_id,
             chapter_string=chapter_str,
         )
-        extensions = json.dumps(
-            {
-                "persistedQuery": {"version": 1, "sha256Hash": CHAPTER_HASH},
-                "aaReq": generate_aareq(CHAPTER_HASH),
-            }
-        )
+        extensions = json.dumps({"persistedQuery": {"version": 1, "sha256Hash": CHAPTER_HASH}})
         params = {
             "variables": variables,
             "extensions": extensions,
