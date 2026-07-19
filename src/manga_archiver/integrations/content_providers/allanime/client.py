@@ -15,9 +15,20 @@ from .constants import (
     MANGA_HASH,
     SEARCH_HASH,
     SEARCH_QUERY,
+    STALE_CRYPTO_MESSAGE,
 )
-from .decode import decode_tobeparsed
+from .decode import decode_tobeparsed, generate_aareq, invalidate_crypto_cache
 from .types import AllMangaChapterResponse, AllMangaSearchResponse, DownloadResourceResponse
+
+
+def _first_error_message(response: dict) -> str | None:
+    """Return the first GraphQL error message, tolerating malformed error shapes."""
+    errors = response.get("errors")
+    if isinstance(errors, list) and errors and isinstance(errors[0], dict):
+        message = errors[0].get("message")
+        if isinstance(message, str):
+            return message
+    return None
 
 
 class AllMangaClient(Provider):
@@ -67,6 +78,49 @@ class AllMangaClient(Provider):
 
             return await response.json()
 
+    async def _aa_req_request(self, query_hash: str, variables: str) -> dict:
+        """Execute a persisted GraphQL query with an aaReq token.
+
+        If the API reports stale crypto, the cached crypto values are
+        refreshed and the request retried once.
+
+        Args:
+            query_hash: Persisted query sha256 hash
+            variables: JSON-encoded query variables
+
+        Returns:
+            dict: JSON response as a dictionary
+
+        Raises:
+            RateLimitError: If the API still reports stale crypto after refresh
+            ApiError: If the aaReq token cannot be generated
+        """
+        resp = await self._send_aa_req(query_hash, variables)
+        if _first_error_message(resp) == STALE_CRYPTO_MESSAGE:
+            invalidate_crypto_cache()
+            resp = await self._send_aa_req(query_hash, variables)
+            if _first_error_message(resp) == STALE_CRYPTO_MESSAGE:
+                # Same treatment as the API's other soft rate limiting: back off and retry later
+                raise RateLimitError(
+                    f"API reports stale crypto after refresh: {resp.get('errors')}"
+                )
+        return resp
+
+    async def _send_aa_req(self, query_hash: str, variables: str) -> dict:
+        try:
+            aa_req = await generate_aareq(self._session, query_hash)
+        except ValueError as e:
+            raise ApiError(f"Failed to generate aaReq token: {e}") from e
+
+        extensions = json.dumps(
+            {
+                "persistedQuery": {"version": 1, "sha256Hash": query_hash},
+                "aaReq": aa_req,
+            }
+        )
+        params = {"variables": variables, "extensions": extensions}
+        return await self._request(ALLANIME_API_URL, params=params)
+
     async def search_manga(self, query: str, page: int, page_size: int) -> list[Manga]:
         """Search for manga matching query with pagination.
 
@@ -88,13 +142,8 @@ class AllMangaClient(Provider):
             limit=page_size,
             page=page,
         )
-        extensions = json.dumps({"persistedQuery": {"version": 1, "sha256Hash": SEARCH_HASH}})
-        params = {
-            "variables": variables,
-            "extensions": extensions,
-        }
 
-        response = await self._request(ALLANIME_API_URL, params=params)
+        response = await self._aa_req_request(SEARCH_HASH, variables)
 
         return self._parse_search_response(response)
 
@@ -136,13 +185,8 @@ class AllMangaClient(Provider):
             ApiError: If the API returns any other error
         """
         variables = MANGA_DETAILS_QUERY.format(manga_id=manga_id)
-        extensions = json.dumps({"persistedQuery": {"version": 1, "sha256Hash": MANGA_HASH}})
-        params = {
-            "variables": variables,
-            "extensions": extensions,
-        }
 
-        response = await self._request(ALLANIME_API_URL, params=params)
+        response = await self._aa_req_request(MANGA_HASH, variables)
 
         return self._parse_chapter_data(response, manga_id)
 
@@ -204,17 +248,11 @@ class AllMangaClient(Provider):
             manga_id=manga_id,
             chapter_string=chapter_str,
         )
-        extensions = json.dumps({"persistedQuery": {"version": 1, "sha256Hash": CHAPTER_HASH}})
-        params = {
-            "variables": variables,
-            "extensions": extensions,
-        }
 
-        response = await self._request(ALLANIME_API_URL, params=params)
+        response = await self._aa_req_request(CHAPTER_HASH, variables)
+        return await self._parse_download_resource(response, chapter_id)
 
-        return self._parse_download_resource(response, chapter_id)
-
-    def _parse_download_resource(self, response: dict, chapter_id: str) -> DownloadResource:
+    async def _parse_download_resource(self, response: dict, chapter_id: str) -> DownloadResource:
         """Parse chapter pages response into DownloadResource.
 
         Args:
@@ -227,13 +265,9 @@ class AllMangaClient(Provider):
         Raises:
             ApiError: If response data is invalid or no URLs found
         """
-        errors = response.get("errors")
-
         # AllManga suspected to have non-standard rate limiting; instead of 429, they return malformed response
-        if errors and isinstance(errors, list):
-            error = errors[0]
-            if error.get("message") == "PersistedQueryNotFound":
-                raise RateLimitError(f"API returned malformed response: {errors}")
+        if _first_error_message(response) == "PersistedQueryNotFound":
+            raise RateLimitError(f"API returned malformed response: {response.get('errors')}")
 
         response_data = response.get("data")
 
@@ -242,7 +276,7 @@ class AllMangaClient(Provider):
 
         if "tobeparsed" in response_data:
             try:
-                response_data = decode_tobeparsed(response_data["tobeparsed"])
+                response_data = await decode_tobeparsed(self._session, response_data["tobeparsed"])
             except ValueError as e:
                 raise ApiError(str(e)) from e
 
