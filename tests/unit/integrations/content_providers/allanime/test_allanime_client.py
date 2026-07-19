@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -302,9 +302,53 @@ class TestAllMangaClientGetDownloadResource:
         client = AllMangaClient(mock_session)
         result = await client.get_download_resource("manga:1")
 
-        mock_decode.assert_called_once_with("encrypted_data_string")
+        mock_decode.assert_called_once_with(mock_session, "encrypted_data_string")
         assert len(result.urls) == 1
         assert result.urls[0] == f"{CDN_BASE_URL}decoded.jpg"
+
+
+def _json_response(payload: dict) -> MagicMock:
+    response = MagicMock()
+    response.status = 200
+    response.json = AsyncMock(return_value=payload)
+    return response
+
+
+class TestAllMangaClientStaleCrypto:
+    async def test_stale_crypto_retries_then_succeeds(self, mock_session) -> None:
+        stale = _json_response({"errors": [{"message": "AA_CRYPTO_STALE"}]})
+        ok = _json_response(mock_search_response)
+        mock_session.get.side_effect = [
+            AsyncContextManagerMock(stale),
+            AsyncContextManagerMock(ok),
+        ]
+        client = AllMangaClient(mock_session)
+
+        result = await client.search_manga("jujutsu", 1, 20)
+
+        assert result == mock_processed_search_results
+        assert mock_session.get.call_count == 2
+
+    async def test_stale_crypto_after_refresh_raises_rate_limit(self, mock_session) -> None:
+        stale_payload = {"errors": [{"message": "AA_CRYPTO_STALE"}]}
+        mock_session.get.side_effect = [
+            AsyncContextManagerMock(_json_response(stale_payload)),
+            AsyncContextManagerMock(_json_response(stale_payload)),
+        ]
+        client = AllMangaClient(mock_session)
+
+        with pytest.raises(RateLimitError):
+            await client.get_chapters("test")
+        assert mock_session.get.call_count == 2
+
+    async def test_non_dict_error_entries_raise_api_error(self, mock_session) -> None:
+        response = _json_response({"errors": ["AA_CRYPTO_STALE"]})
+        mock_session.get.return_value = AsyncContextManagerMock(response)
+        client = AllMangaClient(mock_session)
+
+        with pytest.raises(ApiError):
+            await client.search_manga("test", 1, 20)
+        assert mock_session.get.call_count == 1
 
 
 class TestAllMangaClientErrorPropagation:
