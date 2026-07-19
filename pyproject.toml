@@ -15,7 +15,7 @@ google-auth = "^2.35.0"
 google-api-python-client = "^2.100.0"
 requests = "^2.33.1"
 ebooklib = "^0.20"
-cryptography = "^46.0.7"
+cryptography = "^49.0.0"
 tqdm = "^4.67.3"
 
 [tool.poetry.scripts]
@@ -29,6 +29,7 @@ ruff = "^0.15.11"
 pyright = "^1.1.409"
 pre-commit = "^4.5.1"
 pip-audit = "^2.10.0"
+setuptools = "^83.0.0"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
