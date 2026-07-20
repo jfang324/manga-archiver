@@ -12,7 +12,9 @@ from .constants import (
     ALLANIME_FALLBACK_EPOCH,
     ALLANIME_FALLBACK_MASK,
     ALLANIME_FALLBACK_PART_B,
+    BOOTSTRAP_URL,
     BROWSER_UA,
+    BUILD_ID,
     CDN_IMMUTABLE,
     CRYPTO_TTL_SECONDS,
     MKISSA_URL,
@@ -79,14 +81,29 @@ def _build_crypto(aa: dict, mask: str) -> dict | None:
     return {"epoch": epoch, "partB": part_b, "mask": mask}
 
 
-async def _fetch_crypto(session: ClientSession) -> dict | None:
-    """Scrape current aaReq crypto values from the site's JS bundle.
+async def _fetch_bootstrap(
+    session: ClientSession, headers: dict, timeout: ClientTimeout
+) -> dict | None:
+    """Fetch crypto values from the live bootstrap endpoint.
 
-    Returns None on any failure so the caller can fall back to cached or
-    static values.
+    Returns {epoch, partB, switchAt} on success, None on any failure.
     """
-    headers = {"User-Agent": BROWSER_UA}
-    timeout = ClientTimeout(total=SCRAPE_TIMEOUT_SECONDS)
+    bootstrap_url = f"{BOOTSTRAP_URL}?buildId={BUILD_ID}"
+    bootstrap_headers = {**headers, "x-build-id": BUILD_ID}
+    try:
+        async with session.get(bootstrap_url, headers=bootstrap_headers, timeout=timeout) as resp:
+            if resp.status != 200:
+                return None
+            data = await resp.json()
+        if not isinstance(data, dict) or not data.get("partB"):
+            return None
+        return data
+    except Exception:
+        return None
+
+
+async def _fetch_mask(session: ClientSession, headers: dict, timeout: ClientTimeout) -> str | None:
+    """Scan CDN chunks for the crypto mask hex string."""
     try:
         async with session.get(MKISSA_URL, headers=headers, timeout=timeout) as resp:
             html = await resp.text()
@@ -94,7 +111,7 @@ async def _fetch_crypto(session: ClientSession) -> dict | None:
         parsed = _parse_crypto_page(html)
         if parsed is None:
             return None
-        aa, app_path = parsed
+        _, app_path = parsed
 
         async with session.get(CDN_IMMUTABLE + app_path, headers=headers, timeout=timeout) as resp:
             app_js = await resp.text()
@@ -110,9 +127,63 @@ async def _fetch_crypto(session: ClientSession) -> dict | None:
                 continue
             mask = _extract_mask(js)
             if mask is not None:
-                return _build_crypto(aa, mask)
+                return mask
     except Exception:
         return None
+    return None
+
+
+async def _fetch_crypto(session: ClientSession) -> dict | None:
+    """Scrape current aaReq crypto values from the site's JS bundle.
+
+    Priority: bootstrap endpoint -> mkissa.to CDN -> None.
+    Returns None on any failure so the caller can fall back to cached or
+    static values.
+    """
+    headers = {"User-Agent": BROWSER_UA}
+    timeout = ClientTimeout(total=SCRAPE_TIMEOUT_SECONDS)
+
+    # Source 1: bootstrap endpoint (authoritative, behind Cloudflare)
+    aa = await _fetch_bootstrap(session, headers, timeout)
+
+    if aa is not None:
+        mask = await _fetch_mask(session, headers, timeout)
+        if mask is not None:
+            built = _build_crypto(aa, mask)
+            if built is not None:
+                return built
+
+    # Source 2: mkissa.to __aaCrypto + CDN mask (SSR fallback)
+    try:
+        async with session.get(MKISSA_URL, headers=headers, timeout=timeout) as resp:
+            html = await resp.text()
+
+        parsed = _parse_crypto_page(html)
+        if parsed is not None:
+            aa, app_path = parsed
+
+            async with session.get(
+                CDN_IMMUTABLE + app_path, headers=headers, timeout=timeout
+            ) as resp:
+                app_js = await resp.text()
+
+            chunk_refs = dict.fromkeys(re.findall(r"\.\./chunks/([A-Za-z0-9_\-]+\.js)", app_js))
+            for ref in chunk_refs:
+                try:
+                    async with session.get(
+                        CDN_IMMUTABLE + "chunks/" + ref, headers=headers, timeout=timeout
+                    ) as resp:
+                        js = await resp.text()
+                except Exception:  # noqa: S112
+                    continue
+                mask = _extract_mask(js)
+                if mask is not None:
+                    built = _build_crypto(aa, mask)
+                    if built is not None:
+                        return built
+    except Exception:  # noqa: S110
+        pass
+
     return None
 
 
@@ -175,10 +246,10 @@ async def generate_aareq(session: ClientSession, query_hash: str) -> str:
 
     ts = int(time.time() * 1000) // _AAREQ_TS_BUCKET_MS * _AAREQ_TS_BUCKET_MS
     payload = json.dumps(
-        {"v": 1, "ts": ts, "epoch": epoch, "qh": query_hash},
+        {"v": 1, "ts": ts, "epoch": epoch, "buildId": BUILD_ID, "qh": query_hash},
         separators=(",", ":"),
     )
-    iv = hashlib.sha256(f"{epoch}:{query_hash}:{ts}".encode()).digest()[:12]
+    iv = hashlib.sha256(f"{epoch}:{BUILD_ID}:{query_hash}:{ts}".encode()).digest()[:12]
     cipher = Cipher(algorithms.AES(key), modes.GCM(iv))
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(payload.encode()) + encryptor.finalize()
