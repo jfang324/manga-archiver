@@ -1,4 +1,6 @@
 ALLANIME_API_URL: str = "https://api.allanime.day/api"
+BUILD_ID: str = "47"
+BOOTSTRAP_URL: str = "https://api.mkissa.net/client-crypto/v1/bootstrap"
 BROWSER_UA: str = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
