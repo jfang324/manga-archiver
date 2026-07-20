@@ -1,4 +1,5 @@
 ALLANIME_API_URL: str = "https://api.allanime.day/api"
+CHAPTER_API_URL: str = "https://api.mkissa.net/api"
 BUILD_ID: str = "47"
 BOOTSTRAP_URL: str = "https://api.mkissa.net/client-crypto/v1/bootstrap"
 BROWSER_UA: str = (
@@ -11,7 +12,7 @@ CDN_IMMUTABLE: str = "https://cdn.allanime.day/all/mk/_app/immutable/"
 # GraphQL persisted query hashes (from reverse-engineered API)
 SEARCH_HASH: str = "2d48e19fb67ddcac42fbb885204b6abb0a84f406f15ef83f36de4a66f49f651a"
 MANGA_HASH: str = "d77781dcf964b97aea0be621dbde430e89e200b58526823ee6010dd11c3ca96a"
-CHAPTER_HASH: str = "404980504d680671d1639cf9a33b1847865c855a32ceaeef900b838896c00464"
+CHAPTER_HASH: str = "f60706ebc4ac65d078c41c9f052b8df3aa4526190be83dced92cbdc9412a4b8d"
 
 # AllAnime aaReq crypto constants (refreshed periodically)
 ALLANIME_FALLBACK_EPOCH: int = 4130

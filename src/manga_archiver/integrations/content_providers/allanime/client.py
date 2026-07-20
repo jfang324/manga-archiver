@@ -5,10 +5,11 @@ from aiohttp import ClientSession
 from ....models import Chapter, ContentSource, DownloadResource, Manga
 from ...exceptions import ApiError, BadGatewayError, NotFoundError, RateLimitError
 from ..base import Provider
-from ..constants import API_HEADERS, DEFAULT_REQUEST_TIMEOUT
+from ..constants import API_HEADERS, DEFAULT_REQUEST_TIMEOUT, MKISSA_HEADERS
 from .constants import (
     ALLANIME_API_URL,
     CDN_BASE_URL,
+    CHAPTER_API_URL,
     CHAPTER_HASH,
     CHAPTER_PAGES_QUERY,
     MANGA_DETAILS_QUERY,
@@ -43,12 +44,15 @@ class AllMangaClient(Provider):
         super().__init__(session)
         self._source = ContentSource.ALLMANGA
 
-    async def _request(self, url: str, params: dict | None = None) -> dict:
-        """Make authenticated API request with required Referer header.
+    async def _request(
+        self, url: str, params: dict | None = None, headers: dict | None = None
+    ) -> dict:
+        """Make API request with optional custom headers.
 
         Args:
             url: API endpoint URL
             params: Query parameters for GraphQL request
+            headers: Custom request headers (falls back to API_HEADERS)
 
         Returns:
             dict: JSON response as a dictionary
@@ -59,10 +63,10 @@ class AllMangaClient(Provider):
             BadGatewayError: 502 response
             ApiError: Other error status codes
         """
-        headers = API_HEADERS.get(ContentSource.ALLMANGA, {})
+        request_headers = headers or API_HEADERS.get(ContentSource.ALLMANGA, {})
 
         async with self._session.get(
-            url, params=params, headers=headers, timeout=DEFAULT_REQUEST_TIMEOUT
+            url, params=params, headers=request_headers, timeout=DEFAULT_REQUEST_TIMEOUT
         ) as response:
             if response.status == 404:
                 raise NotFoundError(f"Resource not found: {url}")
@@ -78,7 +82,13 @@ class AllMangaClient(Provider):
 
             return await response.json()
 
-    async def _aa_req_request(self, query_hash: str, variables: str) -> dict:
+    async def _aa_req_request(
+        self,
+        query_hash: str,
+        variables: str,
+        api_url: str = ALLANIME_API_URL,
+        headers: dict | None = None,
+    ) -> dict:
         """Execute a persisted GraphQL query with an aaReq token.
 
         If the API reports stale crypto, the cached crypto values are
@@ -87,6 +97,8 @@ class AllMangaClient(Provider):
         Args:
             query_hash: Persisted query sha256 hash
             variables: JSON-encoded query variables
+            api_url: API endpoint URL (defaults to ALLANIME_API_URL)
+            headers: Custom request headers
 
         Returns:
             dict: JSON response as a dictionary
@@ -95,10 +107,10 @@ class AllMangaClient(Provider):
             RateLimitError: If the API still reports stale crypto after refresh
             ApiError: If the aaReq token cannot be generated
         """
-        resp = await self._send_aa_req(query_hash, variables)
+        resp = await self._send_aa_req(query_hash, variables, api_url, headers)
         if _first_error_message(resp) == STALE_CRYPTO_MESSAGE:
             invalidate_crypto_cache()
-            resp = await self._send_aa_req(query_hash, variables)
+            resp = await self._send_aa_req(query_hash, variables, api_url, headers)
             if _first_error_message(resp) == STALE_CRYPTO_MESSAGE:
                 # Same treatment as the API's other soft rate limiting: back off and retry later
                 raise RateLimitError(
@@ -106,7 +118,13 @@ class AllMangaClient(Provider):
                 )
         return resp
 
-    async def _send_aa_req(self, query_hash: str, variables: str) -> dict:
+    async def _send_aa_req(
+        self,
+        query_hash: str,
+        variables: str,
+        api_url: str = ALLANIME_API_URL,
+        headers: dict | None = None,
+    ) -> dict:
         try:
             aa_req = await generate_aareq(self._session, query_hash)
         except ValueError as e:
@@ -119,7 +137,7 @@ class AllMangaClient(Provider):
             }
         )
         params = {"variables": variables, "extensions": extensions}
-        return await self._request(ALLANIME_API_URL, params=params)
+        return await self._request(api_url, params=params, headers=headers)
 
     async def search_manga(self, query: str, page: int, page_size: int) -> list[Manga]:
         """Search for manga matching query with pagination.
@@ -249,7 +267,9 @@ class AllMangaClient(Provider):
             chapter_string=chapter_str,
         )
 
-        response = await self._aa_req_request(CHAPTER_HASH, variables)
+        response = await self._aa_req_request(
+            CHAPTER_HASH, variables, CHAPTER_API_URL, MKISSA_HEADERS
+        )
         return await self._parse_download_resource(response, chapter_id)
 
     async def _parse_download_resource(self, response: dict, chapter_id: str) -> DownloadResource:
