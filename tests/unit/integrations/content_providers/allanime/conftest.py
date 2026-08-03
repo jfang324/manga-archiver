@@ -5,20 +5,21 @@ import pytest
 
 from src.manga_archiver.integrations.content_providers.allanime import decode
 from src.manga_archiver.integrations.content_providers.allanime.constants import (
+    ALLANIME_FALLBACK_BUILD_ID,
     ALLANIME_FALLBACK_EPOCH,
-    ALLANIME_FALLBACK_MASK,
-    ALLANIME_FALLBACK_PART_B,
+    ALLANIME_FALLBACK_LANES,
 )
 
 
 @pytest.fixture(autouse=True)
 def stub_crypto() -> Iterator[AsyncMock]:
-    """Stub _ensure_crypto so tests never fetch live crypto constants from mkissa.to/CDN."""
+    """Stub _ensure_keygen so tests never fetch live keygen values from GitHub."""
     decode.invalidate_crypto_cache()
-    with patch.object(
-        decode,
-        "_ensure_crypto",
-        return_value=(ALLANIME_FALLBACK_EPOCH, ALLANIME_FALLBACK_PART_B, ALLANIME_FALLBACK_MASK),
-    ) as mock_ensure:
+    fallback = {
+        "build_id": ALLANIME_FALLBACK_BUILD_ID,
+        "epoch": ALLANIME_FALLBACK_EPOCH,
+        "lanes": dict(ALLANIME_FALLBACK_LANES),
+    }
+    with patch.object(decode, "_ensure_keygen", return_value=fallback) as mock_ensure:
         yield mock_ensure
     decode.invalidate_crypto_cache()

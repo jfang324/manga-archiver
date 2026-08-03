@@ -2,259 +2,152 @@ import asyncio
 import base64
 import hashlib
 import json
-import re
 import time
 
 from aiohttp import ClientSession, ClientTimeout
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from .constants import (
+    ALLANIME_FALLBACK_BUILD_ID,
     ALLANIME_FALLBACK_EPOCH,
-    ALLANIME_FALLBACK_MASK,
-    ALLANIME_FALLBACK_PART_B,
-    BOOTSTRAP_URL,
+    ALLANIME_FALLBACK_LANES,
     BROWSER_UA,
-    BUILD_ID,
-    CDN_IMMUTABLE,
     CRYPTO_TTL_SECONDS,
-    MKISSA_URL,
+    KEYGEN_URL,
     RESPONSE_STATIC_KEY_SEED,
-    SCRAPE_TIMEOUT_SECONDS,
 )
 
 _AES_KEY_LENGTH = 32
 _AAREQ_TS_BUCKET_MS = 300_000
 _MIN_PAYLOAD_LENGTH = 29  # 1 header + 12 IV + 16 tag, plus at least some ciphertext
+_KEYGEN_FETCH_TIMEOUT_SECONDS = 15
 
-_crypto_cache: dict | None = None
-_crypto_fetched_at: float | None = None
+_keygen_cache: dict | None = None
+_keygen_fetched_at: float | None = None
 _fetch_lock = asyncio.Lock()
 
 
 def invalidate_crypto_cache() -> None:
-    """Drop cached crypto values so the next request re-fetches them."""
-    global _crypto_cache, _crypto_fetched_at
-    _crypto_cache = None
-    _crypto_fetched_at = None
+    """Drop cached keygen values so the next request re-fetches them."""
+    global _keygen_cache, _keygen_fetched_at
+    _keygen_cache = None
+    _keygen_fetched_at = None
 
 
-def _parse_crypto_page(html: str) -> tuple[dict, str] | None:
-    """Extract the __aaCrypto object and app entry JS path from the site homepage."""
-    assign = re.search(r"window\.__aaCrypto\s*=\s*", html)
-    if not assign:
-        return None
+def _build_fallback_keygen() -> dict:
+    """Return the hardcoded keygen values used when the live fetch fails."""
+    return {
+        "build_id": ALLANIME_FALLBACK_BUILD_ID,
+        "epoch": ALLANIME_FALLBACK_EPOCH,
+        "lanes": dict(ALLANIME_FALLBACK_LANES),
+    }
 
-    # raw_decode handles nested objects and multi-line output, unlike a brace regex
+
+def _valid_keygen(data: dict) -> dict | None:
+    """Validate scraped keygen values so malformed data cannot poison the cache."""
     try:
-        aa, _ = json.JSONDecoder().raw_decode(html, assign.end())
-    except ValueError:
-        return None
-    if not isinstance(aa, dict):
-        return None
-
-    app_match = re.search(r"_app/immutable/(entry/app\.[^\"']+\.js)", html)
-    if not app_match:
-        return None
-
-    return aa, app_match.group(1)
-
-
-def _extract_mask(js: str) -> str | None:
-    """Return the mask from a JS chunk if it unambiguously contains one."""
-    if "__aaCrypto" not in js:
-        return None
-    masks = re.findall(r"[0-9a-f]{64}", js)
-    if len(masks) == 1:
-        return masks[0]
-    return None
-
-
-def _build_crypto(aa: dict, mask: str) -> dict | None:
-    """Validate scraped values so malformed data cannot poison the cache."""
-    try:
-        epoch = int(aa["epoch"])
-        part_b = aa["partB"]
-        if len(base64.b64decode(part_b, validate=True)) != _AES_KEY_LENGTH:
+        build_id = data["build_id"]
+        epoch = int(data["epoch"])
+        lanes = data["lanes"]
+        if not isinstance(build_id, str) or not build_id:
             return None
+        if not isinstance(lanes, dict) or not lanes:
+            return None
+        for lane, key in lanes.items():
+            if not isinstance(lane, str) or not lane:
+                return None
+            if not isinstance(key, str) or len(bytes.fromhex(key)) != _AES_KEY_LENGTH:
+                return None
     except (KeyError, TypeError, ValueError):
         return None
-    return {"epoch": epoch, "partB": part_b, "mask": mask}
+    return {"build_id": build_id, "epoch": epoch, "lanes": lanes}
 
 
-async def _fetch_bootstrap(
-    session: ClientSession, headers: dict, timeout: ClientTimeout
-) -> dict | None:
-    """Fetch crypto values from the live bootstrap endpoint.
-
-    Returns {epoch, partB, switchAt} on success, None on any failure.
-    """
-    bootstrap_url = f"{BOOTSTRAP_URL}?buildId={BUILD_ID}"
-    bootstrap_headers = {**headers, "x-build-id": BUILD_ID}
+async def _fetch_keygen(session: ClientSession) -> dict | None:
+    """Fetch current crypto values from the shared AllAnime keygen endpoint."""
+    headers = {"User-Agent": BROWSER_UA}
+    timeout = ClientTimeout(total=_KEYGEN_FETCH_TIMEOUT_SECONDS)
     try:
-        async with session.get(bootstrap_url, headers=bootstrap_headers, timeout=timeout) as resp:
+        async with session.get(KEYGEN_URL, headers=headers, timeout=timeout) as resp:
             if resp.status != 200:
                 return None
-            data = await resp.json()
-        if not isinstance(data, dict) or not data.get("partB"):
+            data = json.loads(await resp.text())
+        if not isinstance(data, dict):
             return None
-        return data
+        return _valid_keygen(data)
     except Exception:
         return None
 
 
-async def _fetch_mask(session: ClientSession, headers: dict, timeout: ClientTimeout) -> str | None:
-    """Scan CDN chunks for the crypto mask hex string."""
-    try:
-        async with session.get(MKISSA_URL, headers=headers, timeout=timeout) as resp:
-            html = await resp.text()
-
-        parsed = _parse_crypto_page(html)
-        if parsed is None:
-            return None
-        _, app_path = parsed
-
-        async with session.get(CDN_IMMUTABLE + app_path, headers=headers, timeout=timeout) as resp:
-            app_js = await resp.text()
-
-        chunk_refs = dict.fromkeys(re.findall(r"\.\./chunks/([A-Za-z0-9_\-]+\.js)", app_js))
-        for ref in chunk_refs:
-            try:
-                async with session.get(
-                    CDN_IMMUTABLE + "chunks/" + ref, headers=headers, timeout=timeout
-                ) as resp:
-                    js = await resp.text()
-            except Exception:  # noqa: S112
-                continue
-            mask = _extract_mask(js)
-            if mask is not None:
-                return mask
-    except Exception:
-        return None
-    return None
-
-
-async def _fetch_crypto(session: ClientSession) -> dict | None:
-    """Scrape current aaReq crypto values from the site's JS bundle.
-
-    Priority: bootstrap endpoint -> mkissa.to CDN -> None.
-    Returns None on any failure so the caller can fall back to cached or
-    static values.
-    """
-    headers = {"User-Agent": BROWSER_UA}
-    timeout = ClientTimeout(total=SCRAPE_TIMEOUT_SECONDS)
-
-    # Source 1: bootstrap endpoint (authoritative, behind Cloudflare)
-    aa = await _fetch_bootstrap(session, headers, timeout)
-
-    if aa is not None:
-        mask = await _fetch_mask(session, headers, timeout)
-        if mask is not None:
-            built = _build_crypto(aa, mask)
-            if built is not None:
-                return built
-
-    # Source 2: mkissa.to __aaCrypto + CDN mask (SSR fallback)
-    try:
-        async with session.get(MKISSA_URL, headers=headers, timeout=timeout) as resp:
-            html = await resp.text()
-
-        parsed = _parse_crypto_page(html)
-        if parsed is not None:
-            aa, app_path = parsed
-
-            async with session.get(
-                CDN_IMMUTABLE + app_path, headers=headers, timeout=timeout
-            ) as resp:
-                app_js = await resp.text()
-
-            chunk_refs = dict.fromkeys(re.findall(r"\.\./chunks/([A-Za-z0-9_\-]+\.js)", app_js))
-            for ref in chunk_refs:
-                try:
-                    async with session.get(
-                        CDN_IMMUTABLE + "chunks/" + ref, headers=headers, timeout=timeout
-                    ) as resp:
-                        js = await resp.text()
-                except Exception:  # noqa: S112
-                    continue
-                mask = _extract_mask(js)
-                if mask is not None:
-                    built = _build_crypto(aa, mask)
-                    if built is not None:
-                        return built
-    except Exception:  # noqa: S110
-        pass
-
-    return None
-
-
-async def _ensure_crypto(session: ClientSession) -> tuple[int, str, str]:
-    """Return (epoch, partB, mask), refreshing the cache when missing or expired."""
-    global _crypto_cache, _crypto_fetched_at
+async def _ensure_keygen(session: ClientSession) -> dict:
+    """Return the keygen values, refreshing the cache when missing or expired."""
+    global _keygen_cache, _keygen_fetched_at
     async with _fetch_lock:
         now = time.monotonic()
-        expired = _crypto_fetched_at is None or now - _crypto_fetched_at > CRYPTO_TTL_SECONDS
-        if _crypto_cache is None or expired:
-            fetched = await _fetch_crypto(session)
+        expired = _keygen_fetched_at is None or now - _keygen_fetched_at > CRYPTO_TTL_SECONDS
+        if _keygen_cache is None or expired:
+            fetched = await _fetch_keygen(session)
             if fetched is not None:
-                _crypto_cache = fetched
-            elif _crypto_cache is None:
-                _crypto_cache = {
-                    "epoch": ALLANIME_FALLBACK_EPOCH,
-                    "partB": ALLANIME_FALLBACK_PART_B,
-                    "mask": ALLANIME_FALLBACK_MASK,
-                }
+                _keygen_cache = fetched
+            elif _keygen_cache is None:
+                _keygen_cache = _build_fallback_keygen()
             # Re-arm the TTL even when the refresh failed, otherwise an
-            # unreachable source turns every request into a full re-scrape
-            _crypto_fetched_at = now
-        return _crypto_cache["epoch"], _crypto_cache["partB"], _crypto_cache["mask"]
+            # unreachable source turns every request into a full re-fetch
+            _keygen_fetched_at = now
+        return _keygen_cache
 
 
-def _derive_key(mask_hex: str, part_b: str) -> bytes:
-    return bytes(
-        a ^ b
-        for a, b in zip(
-            bytes.fromhex(mask_hex),
-            base64.b64decode(part_b),
-            strict=True,
-        )
-    )
+def _static_key(seed: str = RESPONSE_STATIC_KEY_SEED) -> bytes:
+    return hashlib.sha256(seed.encode()).digest()
 
 
-def _static_key() -> bytes:
-    return hashlib.sha256(RESPONSE_STATIC_KEY_SEED.encode()).digest()
-
-
-async def generate_aareq(session: ClientSession, query_hash: str) -> str:
+async def generate_aareq(session: ClientSession, query_hash: str, lane: str) -> tuple[str, str]:
     """Build the encrypted aaReq token for a persisted GraphQL query.
 
-    The token is AES-GCM over a small JSON payload, keyed by mask XOR partB,
-    with the IV derived from (epoch, query hash, timestamp). Timestamps are
+    The token is AES-GCM over a small JSON payload, keyed by the current
+    AllAnime keygen values for the given content lane, with the IV derived
+    from (epoch, build id, query hash, timestamp, lane). Timestamps are
     floored to 5-minute buckets to match the site's implementation.
 
     Args:
-        session: Shared HTTP session, used if crypto values need refreshing
+        session: Shared HTTP session, used if keygen values need refreshing
         query_hash: The persisted query sha256 hash the token accompanies
+        lane: Content lane (e.g. "k9" for chapter pages)
 
     Returns:
-        str: Base64-encoded aaReq token
+        tuple[str, str]: (aaReq token, build_id) so the caller can attach the
+        matching x-build-id header
 
     Raises:
-        ValueError: If the cached crypto values cannot produce a valid key
+        ValueError: If the cached keygen values cannot produce a valid key
     """
-    epoch, part_b, mask = await _ensure_crypto(session)
-    key = _derive_key(mask, part_b)
+    keygen = await _ensure_keygen(session)
+    try:
+        key = bytes.fromhex(keygen["lanes"][lane])
+    except (KeyError, ValueError) as e:
+        raise ValueError(f"Invalid keygen key for lane {lane}: {e}") from e
+
+    epoch = keygen["epoch"]
+    build_id = keygen["build_id"]
 
     ts = int(time.time() * 1000) // _AAREQ_TS_BUCKET_MS * _AAREQ_TS_BUCKET_MS
     payload = json.dumps(
-        {"v": 1, "ts": ts, "epoch": epoch, "buildId": BUILD_ID, "qh": query_hash},
+        {
+            "v": 1,
+            "ts": ts,
+            "epoch": epoch,
+            "buildId": build_id,
+            "qh": query_hash,
+            "k": lane,
+        },
         separators=(",", ":"),
     )
-    iv = hashlib.sha256(f"{epoch}:{BUILD_ID}:{query_hash}:{ts}".encode()).digest()[:12]
+    iv = hashlib.sha256(f"{epoch}:{build_id}:{query_hash}:{ts}:{lane}".encode()).digest()[:12]
     cipher = Cipher(algorithms.AES(key), modes.GCM(iv))
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(payload.encode()) + encryptor.finalize()
     token = b"\x01" + iv + ciphertext + encryptor.tag
-    return base64.b64encode(token).decode()
+    return base64.b64encode(token).decode(), build_id
 
 
 def _try_decode(raw: bytes, keys: list[bytes]) -> dict | None:
@@ -279,16 +172,17 @@ def _try_decode(raw: bytes, keys: list[bytes]) -> dict | None:
     return None
 
 
-async def decode_tobeparsed(session: ClientSession, encoded: str) -> dict:
+async def decode_tobeparsed(session: ClientSession, encoded: str, lane: str) -> dict:
     """Decrypt a tobeparsed API payload into response data.
 
-    Tries the aaReq-derived key and the static key, under GCM and the legacy
-    CTR scheme. If every candidate fails, the crypto cache is refreshed once
-    and decoding retried, in case the server rotated keys mid-TTL.
+    Tries the lane's keygen-derived key and the static key, under GCM and the
+    legacy CTR scheme. If every candidate fails, the keygen cache is refreshed
+    once and decoding retried, in case the server rotated keys mid-TTL.
 
     Args:
-        session: Shared HTTP session, used if crypto values need refreshing
+        session: Shared HTTP session, used if keygen values need refreshing
         encoded: Base64 payload from the API's data.tobeparsed field
+        lane: Content lane the response belongs to (e.g. "k9")
 
     Returns:
         dict: Decrypted response data
@@ -309,8 +203,13 @@ async def decode_tobeparsed(session: ClientSession, encoded: str) -> dict:
     for refresh in (False, True):
         if refresh:
             invalidate_crypto_cache()
-        _, part_b, mask = await _ensure_crypto(session)
-        result = _try_decode(raw, [_derive_key(mask, part_b), _static_key()])
+        keygen = await _ensure_keygen(session)
+        keys: list[bytes] = [_static_key(RESPONSE_STATIC_KEY_SEED)]
+        try:
+            keys.insert(0, bytes.fromhex(keygen["lanes"][lane]))
+        except (KeyError, ValueError):
+            pass
+        result = _try_decode(raw, keys)
         if result is not None:
             return result
 

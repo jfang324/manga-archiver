@@ -8,21 +8,21 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from src.manga_archiver.integrations.content_providers.allanime import decode
 from src.manga_archiver.integrations.content_providers.allanime.constants import (
+    ALLANIME_FALLBACK_BUILD_ID,
     ALLANIME_FALLBACK_EPOCH,
-    ALLANIME_FALLBACK_MASK,
-    ALLANIME_FALLBACK_PART_B,
+    ALLANIME_FALLBACK_LANES,
     CRYPTO_TTL_SECONDS,
 )
 
 # Captured at import time, before the autouse stub_crypto fixture patches it
-_real_ensure_crypto = decode._ensure_crypto
+_real_ensure_keygen = decode._ensure_keygen
 
 PAYLOAD = {"chapterPages": {"edges": []}}
 IV = b"\x0a" * 12
 
 
-def _aareq_key() -> bytes:
-    return decode._derive_key(ALLANIME_FALLBACK_MASK, ALLANIME_FALLBACK_PART_B)
+def _aareq_key(lane: str = "k9") -> bytes:
+    return bytes.fromhex(ALLANIME_FALLBACK_LANES[lane])
 
 
 def _encrypt_gcm(key: bytes, payload: dict) -> str:
@@ -41,34 +41,34 @@ def _encrypt_legacy_ctr(key: bytes, payload: dict) -> str:
 class TestDecodeTobeparsed:
     async def test_decodes_gcm_with_aareq_key(self, mock_session) -> None:
         encoded = _encrypt_gcm(_aareq_key(), PAYLOAD)
-        assert await decode.decode_tobeparsed(mock_session, encoded) == PAYLOAD
+        assert await decode.decode_tobeparsed(mock_session, encoded, "k9") == PAYLOAD
 
     async def test_decodes_gcm_with_static_key(self, mock_session) -> None:
         encoded = _encrypt_gcm(decode._static_key(), PAYLOAD)
-        assert await decode.decode_tobeparsed(mock_session, encoded) == PAYLOAD
+        assert await decode.decode_tobeparsed(mock_session, encoded, "k9") == PAYLOAD
 
     async def test_decodes_legacy_ctr_payload(self, mock_session) -> None:
         encoded = _encrypt_legacy_ctr(decode._static_key(), PAYLOAD)
-        assert await decode.decode_tobeparsed(mock_session, encoded) == PAYLOAD
+        assert await decode.decode_tobeparsed(mock_session, encoded, "k9") == PAYLOAD
 
     async def test_unknown_key_raises_value_error(self, mock_session) -> None:
         encoded = _encrypt_gcm(b"\x42" * 32, PAYLOAD)
         with pytest.raises(ValueError, match="any known key"):
-            await decode.decode_tobeparsed(mock_session, encoded)
+            await decode.decode_tobeparsed(mock_session, encoded, "k9")
 
     async def test_short_payload_raises_value_error(self, mock_session) -> None:
         encoded = base64.b64encode(b"short").decode()
         with pytest.raises(ValueError, match="too short"):
-            await decode.decode_tobeparsed(mock_session, encoded)
+            await decode.decode_tobeparsed(mock_session, encoded, "k9")
 
     async def test_invalid_base64_raises_value_error(self, mock_session) -> None:
         with pytest.raises(ValueError, match="Failed to decode"):
-            await decode.decode_tobeparsed(mock_session, "!!!not-base64!!!")
+            await decode.decode_tobeparsed(mock_session, "!!!not-base64!!!", "k9")
 
 
 class TestGenerateAareq:
-    async def test_token_round_trips_with_derived_key(self, mock_session) -> None:
-        token = await decode.generate_aareq(mock_session, "abc123")
+    async def test_token_round_trips_with_keygen_key(self, mock_session) -> None:
+        token, build_id = await decode.generate_aareq(mock_session, "abc123", "k9")
         raw = base64.b64decode(token)
 
         decryptor = Cipher(
@@ -78,71 +78,79 @@ class TestGenerateAareq:
 
         assert payload["qh"] == "abc123"
         assert payload["epoch"] == ALLANIME_FALLBACK_EPOCH
+        assert payload["buildId"] == ALLANIME_FALLBACK_BUILD_ID
+        assert payload["k"] == "k9"
+        assert build_id == ALLANIME_FALLBACK_BUILD_ID
+
+    async def test_unknown_lane_raises_value_error(self, mock_session) -> None:
+        with pytest.raises(ValueError, match="k99"):
+            await decode.generate_aareq(mock_session, "abc123", "k99")
 
 
-class TestParseCryptoPage:
-    def test_parses_nested_multiline_object(self) -> None:
-        html = (
-            'window.__aaCrypto = {\n"epoch": 4131,\n"partB": "abc",\n"extra": {"x": "}"}\n};\n'
-            '<script src="/_app/immutable/entry/app.abc123.js"></script>'
-        )
-        parsed = decode._parse_crypto_page(html)
-
-        assert parsed is not None
-        aa, app_path = parsed
-        assert aa["epoch"] == 4131
-        assert app_path == "entry/app.abc123.js"
-
-    def test_returns_none_without_crypto_object(self) -> None:
-        assert decode._parse_crypto_page("<html></html>") is None
-
-    def test_returns_none_for_invalid_json(self) -> None:
-        html = "window.__aaCrypto = {broken};"
-        assert decode._parse_crypto_page(html) is None
-
-
-class TestBuildCrypto:
+class TestValidKeygen:
     def test_accepts_valid_values(self) -> None:
-        crypto = decode._build_crypto(
-            {"epoch": "4130", "partB": ALLANIME_FALLBACK_PART_B}, ALLANIME_FALLBACK_MASK
+        keygen = decode._valid_keygen(
+            {
+                "build_id": "96",
+                "epoch": 2953,
+                "lanes": dict(ALLANIME_FALLBACK_LANES),
+            }
         )
-        assert crypto == {
-            "epoch": 4130,
-            "partB": ALLANIME_FALLBACK_PART_B,
-            "mask": ALLANIME_FALLBACK_MASK,
+        assert keygen == {
+            "build_id": "96",
+            "epoch": 2953,
+            "lanes": dict(ALLANIME_FALLBACK_LANES),
         }
 
-    def test_rejects_wrong_length_part_b(self) -> None:
-        part_b = base64.b64encode(b"short").decode()
-        assert decode._build_crypto({"epoch": 1, "partB": part_b}, ALLANIME_FALLBACK_MASK) is None
+    def test_rejects_wrong_length_key(self) -> None:
+        keygen = decode._valid_keygen(
+            {
+                "build_id": "96",
+                "epoch": 2953,
+                "lanes": {"k9": "aabb"},
+            }
+        )
+        assert keygen is None
+
+    def test_rejects_empty_lanes(self) -> None:
+        assert decode._valid_keygen({"build_id": "96", "epoch": 2953, "lanes": {}}) is None
 
     def test_rejects_missing_fields(self) -> None:
-        assert decode._build_crypto({}, ALLANIME_FALLBACK_MASK) is None
+        assert decode._valid_keygen({}) is None
+
+    def test_rejects_non_dict_lanes(self) -> None:
+        keygen = decode._valid_keygen({"build_id": "96", "epoch": 2953, "lanes": "k9"})
+        assert keygen is None
 
 
-class TestEnsureCryptoCache:
+class TestEnsureKeygenCache:
     async def test_failed_fetch_serves_fallback_and_rearms_ttl(self, mock_session) -> None:
         decode.invalidate_crypto_cache()
 
-        with patch.object(decode, "_fetch_crypto", return_value=None) as mock_fetch:
-            epoch, _, _ = await _real_ensure_crypto(mock_session)
-            await _real_ensure_crypto(mock_session)
+        with patch.object(decode, "_fetch_keygen", return_value=None) as mock_fetch:
+            keygen = await _real_ensure_keygen(mock_session)
+            await _real_ensure_keygen(mock_session)
 
-        assert epoch == ALLANIME_FALLBACK_EPOCH
-        # Failed fetch must still re-arm the TTL so the second call skips the scrape
+        assert keygen["epoch"] == ALLANIME_FALLBACK_EPOCH
+        assert keygen["build_id"] == ALLANIME_FALLBACK_BUILD_ID
+        # Failed fetch must still re-arm the TTL so the second call skips the re-fetch
         assert mock_fetch.await_count == 1
 
     async def test_stale_cache_kept_when_refresh_fails(self, mock_session) -> None:
         decode.invalidate_crypto_cache()
-        fetched = {"epoch": 1, "partB": ALLANIME_FALLBACK_PART_B, "mask": ALLANIME_FALLBACK_MASK}
-        with patch.object(decode, "_fetch_crypto", return_value=fetched):
-            await _real_ensure_crypto(mock_session)
+        fetched = {
+            "build_id": "99",
+            "epoch": 9999,
+            "lanes": dict(ALLANIME_FALLBACK_LANES),
+        }
+        with patch.object(decode, "_fetch_keygen", return_value=fetched):
+            await _real_ensure_keygen(mock_session)
 
-        decode._crypto_fetched_at = time.monotonic() - CRYPTO_TTL_SECONDS - 1
+        decode._keygen_fetched_at = time.monotonic() - CRYPTO_TTL_SECONDS - 1
 
-        with patch.object(decode, "_fetch_crypto", return_value=None) as mock_fetch:
-            epoch, _, _ = await _real_ensure_crypto(mock_session)
-            await _real_ensure_crypto(mock_session)
+        with patch.object(decode, "_fetch_keygen", return_value=None) as mock_fetch:
+            keygen = await _real_ensure_keygen(mock_session)
+            await _real_ensure_keygen(mock_session)
 
-        assert epoch == 1
+        assert keygen["epoch"] == 9999
         assert mock_fetch.await_count == 1
