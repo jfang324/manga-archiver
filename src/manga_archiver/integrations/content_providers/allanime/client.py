@@ -11,6 +11,7 @@ from .constants import (
     CDN_BASE_URL,
     CHAPTER_API_URL,
     CHAPTER_HASH,
+    CHAPTER_PAGES_LANE,
     CHAPTER_PAGES_QUERY,
     MANGA_DETAILS_QUERY,
     MANGA_HASH,
@@ -112,6 +113,10 @@ class AllMangaClient(Provider):
             invalidate_crypto_cache()
             resp = await self._send_aa_req(query_hash, variables, api_url, headers)
             if _first_error_message(resp) == STALE_CRYPTO_MESSAGE:
+                # Drop the refreshed values too so the next request re-fetches
+                # keygen from scratch instead of reusing values the server
+                # already declared stale for the rest of the TTL window.
+                invalidate_crypto_cache()
                 # Same treatment as the API's other soft rate limiting: back off and retry later
                 raise RateLimitError(
                     f"API reports stale crypto after refresh: {resp.get('errors')}"
@@ -126,7 +131,7 @@ class AllMangaClient(Provider):
         headers: dict | None = None,
     ) -> dict:
         try:
-            aa_req = await generate_aareq(self._session, query_hash)
+            aa_req, build_id = await generate_aareq(self._session, query_hash, CHAPTER_PAGES_LANE)
         except ValueError as e:
             raise ApiError(f"Failed to generate aaReq token: {e}") from e
 
@@ -134,10 +139,41 @@ class AllMangaClient(Provider):
             {
                 "persistedQuery": {"version": 1, "sha256Hash": query_hash},
                 "aaReq": aa_req,
+                "k": CHAPTER_PAGES_LANE,
             }
         )
+        request_headers = {
+            **(headers or API_HEADERS.get(ContentSource.ALLMANGA, {})),
+            "x-build-id": build_id,
+        }
         params = {"variables": variables, "extensions": extensions}
-        return await self._request(api_url, params=params, headers=headers)
+        return await self._request(api_url, params=params, headers=request_headers)
+
+    async def _persisted_request(
+        self,
+        query_hash: str,
+        variables: str,
+        api_url: str = ALLANIME_API_URL,
+        headers: dict | None = None,
+    ) -> dict:
+        """Execute a plain persisted GraphQL query without crypto headers.
+
+        Search and manga-detail queries are not lane-gated by the API, so they
+        need no aaReq token, k extension, or x-build-id header.
+
+        Args:
+            query_hash: Persisted query sha256 hash
+            variables: JSON-encoded query variables
+            api_url: API endpoint URL (defaults to ALLANIME_API_URL)
+            headers: Custom request headers
+
+        Returns:
+            dict: JSON response as a dictionary
+        """
+        extensions = json.dumps({"persistedQuery": {"version": 1, "sha256Hash": query_hash}})
+        request_headers = headers or API_HEADERS.get(ContentSource.ALLMANGA, {})
+        params = {"variables": variables, "extensions": extensions}
+        return await self._request(api_url, params=params, headers=request_headers)
 
     async def search_manga(self, query: str, page: int, page_size: int) -> list[Manga]:
         """Search for manga matching query with pagination.
@@ -161,7 +197,7 @@ class AllMangaClient(Provider):
             page=page,
         )
 
-        response = await self._aa_req_request(SEARCH_HASH, variables)
+        response = await self._persisted_request(SEARCH_HASH, variables)
 
         return self._parse_search_response(response)
 
@@ -204,7 +240,7 @@ class AllMangaClient(Provider):
         """
         variables = MANGA_DETAILS_QUERY.format(manga_id=manga_id)
 
-        response = await self._aa_req_request(MANGA_HASH, variables)
+        response = await self._persisted_request(MANGA_HASH, variables)
 
         return self._parse_chapter_data(response, manga_id)
 
@@ -296,7 +332,9 @@ class AllMangaClient(Provider):
 
         if "tobeparsed" in response_data:
             try:
-                response_data = await decode_tobeparsed(self._session, response_data["tobeparsed"])
+                response_data = await decode_tobeparsed(
+                    self._session, response_data["tobeparsed"], CHAPTER_PAGES_LANE
+                )
             except ValueError as e:
                 raise ApiError(str(e)) from e
 
