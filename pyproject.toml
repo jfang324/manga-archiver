@@ -15,7 +15,7 @@ google-auth = "^2.35.0"
 google-api-python-client = "^2.100.0"
 requests = "^2.33.1"
 ebooklib = "^0.20"
-cryptography = "^49.0.0"
+cryptography = "^50.0.0"
 tqdm = "^4.67.3"
 
 [tool.poetry.scripts]
