@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "manga-archiver"
-version = "1.5.3"
+version = "1.5.4"
 description = "A terminal-based manga downloader and archiver"
 authors = ["Jeffery Fang <Jefferyfang324@gmail.com>"]
 readme = "README.md"
