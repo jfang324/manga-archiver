@@ -188,7 +188,8 @@ async def decode_tobeparsed(session: ClientSession, encoded: str, lane: str) -> 
         dict: Decrypted response data
 
     Raises:
-        ValueError: If the payload is malformed or no known key decodes it
+        ValueError: If the payload is malformed, the lane is unknown, or no
+            known key decodes it
     """
     try:
         raw = base64.b64decode(encoded)
@@ -204,10 +205,12 @@ async def decode_tobeparsed(session: ClientSession, encoded: str, lane: str) -> 
         if refresh:
             invalidate_crypto_cache()
         keygen = await _ensure_keygen(session)
+        if lane not in keygen["lanes"]:
+            raise ValueError(f"Invalid keygen key for lane {lane}: lane not found")
         keys: list[bytes] = [_static_key(RESPONSE_STATIC_KEY_SEED)]
         try:
             keys.insert(0, bytes.fromhex(keygen["lanes"][lane]))
-        except (KeyError, ValueError):
+        except ValueError:
             pass
         result = _try_decode(raw, keys)
         if result is not None:
