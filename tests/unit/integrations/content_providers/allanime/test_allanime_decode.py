@@ -56,6 +56,11 @@ class TestDecodeTobeparsed:
         with pytest.raises(ValueError, match="any known key"):
             await decode.decode_tobeparsed(mock_session, encoded, "k9")
 
+    async def test_unknown_lane_raises_value_error(self, mock_session) -> None:
+        encoded = _encrypt_gcm(_aareq_key(), PAYLOAD)
+        with pytest.raises(ValueError, match="lane k99"):
+            await decode.decode_tobeparsed(mock_session, encoded, "k99")
+
     async def test_short_payload_raises_value_error(self, mock_session) -> None:
         encoded = base64.b64encode(b"short").decode()
         with pytest.raises(ValueError, match="too short"):
