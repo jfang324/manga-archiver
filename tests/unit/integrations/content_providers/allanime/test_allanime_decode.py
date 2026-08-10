@@ -1,8 +1,10 @@
+import asyncio
 import base64
 import json
 import time
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import aiohttp
 import pytest
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
@@ -13,6 +15,7 @@ from src.manga_archiver.integrations.content_providers.allanime.constants import
     ALLANIME_FALLBACK_LANES,
     CRYPTO_TTL_SECONDS,
 )
+from tests.conftest import AsyncContextManagerMock
 
 # Captured at import time, before the autouse stub_crypto fixture patches it
 _real_ensure_keygen = decode._ensure_keygen
@@ -69,6 +72,65 @@ class TestDecodeTobeparsed:
     async def test_invalid_base64_raises_value_error(self, mock_session) -> None:
         with pytest.raises(ValueError, match="Failed to decode"):
             await decode.decode_tobeparsed(mock_session, "!!!not-base64!!!", "k9")
+
+
+class TestFetchKeygen:
+    def _mock_response(self, *, status: int = 200, text: str = "") -> MagicMock:
+        response = MagicMock()
+        response.status = status
+        response.text = AsyncMock(return_value=text)
+        return response
+
+    def _valid_keygen_data(self) -> dict:
+        return {
+            "build_id": ALLANIME_FALLBACK_BUILD_ID,
+            "epoch": ALLANIME_FALLBACK_EPOCH,
+            "lanes": dict(ALLANIME_FALLBACK_LANES),
+        }
+
+    async def test_success_returns_validated_keygen(self, mock_session) -> None:
+        mock_session.get.return_value = AsyncContextManagerMock(
+            self._mock_response(text=json.dumps(self._valid_keygen_data()))
+        )
+
+        keygen = await decode._fetch_keygen(mock_session)
+
+        assert keygen == self._valid_keygen_data()
+
+    async def test_non_200_status_returns_none(self, mock_session) -> None:
+        mock_session.get.return_value = AsyncContextManagerMock(self._mock_response(status=500))
+
+        assert await decode._fetch_keygen(mock_session) is None
+
+    async def test_client_error_returns_none(self, mock_session) -> None:
+        mock_session.get.side_effect = aiohttp.ClientError("connection refused")
+
+        assert await decode._fetch_keygen(mock_session) is None
+
+    async def test_timeout_returns_none(self, mock_session) -> None:
+        mock_session.get.side_effect = asyncio.TimeoutError
+
+        assert await decode._fetch_keygen(mock_session) is None
+
+    async def test_json_decode_error_returns_none(self, mock_session) -> None:
+        mock_session.get.return_value = AsyncContextManagerMock(
+            self._mock_response(text="not-json")
+        )
+
+        assert await decode._fetch_keygen(mock_session) is None
+
+    async def test_malformed_keygen_returns_none(self, mock_session) -> None:
+        mock_session.get.return_value = AsyncContextManagerMock(
+            self._mock_response(text=json.dumps({"bad": "data"}))
+        )
+
+        assert await decode._fetch_keygen(mock_session) is None
+
+    async def test_unexpected_exception_propagates(self, mock_session) -> None:
+        mock_session.get.side_effect = RuntimeError("unexpected")
+
+        with pytest.raises(RuntimeError, match="unexpected"):
+            await decode._fetch_keygen(mock_session)
 
 
 class TestGenerateAareq:

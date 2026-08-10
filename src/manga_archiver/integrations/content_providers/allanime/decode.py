@@ -4,7 +4,7 @@ import hashlib
 import json
 import time
 
-from aiohttp import ClientSession, ClientTimeout
+from aiohttp import ClientError, ClientSession, ClientTimeout
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from .constants import (
@@ -64,7 +64,12 @@ def _valid_keygen(data: dict) -> dict | None:
 
 
 async def _fetch_keygen(session: ClientSession) -> dict | None:
-    """Fetch current crypto values from the shared AllAnime keygen endpoint."""
+    """Fetch current crypto values from the shared AllAnime keygen endpoint.
+
+    Expected aiohttp client, timeout, and JSON decoding failures return None so
+    the caller can fall back to cached or hardcoded values. Unexpected
+    exceptions propagate so genuine bugs are not silently swallowed.
+    """
     headers = {"User-Agent": BROWSER_UA}
     timeout = ClientTimeout(total=_KEYGEN_FETCH_TIMEOUT_SECONDS)
     try:
@@ -75,7 +80,7 @@ async def _fetch_keygen(session: ClientSession) -> dict | None:
         if not isinstance(data, dict):
             return None
         return _valid_keygen(data)
-    except Exception:
+    except (ClientError, asyncio.TimeoutError, json.JSONDecodeError):
         return None
 
 
