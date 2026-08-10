@@ -181,8 +181,10 @@ async def decode_tobeparsed(session: ClientSession, encoded: str, lane: str) -> 
     """Decrypt a tobeparsed API payload into response data.
 
     Tries the lane's keygen-derived key and the static key, under GCM and the
-    legacy CTR scheme. If every candidate fails, the keygen cache is refreshed
-    once and decoding retried, in case the server rotated keys mid-TTL.
+    legacy CTR scheme. If every candidate fails, or the lane is missing from
+    the cached keygen, the keygen cache is refreshed once and decoding
+    retried, in case the server rotated keys or lanes mid-TTL. The lane is
+    only rejected after refreshed keygen data still lacks it.
 
     Args:
         session: Shared HTTP session, used if keygen values need refreshing
@@ -211,6 +213,8 @@ async def decode_tobeparsed(session: ClientSession, encoded: str, lane: str) -> 
             invalidate_crypto_cache()
         keygen = await _ensure_keygen(session)
         if lane not in keygen["lanes"]:
+            if not refresh:
+                continue
             raise ValueError(f"Invalid keygen key for lane {lane}: lane not found")
         keys: list[bytes] = [_static_key(RESPONSE_STATIC_KEY_SEED)]
         try:

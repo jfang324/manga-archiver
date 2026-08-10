@@ -64,6 +64,28 @@ class TestDecodeTobeparsed:
         with pytest.raises(ValueError, match="lane k99"):
             await decode.decode_tobeparsed(mock_session, encoded, "k99")
 
+    async def test_stale_keygen_without_lane_recovers_after_refresh(self, mock_session) -> None:
+        decode.invalidate_crypto_cache()
+        stale = {
+            "build_id": ALLANIME_FALLBACK_BUILD_ID,
+            "epoch": ALLANIME_FALLBACK_EPOCH,
+            "lanes": {"k2": ALLANIME_FALLBACK_LANES["k2"]},
+        }
+        refreshed = {
+            "build_id": ALLANIME_FALLBACK_BUILD_ID,
+            "epoch": ALLANIME_FALLBACK_EPOCH,
+            "lanes": dict(ALLANIME_FALLBACK_LANES),
+        }
+        encoded = _encrypt_gcm(_aareq_key(), PAYLOAD)
+
+        with (
+            patch.object(decode, "_ensure_keygen", _real_ensure_keygen),
+            patch.object(decode, "_fetch_keygen", side_effect=[stale, refreshed]),
+        ):
+            result = await decode.decode_tobeparsed(mock_session, encoded, "k9")
+
+        assert result == PAYLOAD
+
     async def test_short_payload_raises_value_error(self, mock_session) -> None:
         encoded = base64.b64encode(b"short").decode()
         with pytest.raises(ValueError, match="too short"):
