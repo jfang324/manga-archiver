@@ -213,7 +213,6 @@ https://github.com/user-attachments/assets/f07d5eb4-91d3-4fa1-b90f-23f9f24bfbed
 ## Acknowledgements
 
 - [MangaDex](https://mangadex.org/) for providing the API used in this project
-- [manga-archiver-keygen](https://github.com/jfang324/manga-archiver-keygen) for the AllManga aaReq crypto keygen values fetched at runtime
 
 ## Known Issues
 
