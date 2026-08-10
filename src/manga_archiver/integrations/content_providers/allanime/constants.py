@@ -8,10 +8,10 @@ BROWSER_UA: str = (
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 )
 
-# GraphQL persisted query hashes (from reverse-engineered API)
-SEARCH_HASH: str = "2d48e19fb67ddcac42fbb885204b6abb0a84f406f15ef83f36de4a66f49f651a"
-MANGA_HASH: str = "d77781dcf964b97aea0be621dbde430e89e200b58526823ee6010dd11c3ca96a"
-CHAPTER_HASH: str = "f60706ebc4ac65d078c41c9f052b8df3aa4526190be83dced92cbdc9412a4b8d"
+# GraphQL persisted query hashes (sha256 of the current site bundle's query documents)
+SEARCH_HASH: str = "ae4b341aba9e0633e7b724f7455d97cdbfddb00e01346862cb9c9d1b0c71ed79"
+MANGA_HASH: str = "7bd734401bb184b8cce8227b4807dfdf3243073afeee92d56684ad6e60a84a1d"
+CHAPTER_HASH: str = "fd67da540aedbe7ac1cf2508c35780750e6a4c0893949f1ca7e014c2746dfca5"
 
 # AllAnime aaReq crypto keygen fallback (refreshed periodically from manga-archiver-keygen)
 ALLANIME_FALLBACK_BUILD_ID: str = "96"
