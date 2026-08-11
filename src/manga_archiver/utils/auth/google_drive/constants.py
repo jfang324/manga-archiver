@@ -5,3 +5,5 @@ TOKEN_URL = "https://oauth2.googleapis.com/token"  # noqa: S105 - OAuth endpoint
 REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 
 DEFAULT_AUTH_TIMEOUT_SECONDS = 300
+REQUEST_TIMEOUT_SECONDS = 30
+BASE_POLLING_INTERVAL = 5

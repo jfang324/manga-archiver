@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from pathlib import Path
 
 import requests
 
@@ -11,11 +12,14 @@ from ....constants.exit_codes import (
 )
 from ....persistence import GoogleDriveTokenStore
 from ....persistence.google_drive_token_store import GoogleApiStoredToken
+from ....persistence.utils import get_root_path
 from .constants import (
+    BASE_POLLING_INTERVAL,
     CREDENTIALS_FILENAME,
     DEFAULT_AUTH_TIMEOUT_SECONDS,
     DEVICE_AUTH_URL,
     DRIVE_SCOPE,
+    REQUEST_TIMEOUT_SECONDS,
     REVOKE_URL,
     TOKEN_URL,
 )
@@ -23,14 +27,14 @@ from .enums import GoogleAuthDeviceFlowResult
 from .types import GoogleAuthCredentials, GoogleAuthDeviceCode
 
 
-def _get_credentials_path() -> str:
+def _get_credentials_path() -> Path:
     """Get the absolute path to the OAuth client credentials file."""
-    config_dir = os.path.expanduser("~/.manga-archiver")
+    config_dir = get_root_path()
 
-    return os.path.join(config_dir, CREDENTIALS_FILENAME)
+    return config_dir / CREDENTIALS_FILENAME
 
 
-def _load_client_credentials(credentials_path: str) -> GoogleAuthCredentials:
+def _load_client_credentials(credentials_path: Path) -> GoogleAuthCredentials:
     """Load OAuth client credentials from JSON file.
 
     Args:
@@ -63,7 +67,7 @@ def _fetch_device_code(client_id: str) -> GoogleAuthDeviceCode:
         DEVICE_AUTH_URL,
         data={"client_id": client_id, "scope": DRIVE_SCOPE},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
-        timeout=30,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
 
@@ -91,7 +95,7 @@ def _poll_for_token(
         requests.Timeout: If a request exceeds 30 seconds
         requests.ConnectionError: If the connection fails
     """
-    interval = 5
+    interval = BASE_POLLING_INTERVAL
     start_time = time.time()
 
     while time.time() - start_time < timeout:
@@ -106,12 +110,20 @@ def _poll_for_token(
                 "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=30,
+            timeout=REQUEST_TIMEOUT_SECONDS,
         )
 
         if token_response.status_code == 200:
             token_data = token_response.json()
-            return token_data.get("refresh_token")
+
+            if not isinstance(token_data, dict):
+                raise KeyError("Refresh token not found in response")
+
+            refresh_token = token_data.get("refresh_token")
+            if not isinstance(refresh_token, str) or not refresh_token:
+                raise KeyError("Refresh token not found in response")
+
+            return refresh_token
 
         if token_response.status_code == 400:
             error_data = token_response.json()
@@ -121,7 +133,7 @@ def _poll_for_token(
                 continue
 
             if error == GoogleAuthDeviceFlowResult.SLOW_DOWN:
-                interval += 5
+                interval += BASE_POLLING_INTERVAL
 
             if error == GoogleAuthDeviceFlowResult.ACCESS_DENIED:
                 return GoogleAuthDeviceFlowResult.ACCESS_DENIED
@@ -177,39 +189,44 @@ async def handle_auth_login() -> int:
         print("==========================================")
         print()
 
-        result = _poll_for_token(
-            client_id,
-            client_secret,
-            code_info["device_code"],
-            DEFAULT_AUTH_TIMEOUT_SECONDS,
-        )
+        try:
+            result = _poll_for_token(
+                client_id,
+                client_secret,
+                code_info["device_code"],
+                DEFAULT_AUTH_TIMEOUT_SECONDS,
+            )
+        except KeyError as e:
+            print(f"Key error during authentication: {e}")
+            return EXIT_AUTH_LOGIN_FAILED
 
         if result == GoogleAuthDeviceFlowResult.ACCESS_DENIED:
             print("Access denied. Please try again.")
             return EXIT_AUTH_LOGIN_FAILED
 
         if result == GoogleAuthDeviceFlowResult.EXPIRED_TOKEN:
-            print("Authentication timed out. Please try again.")
+            print("Auth token expired. Please try again.")
             return EXIT_AUTH_LOGIN_FAILED
 
         if result == GoogleAuthDeviceFlowResult.TIMEOUT:
             print("Authentication timed out. Please try again.")
             return EXIT_AUTH_LOGIN_FAILED
 
-        if result:
-            await token_store.save(
-                GoogleApiStoredToken(
-                    token_uri=TOKEN_URL,
-                    client_id=client_id,
-                    client_secret=client_secret,
-                    refresh_token=str(result),
-                )
-            )
-            print("Authentication successful!")
-            return EXIT_SUCCESS
+        if not isinstance(result, str):
+            print("Authentication failed. Please try again.")
+            return EXIT_AUTH_LOGIN_FAILED
 
-        print("Authentication failed. Please try again.")
-        return EXIT_AUTH_LOGIN_FAILED
+        await token_store.save(
+            GoogleApiStoredToken(
+                token_uri=TOKEN_URL,
+                client_id=client_id,
+                client_secret=client_secret,
+                refresh_token=result,
+            )
+        )
+
+        print("Authentication successful!")
+        return EXIT_SUCCESS
 
     except (requests.Timeout, requests.ConnectionError) as e:
         print(f"Network error during authentication: {e}")
@@ -246,7 +263,7 @@ async def handle_auth_logout() -> int:
             REVOKE_URL,
             params={"token": token["refresh_token"]},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=30,
+            timeout=REQUEST_TIMEOUT_SECONDS,
         )
 
         if response.status_code == 200:
