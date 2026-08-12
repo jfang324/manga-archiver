@@ -119,11 +119,9 @@ class Worker(ABC):
         await self._send_notification(job, self._work_status, work_start)
 
         max_attempts = max(self._config.max_retries + 1, 1)
-        max_retry_attempts = max_attempts - 1
 
         for attempt in range(max_attempts):
-            is_final_attempt = attempt == max_attempts - 1
-
+            # Retry loop: exception handling is the control flow here (intentional)
             try:
                 next_job: Job | None = await self._do_work(job)
 
@@ -137,7 +135,7 @@ class Worker(ABC):
 
                 await self._send_scheduler_feedback(job, was_rate_limited=False)
                 return
-            except (NotFoundError, ValueError) as e:
+            except (NotFoundError, ValueError) as e:  # noqa: PERF203
                 # Non-retryable errors: fail immediately
                 error_type = type(e).__name__
 
@@ -150,55 +148,17 @@ class Worker(ABC):
                 )
                 await self._send_notification(job, JobStatus.FAILED)
                 return
-            except RateLimitError:
-                await self._send_scheduler_feedback(job, was_rate_limited=True)
+            except (
+                RateLimitError,
+                TimeoutError,
+                BadGatewayError,
+                asyncio.TimeoutError,
+                ClientError,
+            ) as e:
+                is_terminal = await self._handle_retryable_error(job, e, attempt)
 
-                # 429: Retry with standard backoff
-                if is_final_attempt:
-                    logger.error(
-                        "Worker %s: Job %s rate limited after %d attempts - failing",
-                        self._id,
-                        job.id,
-                        max_attempts,
-                    )
-                    await self._send_notification(job, JobStatus.FAILED)
+                if is_terminal:
                     return
-
-                delay = self._calculate_backoff(attempt)
-                logger.error(
-                    "Worker %s: Job %s rate limited, retrying in %.1fs (retry %d/%d)",
-                    self._id,
-                    job.id,
-                    delay,
-                    attempt + 1,
-                    max_retry_attempts,
-                )
-                await asyncio.sleep(delay)
-            except (TimeoutError, BadGatewayError, asyncio.TimeoutError, ClientError) as e:
-                # Transient network errors: retry normally
-                if is_final_attempt:
-                    logger.error(
-                        "Worker %s: Job %s network failed after %d attempts",
-                        self._id,
-                        job.id,
-                        max_attempts,
-                    )
-                    await self._send_notification(job, JobStatus.FAILED)
-                    return
-
-                delay = self._calculate_backoff(attempt)
-                error_type = type(e).__name__
-
-                logger.error(
-                    "Worker %s: Job %s network error: %s, retrying in %.1fs (retry %d/%d)",
-                    self._id,
-                    job.id,
-                    error_type,
-                    delay,
-                    attempt + 1,
-                    max_retry_attempts,
-                )
-                await asyncio.sleep(delay)
             except Exception as e:
                 # Unknown errors: fail immediately (don't retry bugs)
                 logger.error(
@@ -210,6 +170,52 @@ class Worker(ABC):
                 )
                 await self._send_notification(job, JobStatus.FAILED)
                 return
+
+    async def _handle_retryable_error(
+        self,
+        job: Job,
+        error: Exception,
+        attempt: int,
+    ) -> bool:
+        """Apply the retry policy for a retryable error.
+
+        Args:
+            job: The job being processed
+            error: The retryable error raised
+            attempt: The zero-based attempt index
+
+        Returns:
+            True if the job failed terminally (caller must return)
+        """
+        if isinstance(error, RateLimitError):
+            await self._send_scheduler_feedback(job, was_rate_limited=True)
+
+        max_attempts = max(self._config.max_retries + 1, 1)
+        error_label = type(error).__name__
+
+        if attempt == max_attempts - 1:
+            logger.error(
+                "Worker %s: Job %s failed after %d attempts (%s)",
+                self._id,
+                job.id,
+                max_attempts,
+                error_label,
+            )
+            await self._send_notification(job, JobStatus.FAILED)
+            return True
+
+        delay = self._calculate_backoff(attempt)
+        logger.error(
+            "Worker %s: Job %s encountered error (%s), retrying in %.1fs (retry %d/%d)",
+            self._id,
+            job.id,
+            error_label,
+            delay,
+            attempt + 1,
+            max_attempts - 1,
+        )
+        await asyncio.sleep(delay)
+        return False
 
     async def _send_scheduler_feedback(self, job: Job, was_rate_limited: bool) -> None:
         if self._scheduler_feedback_queue is None:
