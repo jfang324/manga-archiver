@@ -137,12 +137,16 @@ class Worker(ABC):
 
                 await self._send_scheduler_feedback(job, was_rate_limited=False)
                 return
-            except NotFoundError:
-                # 404: Fail fast, don't retry
+            except (NotFoundError, ValueError) as e:
+                # Non-retryable errors: fail immediately
+                error_type = type(e).__name__
+
                 logger.error(
-                    "Worker %s: Job %s failed with 404 NotFound - failing immediately",
+                    "Worker %s: Job %s failed with %s: %s - failing immediately",
                     self._id,
                     job.id,
+                    error_type,
+                    e,
                 )
                 await self._send_notification(job, JobStatus.FAILED)
                 return
@@ -183,26 +187,18 @@ class Worker(ABC):
                     return
 
                 delay = self._calculate_backoff(attempt)
+                error_type = type(e).__name__
+
                 logger.error(
                     "Worker %s: Job %s network error: %s, retrying in %.1fs (retry %d/%d)",
                     self._id,
                     job.id,
-                    type(e).__name__,
+                    error_type,
                     delay,
                     attempt + 1,
                     max_retry_attempts,
                 )
                 await asyncio.sleep(delay)
-            except ValueError as e:
-                # Data validation errors: don't retry
-                logger.error(
-                    "Worker %s: Job %s validation error: %s - failing immediately",
-                    self._id,
-                    job.id,
-                    e,
-                )
-                await self._send_notification(job, JobStatus.FAILED)
-                return
             except Exception as e:
                 # Unknown errors: fail immediately (don't retry bugs)
                 logger.error(
