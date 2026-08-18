@@ -1,9 +1,8 @@
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.manga_archiver.integrations.content_providers.allanime import decode
 from src.manga_archiver.integrations.content_providers.allanime.client import AllMangaClient
 from src.manga_archiver.integrations.content_providers.allanime.constants import (
     ALLANIME_FALLBACK_BUILD_ID,
@@ -11,7 +10,9 @@ from src.manga_archiver.integrations.content_providers.allanime.constants import
     CDN_BASE_URL,
     CHAPTER_HASH,
     CHAPTER_PAGES_LANE,
+    PERSISTED_QUERY_NOT_FOUND,
 )
+from src.manga_archiver.integrations.content_providers.allanime.keygen import AllAnimeKeygen
 from src.manga_archiver.integrations.exceptions import (
     ApiError,
     BadGatewayError,
@@ -37,9 +38,6 @@ from tests.unit.integrations.content_providers.allanime.mock_allanime_api_data i
     mock_search_response_missing_ids,
     mock_search_response_no_english_name,
 )
-
-# Captured at import time, before the autouse stub_crypto fixture patches it
-_real_ensure_keygen = decode._ensure_keygen
 
 
 class TestAllMangaClientRequest:
@@ -331,11 +329,36 @@ class TestAllMangaClientGetDownloadResource:
         client = AllMangaClient(mock_session)
         result = await client.get_download_resource("manga:1")
 
-        mock_decode.assert_called_once_with(
-            mock_session, "encrypted_data_string", CHAPTER_PAGES_LANE
-        )
+        mock_decode.assert_called_once_with("encrypted_data_string", CHAPTER_PAGES_LANE, ANY)
         assert len(result.urls) == 1
         assert result.urls[0] == f"{CDN_BASE_URL}decoded.jpg"
+
+    async def test_keygen_failure_raises_api_error(self, mock_session) -> None:
+        client = AllMangaClient(mock_session)
+        with patch.object(
+            client._keygen, "build_aa_req", side_effect=ValueError("Invalid keygen key for lane k9")
+        ):
+            with pytest.raises(ApiError, match="Failed to generate aaReq token"):
+                await client.get_download_resource("manga:1")
+
+    @patch(
+        "src.manga_archiver.integrations.content_providers.allanime.client.decode_tobeparsed",
+        side_effect=ValueError("encrypted with unknown key"),
+    )
+    @pytest.mark.parametrize(
+        "mock_api_response",
+        [(200, {"data": {"tobeparsed": "encrypted_data_string"}})],
+        indirect=["mock_api_response"],
+    )
+    async def test_decode_failure_invalidates_cache_and_raises_api_error(
+        self, _mock_decode: MagicMock, mock_session, mock_api_response
+    ) -> None:
+        mock_session.get.return_value = AsyncContextManagerMock(mock_api_response)
+        client = AllMangaClient(mock_session)
+
+        with pytest.raises(ApiError, match="encrypted with unknown key"):
+            await client.get_download_resource("manga:1")
+        assert client._keygen._cache is None
 
 
 def _json_response(payload: dict) -> MagicMock:
@@ -346,44 +369,24 @@ def _json_response(payload: dict) -> MagicMock:
 
 
 class TestAllMangaClientStaleCrypto:
-    async def test_stale_crypto_retries_then_succeeds(self, mock_session) -> None:
+    async def test_stale_crypto_invalidates_and_raises_rate_limit(self, mock_session) -> None:
         stale = _json_response({"errors": [{"message": "AA_CRYPTO_STALE"}]})
-        ok = _json_response(mock_chapter_pages_response)
-        mock_session.get.side_effect = [
-            AsyncContextManagerMock(stale),
-            AsyncContextManagerMock(ok),
-        ]
-        client = AllMangaClient(mock_session)
-
-        result = await client.get_download_resource("manga:1")
-
-        assert result == mock_processed_download_resource
-        assert mock_session.get.call_count == 2
-
-    async def test_stale_crypto_after_refresh_raises_rate_limit(self, mock_session) -> None:
-        stale_payload = {"errors": [{"message": "AA_CRYPTO_STALE"}]}
-        mock_session.get.side_effect = [
-            AsyncContextManagerMock(_json_response(stale_payload)),
-            AsyncContextManagerMock(_json_response(stale_payload)),
-        ]
+        mock_session.get.return_value = AsyncContextManagerMock(stale)
         client = AllMangaClient(mock_session)
 
         with pytest.raises(RateLimitError):
             await client.get_download_resource("manga:1")
-        assert mock_session.get.call_count == 2
+        assert mock_session.get.call_count == 1
         # The known-stale values must not remain cached for the rest of the TTL
-        assert decode._keygen_cache is None
+        assert client._keygen._cache is None
 
     async def test_stale_crypto_failure_triggers_refresh_on_next_call(self, mock_session) -> None:
-        stale_payload = {"errors": [{"message": "AA_CRYPTO_STALE"}]}
-        mock_session.get.side_effect = [
-            AsyncContextManagerMock(_json_response(stale_payload)),
-            AsyncContextManagerMock(_json_response(stale_payload)),
-        ]
+        stale = _json_response({"errors": [{"message": "AA_CRYPTO_STALE"}]})
+        mock_session.get.return_value = AsyncContextManagerMock(stale)
         client = AllMangaClient(mock_session)
         with pytest.raises(RateLimitError):
             await client.get_download_resource("manga:1")
-        assert decode._keygen_cache is None
+        assert client._keygen._cache is None
 
         # With the cache emptied by the stale failure, the next token build
         # must re-fetch keygen instead of serving cached values.
@@ -392,8 +395,12 @@ class TestAllMangaClientStaleCrypto:
             "epoch": 2953,
             "lanes": dict(ALLANIME_FALLBACK_LANES),
         }
-        with patch.object(decode, "_fetch_keygen", return_value=fetched) as mock_fetch:
-            await _real_ensure_keygen(mock_session)
+        with patch.object(
+            client._keygen,
+            "_fetch",
+            new=AsyncMock(return_value=AllAnimeKeygen.from_dict(fetched)),
+        ) as mock_fetch:
+            await client._keygen.get()
             mock_fetch.assert_awaited_once()
 
     async def test_non_dict_error_entries_raise_api_error(self, mock_session) -> None:
@@ -404,6 +411,29 @@ class TestAllMangaClientStaleCrypto:
         with pytest.raises(ApiError):
             await client.get_download_resource("manga:1")
         assert mock_session.get.call_count == 1
+
+
+class TestAllMangaClientQueryNotFound:
+    def _not_found(self) -> MagicMock:
+        return _json_response({"errors": [{"message": PERSISTED_QUERY_NOT_FOUND}]})
+
+    async def test_download_invalidates_and_raises_on_not_found(self, mock_session) -> None:
+        mock_session.get.return_value = AsyncContextManagerMock(self._not_found())
+        client = AllMangaClient(mock_session)
+
+        with pytest.raises(RateLimitError):
+            await client.get_download_resource("manga:1")
+        assert mock_session.get.call_count == 1
+        assert client._keygen._cache is None
+
+    async def test_search_invalidates_and_raises_on_not_found(self, mock_session) -> None:
+        mock_session.get.return_value = AsyncContextManagerMock(self._not_found())
+        client = AllMangaClient(mock_session)
+
+        with pytest.raises(RateLimitError):
+            await client.search_manga("jujutsu", 1, 20)
+        assert mock_session.get.call_count == 1
+        assert client._keygen._cache is None
 
 
 class TestAllMangaClientErrorPropagation:

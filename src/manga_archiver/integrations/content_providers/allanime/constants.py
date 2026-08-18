@@ -1,5 +1,6 @@
+from enum import Enum
+
 ALLANIME_API_URL: str = "https://api.mkissa.net/api"
-CHAPTER_API_URL: str = "https://api.mkissa.net/api"
 KEYGEN_URL: str = (
     "https://raw.githubusercontent.com/jfang324/manga-archiver-keygen/main/keygen.json"
 )
@@ -8,10 +9,27 @@ BROWSER_UA: str = (
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 )
 
-# GraphQL persisted query hashes (sha256 of the current site bundle's query documents)
-SEARCH_HASH: str = "ae4b341aba9e0633e7b724f7455d97cdbfddb00e01346862cb9c9d1b0c71ed79"
-MANGA_HASH: str = "7bd734401bb184b8cce8227b4807dfdf3243073afeee92d56684ad6e60a84a1d"
-CHAPTER_HASH: str = "fd67da540aedbe7ac1cf2508c35780750e6a4c0893949f1ca7e014c2746dfca5"
+# GraphQL persisted query hashes (sha256 of the site bundle's query documents).
+# Live values come from keygen.json query_hashes; these are the offline fallback.
+SEARCH_HASH: str = "6aa0ec525141123d2a64012a5ace12ba1cdef2f47d12abfec62158f3a7c73f5f"
+MANGA_HASH: str = "97db525f763de75fd165a3dfd4bf6570adaa914a327ebd3cda0bd703e92de758"
+CHAPTER_HASH: str = "9c06f42995949a3b6e15e843d7832668f4460416ba94881a2cdb9a906266ad40"
+
+
+class PersistedQueryName(Enum):
+    """Persisted GraphQL queries the AllManga API serves by registered hash."""
+
+    SEARCH = "search"
+    MANGA = "manga"
+    CHAPTER = "chapter"
+
+
+PERSISTED_QUERY_HASH_FALLBACKS: dict[PersistedQueryName, str] = {
+    PersistedQueryName.SEARCH: SEARCH_HASH,
+    PersistedQueryName.MANGA: MANGA_HASH,
+    PersistedQueryName.CHAPTER: CHAPTER_HASH,
+}
+
 
 # AllAnime aaReq crypto keygen fallback (refreshed periodically from manga-archiver-keygen)
 ALLANIME_FALLBACK_BUILD_ID: str = "96"
@@ -32,6 +50,9 @@ CHAPTER_PAGES_LANE: str = "k9"
 
 # Error message the API returns when the aaReq token was built with rotated-out crypto values
 STALE_CRYPTO_MESSAGE: str = "AA_CRYPTO_STALE"
+
+# Error message the API returns when a persisted query hash is not registered
+PERSISTED_QUERY_NOT_FOUND: str = "PersistedQueryNotFound"
 
 # CDN base URL for image downloads
 CDN_BASE_URL: str = "https://ytimgf.youtube-anime.com/"
