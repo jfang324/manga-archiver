@@ -1,5 +1,5 @@
 import json
-from unittest.mock import ANY, AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -10,6 +10,7 @@ from src.manga_archiver.integrations.content_providers.allanime.constants import
     CDN_BASE_URL,
     CHAPTER_HASH,
     CHAPTER_PAGES_LANE,
+    PERSISTED_QUERY_HASH_FALLBACKS,
     PERSISTED_QUERY_NOT_FOUND,
 )
 from src.manga_archiver.integrations.content_providers.allanime.keygen import AllAnimeKeygen
@@ -21,6 +22,7 @@ from src.manga_archiver.integrations.exceptions import (
 )
 from src.manga_archiver.models import ContentSource
 from tests.conftest import AsyncContextManagerMock
+from tests.unit.integrations.content_providers.allanime.conftest import fallback_keygen
 from tests.unit.integrations.content_providers.allanime.mock_allanime_api_data import (
     mock_chapter_pages_missing_urls,
     mock_chapter_pages_response,
@@ -329,7 +331,11 @@ class TestAllMangaClientGetDownloadResource:
         client = AllMangaClient(mock_session)
         result = await client.get_download_resource("manga:1")
 
-        mock_decode.assert_called_once_with("encrypted_data_string", CHAPTER_PAGES_LANE, ANY)
+        mock_decode.assert_called_once_with(
+            "encrypted_data_string",
+            CHAPTER_PAGES_LANE,
+            fallback_keygen(query_hashes=dict(PERSISTED_QUERY_HASH_FALLBACKS)),
+        )
         assert len(result.urls) == 1
         assert result.urls[0] == f"{CDN_BASE_URL}decoded.jpg"
 
