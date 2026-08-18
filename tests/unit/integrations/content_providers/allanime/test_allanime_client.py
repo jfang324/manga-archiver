@@ -412,6 +412,20 @@ class TestAllMangaClientStaleCrypto:
             await client.get_download_resource("manga:1")
         assert mock_session.get.call_count == 1
 
+    async def test_rotation_marker_in_later_error_invalidates_and_raises(
+        self, mock_session
+    ) -> None:
+        response = _json_response(
+            {"errors": [{"message": "Something else"}, {"message": "AA_CRYPTO_STALE"}]}
+        )
+        mock_session.get.return_value = AsyncContextManagerMock(response)
+        client = AllMangaClient(mock_session)
+
+        with pytest.raises(RateLimitError):
+            await client.get_download_resource("manga:1")
+        assert mock_session.get.call_count == 1
+        assert client._keygen._cache is None
+
 
 class TestAllMangaClientQueryNotFound:
     def _not_found(self) -> MagicMock:
