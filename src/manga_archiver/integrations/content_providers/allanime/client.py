@@ -111,16 +111,21 @@ class AllMangaClient(Provider):
             ApiError: Any other error shape or a missing data payload
         """
         errors = response.get("errors")
-        if isinstance(errors, list) and errors and isinstance(errors[0], dict):
-            message = errors[0].get("message")
-            if isinstance(message, str):
+        if isinstance(errors, list):
+            messages = [
+                entry["message"]
+                for entry in errors
+                if isinstance(entry, dict) and isinstance(entry.get("message"), str)
+            ]
+            for message in messages:
                 if message in (STALE_CRYPTO_MESSAGE, PERSISTED_QUERY_NOT_FOUND):
                     # The API may have rotated crypto values or registered
                     # persisted query hashes, so drop the cache and surface a
                     # rate-limit style error for the caller to retry later.
                     self._keygen.invalidate()
                     raise RateLimitError(f"API reports rotated keygen values: {errors}")
-                raise ApiError(f"API error: {message}")
+            if messages:
+                raise ApiError(f"API error: {messages[0]}")
 
         data = response.get("data")
         if not isinstance(data, dict):
