@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from aiohttp import ClientError, ClientSession, ClientTimeout
@@ -44,7 +45,7 @@ class AllAnimeKeygen:
     query_hashes: dict[PersistedQueryName, str]
 
     @staticmethod
-    def from_dict(data: dict) -> AllAnimeKeygen | None:
+    def from_dict(data: Mapping[str, object]) -> AllAnimeKeygen | None:
         """Validate raw keygen JSON into an AllAnimeKeygen, or None when malformed.
 
         Crypto fields must be well-formed (non-empty build id, integer epoch,
@@ -62,10 +63,13 @@ class AllAnimeKeygen:
         """
         try:
             build_id = data["build_id"]
-            epoch = int(data["epoch"])
+            epoch = data["epoch"]
             lanes = data["lanes"]
             if not isinstance(build_id, str) or not build_id:
                 return None
+            if not isinstance(epoch, (int, float, str)):
+                return None
+            epoch = int(epoch)
             if not isinstance(lanes, dict) or not lanes:
                 return None
             for lane, key in lanes.items():
