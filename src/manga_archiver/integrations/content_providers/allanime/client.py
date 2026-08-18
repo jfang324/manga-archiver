@@ -9,28 +9,36 @@ from ..constants import API_HEADERS, DEFAULT_REQUEST_TIMEOUT, MKISSA_HEADERS
 from .constants import (
     ALLANIME_API_URL,
     CDN_BASE_URL,
-    CHAPTER_API_URL,
-    CHAPTER_HASH,
     CHAPTER_PAGES_LANE,
     CHAPTER_PAGES_QUERY,
     MANGA_DETAILS_QUERY,
-    MANGA_HASH,
-    SEARCH_HASH,
+    PERSISTED_QUERY_NOT_FOUND,
     SEARCH_QUERY,
     STALE_CRYPTO_MESSAGE,
+    PersistedQueryName,
 )
-from .decode import decode_tobeparsed, generate_aareq, invalidate_crypto_cache
+from .decode import decode_tobeparsed
+from .keygen import KeygenService
 from .types import AllMangaChapterResponse, AllMangaSearchResponse, DownloadResourceResponse
 
 
-def _first_error_message(response: dict) -> str | None:
-    """Return the first GraphQL error message, tolerating malformed error shapes."""
-    errors = response.get("errors")
-    if isinstance(errors, list) and errors and isinstance(errors[0], dict):
-        message = errors[0].get("message")
-        if isinstance(message, str):
-            return message
-    return None
+def _build_query_params(variables: str, query_hash: str, aa_req: str) -> dict:
+    """Build the URL params for a persisted GraphQL query with an aaReq token."""
+    return {
+        "variables": variables,
+        "extensions": json.dumps(
+            {
+                "persistedQuery": {"version": 1, "sha256Hash": query_hash},
+                "aaReq": aa_req,
+                "k": CHAPTER_PAGES_LANE,
+            }
+        ),
+    }
+
+
+def _build_request_headers(build_id: str, headers: dict | None) -> dict:
+    """Merge provider headers with the build id the aaReq token was minted with."""
+    return {**(headers or API_HEADERS.get(ContentSource.ALLMANGA, {})), "x-build-id": build_id}
 
 
 class AllMangaClient(Provider):
@@ -44,6 +52,7 @@ class AllMangaClient(Provider):
         """
         super().__init__(session)
         self._source = ContentSource.ALLMANGA
+        self._keygen = KeygenService(session)
 
     async def _request(
         self, url: str, params: dict | None = None, headers: dict | None = None
@@ -83,97 +92,60 @@ class AllMangaClient(Provider):
 
             return await response.json()
 
-    async def _aa_req_request(
-        self,
-        query_hash: str,
-        variables: str,
-        api_url: str = ALLANIME_API_URL,
-        headers: dict | None = None,
-    ) -> dict:
-        """Execute a persisted GraphQL query with an aaReq token.
+    def _validate_response(self, response: dict) -> dict:
+        """Validate an API response and return it for parsing.
 
-        If the API reports stale crypto, the cached crypto values are
-        refreshed and the request retried once.
+        Centralizes the API error envelope so parsers can rely on a
+        well-formed response: stale crypto or unregistered persisted queries
+        drop the keygen cache and surface as a RateLimitError, other GraphQL
+        errors surface as an ApiError, and a missing data payload is rejected.
 
         Args:
-            query_hash: Persisted query sha256 hash
-            variables: JSON-encoded query variables
-            api_url: API endpoint URL (defaults to ALLANIME_API_URL)
-            headers: Custom request headers
+            response: Raw API response
 
         Returns:
-            dict: JSON response as a dictionary
+            dict: The validated response
 
         Raises:
-            RateLimitError: If the API still reports stale crypto after refresh
-            ApiError: If the aaReq token cannot be generated
+            RateLimitError: API reported stale crypto or query not found
+            ApiError: Any other error shape or a missing data payload
         """
-        resp = await self._send_aa_req(query_hash, variables, api_url, headers)
-        if _first_error_message(resp) == STALE_CRYPTO_MESSAGE:
-            invalidate_crypto_cache()
-            resp = await self._send_aa_req(query_hash, variables, api_url, headers)
-            if _first_error_message(resp) == STALE_CRYPTO_MESSAGE:
-                # Drop the refreshed values too so the next request re-fetches
-                # keygen from scratch instead of reusing values the server
-                # already declared stale for the rest of the TTL window.
-                invalidate_crypto_cache()
-                # Same treatment as the API's other soft rate limiting: back off and retry later
-                raise RateLimitError(
-                    f"API reports stale crypto after refresh: {resp.get('errors')}"
-                )
-        return resp
+        errors = response.get("errors")
+        if isinstance(errors, list) and errors and isinstance(errors[0], dict):
+            message = errors[0].get("message")
+            if isinstance(message, str):
+                if message in (STALE_CRYPTO_MESSAGE, PERSISTED_QUERY_NOT_FOUND):
+                    # The API may have rotated crypto values or registered
+                    # persisted query hashes, so drop the cache and surface a
+                    # rate-limit style error for the caller to retry later.
+                    self._keygen.invalidate()
+                    raise RateLimitError(f"API reports rotated keygen values: {errors}")
+                raise ApiError(f"API error: {message}")
 
-    async def _send_aa_req(
-        self,
-        query_hash: str,
-        variables: str,
-        api_url: str = ALLANIME_API_URL,
-        headers: dict | None = None,
-    ) -> dict:
-        try:
-            aa_req, build_id = await generate_aareq(self._session, query_hash, CHAPTER_PAGES_LANE)
-        except ValueError as e:
-            raise ApiError(f"Failed to generate aaReq token: {e}") from e
+        data = response.get("data")
+        if not isinstance(data, dict):
+            raise ApiError("Invalid response: data is not a dict")
 
-        extensions = json.dumps(
-            {
-                "persistedQuery": {"version": 1, "sha256Hash": query_hash},
-                "aaReq": aa_req,
-                "k": CHAPTER_PAGES_LANE,
-            }
-        )
-        request_headers = {
-            **(headers or API_HEADERS.get(ContentSource.ALLMANGA, {})),
-            "x-build-id": build_id,
-        }
-        params = {"variables": variables, "extensions": extensions}
-        return await self._request(api_url, params=params, headers=request_headers)
+        return response
 
-    async def _persisted_request(
-        self,
-        query_hash: str,
-        variables: str,
-        api_url: str = ALLANIME_API_URL,
-        headers: dict | None = None,
-    ) -> dict:
-        """Execute a plain persisted GraphQL query without crypto headers.
-
-        Search and manga-detail queries are not lane-gated by the API, so they
-        need no aaReq token, k extension, or x-build-id header.
+    async def _generate_aa_req(self, query: PersistedQueryName) -> tuple[str, str, str]:
+        """Build the aaReq token, build id, and query hash for a persisted query.
 
         Args:
-            query_hash: Persisted query sha256 hash
-            variables: JSON-encoded query variables
-            api_url: API endpoint URL (defaults to ALLANIME_API_URL)
-            headers: Custom request headers
+            query: Persisted query to build the token for
 
         Returns:
-            dict: JSON response as a dictionary
+            tuple[str, str, str]: (query_hash, aaReq token, build_id)
+
+        Raises:
+            ApiError: If the current keygen values cannot produce a valid token
         """
-        extensions = json.dumps({"persistedQuery": {"version": 1, "sha256Hash": query_hash}})
-        request_headers = headers or API_HEADERS.get(ContentSource.ALLMANGA, {})
-        params = {"variables": variables, "extensions": extensions}
-        return await self._request(api_url, params=params, headers=request_headers)
+        try:
+            query_hash = await self._keygen.query_hash(query)
+            aa_req, build_id = await self._keygen.build_aa_req(query_hash, CHAPTER_PAGES_LANE)
+            return query_hash, aa_req, build_id
+        except ValueError as e:
+            raise ApiError(f"Failed to generate aaReq token: {e}") from e
 
     async def search_manga(self, query: str, page: int, page_size: int) -> list[Manga]:
         """Search for manga matching query with pagination.
@@ -189,6 +161,7 @@ class AllMangaClient(Provider):
         Raises:
             NotFoundError: If the resource is not found (404)
             RateLimitError: If rate limited (429)
+            BadGatewayError: If the API is temporarily unavailable (502)
             ApiError: If the API returns any other error
         """
         variables = SEARCH_QUERY.format(
@@ -196,16 +169,20 @@ class AllMangaClient(Provider):
             limit=page_size,
             page=page,
         )
+        query_hash, aa_req, build_id = await self._generate_aa_req(PersistedQueryName.SEARCH)
+        response = await self._request(
+            ALLANIME_API_URL,
+            params=_build_query_params(variables, query_hash, aa_req),
+            headers=_build_request_headers(build_id, None),
+        )
 
-        response = await self._persisted_request(SEARCH_HASH, variables)
-
-        return self._parse_search_response(response)
+        return self._parse_search_response(self._validate_response(response))
 
     def _parse_search_response(self, response: dict) -> list[Manga]:
         """Parse search response into Manga objects.
 
         Args:
-            response: Raw API response data
+            response: Validated API response data
 
         Returns:
             list[Manga]: List of processed manga objects
@@ -239,16 +216,20 @@ class AllMangaClient(Provider):
             ApiError: If the API returns any other error
         """
         variables = MANGA_DETAILS_QUERY.format(manga_id=manga_id)
+        query_hash, aa_req, build_id = await self._generate_aa_req(PersistedQueryName.MANGA)
+        response = await self._request(
+            ALLANIME_API_URL,
+            params=_build_query_params(variables, query_hash, aa_req),
+            headers=_build_request_headers(build_id, None),
+        )
 
-        response = await self._persisted_request(MANGA_HASH, variables)
-
-        return self._parse_chapter_data(response, manga_id)
+        return self._parse_chapter_data(self._validate_response(response), manga_id)
 
     def _parse_chapter_data(self, response: dict, manga_id: str) -> list[Chapter]:
         """Parse manga details response into Chapter objects.
 
         Args:
-            response: Raw API response data
+            response: Validated API response data
             manga_id: AllManga manga ID
 
         Returns:
@@ -302,17 +283,20 @@ class AllMangaClient(Provider):
             manga_id=manga_id,
             chapter_string=chapter_str,
         )
-
-        response = await self._aa_req_request(
-            CHAPTER_HASH, variables, CHAPTER_API_URL, MKISSA_HEADERS
+        query_hash, aa_req, build_id = await self._generate_aa_req(PersistedQueryName.CHAPTER)
+        response = await self._request(
+            ALLANIME_API_URL,
+            params=_build_query_params(variables, query_hash, aa_req),
+            headers=_build_request_headers(build_id, MKISSA_HEADERS),
         )
-        return await self._parse_download_resource(response, chapter_id)
+
+        return await self._parse_download_resource(self._validate_response(response), chapter_id)
 
     async def _parse_download_resource(self, response: dict, chapter_id: str) -> DownloadResource:
         """Parse chapter pages response into DownloadResource.
 
         Args:
-            response: Raw API response data
+            response: Validated API response data
             chapter_id: The chapter ID being fetched
 
         Returns:
@@ -321,25 +305,22 @@ class AllMangaClient(Provider):
         Raises:
             ApiError: If response data is invalid or no URLs found
         """
-        # AllManga suspected to have non-standard rate limiting; instead of 429, they return malformed response
-        if _first_error_message(response) == "PersistedQueryNotFound":
-            raise RateLimitError(f"API returned malformed response: {response.get('errors')}")
-
-        response_data = response.get("data")
-
+        response_data = response["data"]
         if not isinstance(response_data, dict):
-            raise ApiError("Invalid response: not a dict")
+            raise ApiError("Invalid response: data is not a dict")
 
         if "tobeparsed" in response_data:
+            keygen = await self._keygen.get()
             try:
-                response_data = await decode_tobeparsed(
-                    self._session, response_data["tobeparsed"], CHAPTER_PAGES_LANE
+                response_data = decode_tobeparsed(
+                    response_data["tobeparsed"], CHAPTER_PAGES_LANE, keygen
                 )
             except ValueError as e:
+                # Response-encryption keys may have rotated mid-TTL; drop the
+                # cache so the next request re-fetches keygen instead of
+                # retrying the stale values for the rest of the TTL.
+                self._keygen.invalidate()
                 raise ApiError(str(e)) from e
-
-        if not isinstance(response_data, dict):
-            raise ApiError("Invalid response: response_data is not a dict")
 
         try:
             download_response = DownloadResourceResponse.from_dict(response_data)
