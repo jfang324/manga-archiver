@@ -12,7 +12,12 @@ from .integrations.content_providers.mangadex.client import MangaDexApiClient
 from .integrations.exceptions import BadGatewayError, RateLimitError
 from .models import Chapter, ContentSource, DownloadResource, Manga
 
-HEALTH_CHECK_QUERY = "One Piece"
+HEALTH_CHECK_QUERIES: tuple[str, ...] = (
+    "One Piece",
+    "Naruto",
+    "Solo Leveling",
+    "Bleach",
+)
 HEALTH_CHECK_PAGE = 1
 HEALTH_CHECK_PAGE_SIZE = 5
 HEALTH_CHECK_DOWNLOAD_CANDIDATES = 3
@@ -84,12 +89,39 @@ class ProviderHealthChecker:
     async def check_provider(
         self, source: ContentSource, provider: Provider
     ) -> ProviderHealthCheckResult:
-        """Check search, chapter lookup, and download resource retrieval."""
+        """Check search, chapter lookup, and download resource retrieval.
+
+        Tries each candidate query in HEALTH_CHECK_QUERIES in order, returning
+        the first one whose chain reaches download-resource success. When every
+        query fails, returns the last attempt's result so callers see the most
+        recent error rather than an aggregate.
+        """
+        last_result: ProviderHealthCheckResult | None = None
+        for query in HEALTH_CHECK_QUERIES:
+            result = await self._check_provider_with_query(source, provider, query)
+            if result.download_resource.status == HealthStepStatus.OK:
+                return result
+            last_result = result
+        if last_result is None:
+            return ProviderHealthCheckResult(
+                source=source,
+                search=self._skipped_step("search", "no health check queries configured"),
+                chapters=self._skipped_step("chapters", "no health check queries configured"),
+                download_resource=self._skipped_step(
+                    "download_resource", "no health check queries configured"
+                ),
+            )
+        return last_result
+
+    async def _check_provider_with_query(
+        self, source: ContentSource, provider: Provider, query: str
+    ) -> ProviderHealthCheckResult:
+        """Run search → chapters → download for a single health-check query."""
         skipped_download_resource = self._skipped_step(
             "download_resource", "chapters did not produce a usable chapter"
         )
 
-        search_step, manga_results = await self._check_search(provider)
+        search_step, manga_results = await self._check_search(provider, query)
         if not manga_results:
             return ProviderHealthCheckResult(
                 source=source,
@@ -115,11 +147,13 @@ class ProviderHealthChecker:
             download_resource=download_resource_step,
         )
 
-    async def _check_search(self, provider: Provider) -> tuple[HealthStepResult, list[Manga]]:
+    async def _check_search(
+        self, provider: Provider, query: str
+    ) -> tuple[HealthStepResult, list[Manga]]:
         start_ns = time.perf_counter_ns()
         try:
             manga_results = await provider.search_manga(
-                HEALTH_CHECK_QUERY,
+                query,
                 HEALTH_CHECK_PAGE,
                 HEALTH_CHECK_PAGE_SIZE,
             )
@@ -132,13 +166,13 @@ class ProviderHealthChecker:
                 self._ok_step(
                     "search",
                     start_ns,
-                    f"no usable manga found for query '{HEALTH_CHECK_QUERY}'",
+                    f"no usable manga found for query '{query}'",
                 ),
                 [],
             )
 
         return self._ok_step(
-            "search", start_ns, f"found {len(usable_manga)} usable results"
+            "search", start_ns, f"found {len(usable_manga)} usable results for query '{query}'"
         ), usable_manga
 
     async def _check_chapters(
