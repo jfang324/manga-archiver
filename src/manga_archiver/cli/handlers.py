@@ -29,33 +29,33 @@ class SubcommandResult:
 async def handle_workflow_subcommands(
     args: Namespace,
     webhook_config_store: WebhookConfigStore,
-) -> int | None:
+) -> SubcommandResult:
     """Handle CLI subcommands that run separate workflows and exit.
 
     Returns:
-        int | None: An exit code if the command was handled, None if not
+        SubcommandResult: The command handling status and exit code.
     """
     result = _handle_list(args)
     if result.handled:
-        return result.exit_code
+        return result
 
     result = await _handle_auth(args)
     if result.handled:
-        return result.exit_code
+        return result
 
     result = await _handle_health(args)
     if result.handled:
-        return result.exit_code
+        return result
 
     result = await _handle_config(args, webhook_config_store)
     if result.handled:
-        return result.exit_code
+        return result
 
     result = await _handle_migrations(args)
     if result.handled:
-        return result.exit_code
+        return result
 
-    return None
+    return SubcommandResult()
 
 
 def _handle_list(args: Namespace) -> SubcommandResult:

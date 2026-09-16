@@ -101,10 +101,11 @@ class TestPresets:
     async def test_handle_list_presets_prints_presets_and_exits_successfully(self, capsys) -> None:
         args = _make_args(command="list", list_target="presets")
 
-        exit_code = await handle_workflow_subcommands(args, MagicMock())
+        result = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
-        assert exit_code == EXIT_SUCCESS
+        assert result.handled
+        assert result.exit_code == EXIT_SUCCESS
         assert "Available presets:" in captured.out
         assert "default" in captured.out
         assert "safe" in captured.out
@@ -132,7 +133,7 @@ class TestPresets:
         )
         webhook_config_store.save_config = AsyncMock()
 
-        exit_code = await handle_workflow_subcommands(args, webhook_config_store)
+        result = await handle_workflow_subcommands(args, webhook_config_store)
 
         captured = capsys.readouterr()
         mock_input.assert_called_once_with("Enable Discord webhook notifications? [y/n]: ")
@@ -144,7 +145,8 @@ class TestPresets:
                 "webhook_url": existing_url,
             },
         )
-        assert exit_code == EXIT_SUCCESS
+        assert result.handled
+        assert result.exit_code == EXIT_SUCCESS
         assert "Discord webhook config saved." in captured.out
         assert captured.err == ""
 
@@ -185,11 +187,12 @@ class TestPresets:
             auth_action=auth_action,
         )
 
-        actual_exit_code = await handle_workflow_subcommands(args, MagicMock())
+        result = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
         mock_handler.assert_awaited_once_with()
-        assert actual_exit_code == exit_code
+        assert result.handled
+        assert result.exit_code == exit_code
         assert message in captured.out
         assert captured.err == ""
 
@@ -213,12 +216,13 @@ class TestPresets:
         mock_schema_manager.return_value = schema_manager
         args = _make_args(command="migrate", migrate_system=migrate_system)
 
-        exit_code = await handle_workflow_subcommands(args, MagicMock())
+        result = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
         mock_schema_manager.assert_called_once_with()
         schema_manager.run_migrations.assert_awaited_once_with(expected_system)
-        assert exit_code == EXIT_SUCCESS
+        assert result.handled
+        assert result.exit_code == EXIT_SUCCESS
         assert "Running migrations..." in captured.out
         assert f"{expected_system} migration complete" in captured.out
         assert captured.err == ""
@@ -243,12 +247,13 @@ class TestPresets:
         mock_schema_manager.return_value = schema_manager
         args = _make_args(command="migrate", migrate_system=migrate_system)
 
-        exit_code = await handle_workflow_subcommands(args, MagicMock())
+        result = await handle_workflow_subcommands(args, MagicMock())
 
         captured = capsys.readouterr()
         mock_schema_manager.assert_called_once_with()
         schema_manager.run_migrations.assert_awaited_once_with(expected_system)
-        assert exit_code == EXIT_MIGRATION_ERROR
+        assert result.handled
+        assert result.exit_code == EXIT_MIGRATION_ERROR
         assert "Running migrations..." in captured.out
         assert f"Migration failed: {expected_system} failed" in captured.out
         assert captured.err == ""
