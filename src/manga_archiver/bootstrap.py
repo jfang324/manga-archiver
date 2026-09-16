@@ -37,23 +37,27 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class GoogleDriveInitResult:
-    """Result of Google Drive initialization."""
+class BootstrapResult:
+    """Shared result contract for startup/runtime bootstrap stages."""
 
-    archive_store: GoogleDriveArchiveStore | None = None
-    folder_cache: GoogleDriveFolderCache | None = None
-    token: GoogleApiStoredToken | None = None
     exit_code: int | None = None
     message: str | None = None
 
 
 @dataclass(frozen=True)
-class BacklogSyncResult:
+class GoogleDriveInitResult(BootstrapResult):
+    """Result of Google Drive initialization."""
+
+    archive_store: GoogleDriveArchiveStore | None = None
+    folder_cache: GoogleDriveFolderCache | None = None
+    token: GoogleApiStoredToken | None = None
+
+
+@dataclass(frozen=True)
+class BacklogSyncResult(BootstrapResult):
     """Result of backlog sync."""
 
     backlog: list[FetchingResourcesJob] | None = None
-    exit_code: int | None = None
-    message: str | None = None
 
 
 def validate_schema_versions(
