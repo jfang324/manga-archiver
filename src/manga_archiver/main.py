@@ -46,12 +46,12 @@ async def _async_main() -> None:
 
     setup_logging()
 
-    exit_code = await handle_workflow_subcommands(
+    subcommand_result = await handle_workflow_subcommands(
         args,
         webhook_config_store,
     )
-    if exit_code is not None:
-        sys.exit(exit_code)
+    if subcommand_result.handled:
+        sys.exit(subcommand_result.exit_code)
 
     schema_manager = SchemaManager()
 
