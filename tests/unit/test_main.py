@@ -3,6 +3,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.manga_archiver.bootstrap import (
+    build_async_dependencies,
+    build_configurations,
+    initialize_google_drive,
+)
 from src.manga_archiver.cli.handlers import handle_workflow_subcommands
 from src.manga_archiver.cli.presets import get_preset
 from src.manga_archiver.constants.exit_codes import (
@@ -13,11 +18,6 @@ from src.manga_archiver.constants.exit_codes import (
     EXIT_SUCCESS,
 )
 from src.manga_archiver.integrations.webhooks import WebhookProvider
-from src.manga_archiver.main import (
-    _build_async_dependencies,
-    _build_configurations,
-    _initialize_google_drive,
-)
 from src.manga_archiver.models.app_config import AppConfig
 
 
@@ -38,7 +38,7 @@ class TestPresets:
         settings_store = MagicMock()
         settings_store.load = AsyncMock(return_value=AppConfig())
 
-        pipeline_config, _ = await _build_configurations(args, settings_store)
+        pipeline_config, _ = await build_configurations(args, settings_store)
 
         settings_store.load.assert_awaited_once_with()
         assert pipeline_config.num_resolve_workers == preset.resolve_workers
@@ -52,9 +52,9 @@ class TestPresets:
         assert pipeline_config.merge_queue_size == preset.queue_size
         assert pipeline_config.upload_queue_size == preset.queue_size
 
-    @patch("src.manga_archiver.main.DownloadClient")
-    @patch("src.manga_archiver.main.WebhookClient")
-    @patch("src.manga_archiver.main.ContentProviderManager")
+    @patch("src.manga_archiver.bootstrap.DownloadClient")
+    @patch("src.manga_archiver.bootstrap.WebhookClient")
+    @patch("src.manga_archiver.bootstrap.ContentProviderManager")
     async def test_build_async_dependencies_uses_selected_preset_rate_limits(
         self, mock_provider_manager, mock_webhook_client, mock_download_client
     ) -> None:
@@ -65,7 +65,7 @@ class TestPresets:
         webhook_config_store.load = AsyncMock(return_value={})
         webhook_config_store.get_enabled_webhooks.return_value = []
 
-        provider_manager, download_client, webhook_client = await _build_async_dependencies(
+        provider_manager, download_client, webhook_client = await build_async_dependencies(
             session, args, webhook_config_store
         )
 
@@ -91,7 +91,7 @@ class TestPresets:
         token_store = MagicMock()
         token_store.load = AsyncMock(return_value=None)
 
-        result = await _initialize_google_drive(schema_manager, token_store)
+        result = await initialize_google_drive(schema_manager, token_store)
 
         token_store.load.assert_awaited_once_with()
         assert result.exit_code == EXIT_AUTH_ERROR
