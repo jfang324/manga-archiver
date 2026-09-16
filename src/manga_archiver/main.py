@@ -57,10 +57,11 @@ async def _async_main() -> None:
 
     google_drive_enabled = args.archive
     validation_result = validate_schema_versions(schema_manager, google_drive_enabled)
-    if validation_result is not None:
-        exit_code, message = validation_result
-        print(message)
-        sys.exit(exit_code)
+    if validation_result.message is not None:
+        print(validation_result.message)
+
+    if validation_result.exit_code is not None:
+        sys.exit(validation_result.exit_code)
 
     google_drive_archive_store = None
     google_drive_folder_cache = None
@@ -81,8 +82,13 @@ async def _async_main() -> None:
     try:
         pipeline_config, app_config = await build_configurations(args, settings_store)
         favorite_repository = FavoriteRepository()
+        client_session = create_client_session()
+    except Exception as e:
+        logger.error("Failed to initialize: %s", e)
+        sys.exit(EXIT_INIT_ERROR)
 
-        async with create_client_session() as session:
+    async with client_session as session:
+        try:
             (
                 provider_manager,
                 download_client,
@@ -96,8 +102,10 @@ async def _async_main() -> None:
                 app_config=app_config,
             )
 
-            if backlog_result.exit_code is not None:
+            if backlog_result.message is not None:
                 print(backlog_result.message)
+
+            if backlog_result.exit_code is not None:
                 sys.exit(backlog_result.exit_code)
 
             backlog = backlog_result.backlog
@@ -109,13 +117,6 @@ async def _async_main() -> None:
                 google_drive_token=google_drive_token,
                 google_drive_folder_cache=google_drive_folder_cache,
             )
-
-            if args.headless:
-                exit_code = await HeadlessPipelineRunner(
-                    pipeline_manager=pipeline_manager,
-                    webhook_client=webhook_client,
-                ).run(backlog)
-                sys.exit(exit_code)
 
             resumable_jobs = await resumable_jobs_store.get_resumable_jobs()
             await resumable_jobs_store.clear_resumable_jobs()
@@ -129,32 +130,37 @@ async def _async_main() -> None:
                 backlog=backlog,
                 resumable_jobs=resumable_jobs,
             )
+        except Exception as e:
+            logger.error("Failed to initialize: %s", e)
+            sys.exit(EXIT_INIT_ERROR)
 
-            try:
-                incomplete_jobs = await app.run_async()
-            except Exception as e:
-                logger.error("Runtime error during app execution: %s", e)
-                sys.exit(EXIT_RUNTIME_ERROR)
+        if args.headless:
+            exit_code = await HeadlessPipelineRunner(
+                pipeline_manager=pipeline_manager,
+                webhook_client=webhook_client,
+            ).run(backlog)
+            sys.exit(exit_code)
 
-            try:
-                if not isinstance(incomplete_jobs, list):
-                    raise ValueError("Incomplete jobs must be a list")
+        try:
+            incomplete_jobs = await app.run_async()
+        except Exception as e:
+            logger.error("Runtime error during app execution: %s", e)
+            sys.exit(EXIT_RUNTIME_ERROR)
 
-                if not all(
-                    isinstance(incomplete_job, FetchingResourcesJob)
-                    for incomplete_job in incomplete_jobs
-                ):
-                    raise ValueError(
-                        "Incomplete jobs must contain only FetchingResourcesJob instances"
-                    )
+        try:
+            if not isinstance(incomplete_jobs, list):
+                raise ValueError("Incomplete jobs must be a list")
 
-                await resumable_jobs_store.save_resumable_jobs(incomplete_jobs)
-            except Exception as e:
-                logger.error("Failed to save incomplete jobs: %s", e)
-                sys.exit(EXIT_GENERAL_ERROR)
-    except Exception as e:
-        logger.error("Failed to initialize: %s", e)
-        sys.exit(EXIT_INIT_ERROR)
+            if not all(
+                isinstance(incomplete_job, FetchingResourcesJob)
+                for incomplete_job in incomplete_jobs
+            ):
+                raise ValueError("Incomplete jobs must contain only FetchingResourcesJob instances")
+
+            await resumable_jobs_store.save_resumable_jobs(incomplete_jobs)
+        except Exception as e:
+            logger.error("Failed to save incomplete jobs: %s", e)
+            sys.exit(EXIT_GENERAL_ERROR)
 
 
 if __name__ == "__main__":
