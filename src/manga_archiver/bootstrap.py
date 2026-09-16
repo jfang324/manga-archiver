@@ -62,22 +62,25 @@ class BacklogSyncResult(BootstrapResult):
 
 def validate_schema_versions(
     schema_manager: SchemaManager, google_drive_enabled: bool
-) -> tuple[int, str] | None:
+) -> BootstrapResult:
     """Validate schema versions before application startup.
 
     Returns:
-        tuple[int, str] | None: A tuple containing the exit code and error message on failure, or None on success.
+        BootstrapResult: The validation status and optional failure details.
     """
     try:
         is_valid, error_msg = schema_manager.check_versions(google_drive_enabled)
     except MigrationError as e:
         logger.error("Failed to check database versions: %s", e)
-        return EXIT_VALIDATION_ERROR, "Failed to check database versions."
+        return BootstrapResult(
+            exit_code=EXIT_VALIDATION_ERROR,
+            message="Failed to check database versions.",
+        )
 
     if not is_valid:
-        return EXIT_VALIDATION_ERROR, error_msg
+        return BootstrapResult(exit_code=EXIT_VALIDATION_ERROR, message=error_msg)
 
-    return None
+    return BootstrapResult()
 
 
 async def initialize_google_drive(
