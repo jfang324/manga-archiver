@@ -118,6 +118,13 @@ async def _async_main() -> None:
                 google_drive_folder_cache=google_drive_folder_cache,
             )
 
+            if args.headless:
+                exit_code = await HeadlessPipelineRunner(
+                    pipeline_manager=pipeline_manager,
+                    webhook_client=webhook_client,
+                ).run(backlog)
+                sys.exit(exit_code)
+
             resumable_jobs = await resumable_jobs_store.get_resumable_jobs()
             await resumable_jobs_store.clear_resumable_jobs()
 
@@ -133,13 +140,6 @@ async def _async_main() -> None:
         except Exception as e:
             logger.error("Failed to initialize: %s", e)
             sys.exit(EXIT_INIT_ERROR)
-
-        if args.headless:
-            exit_code = await HeadlessPipelineRunner(
-                pipeline_manager=pipeline_manager,
-                webhook_client=webhook_client,
-            ).run(backlog)
-            sys.exit(exit_code)
 
         try:
             incomplete_jobs = await app.run_async()
