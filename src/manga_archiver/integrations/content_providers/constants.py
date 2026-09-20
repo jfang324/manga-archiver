@@ -9,6 +9,9 @@ ALLMANGA_HEADERS: dict[str, str] = {
     "Accept-Language": "en-US,en;q=0.9",
     "Origin": "https://allmanga.to",
     "Referer": "https://allmanga.to/",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
     "User-Agent": (
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) "
         "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 "
@@ -21,6 +24,9 @@ MKISSA_HEADERS: dict[str, str] = {
     "Accept-Language": "en-US,en;q=0.9",
     "Origin": "https://mkissa.to",
     "Referer": "https://mkissa.to/",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
     "User-Agent": (
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) "
         "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 "

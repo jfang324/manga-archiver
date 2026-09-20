@@ -240,6 +240,9 @@ class TestAllMangaClientGetDownloadResource:
         extensions = json.loads(call_kwargs["params"]["extensions"])
         assert extensions["persistedQuery"]["sha256Hash"] == CHAPTER_HASH
         assert extensions["k"] == CHAPTER_PAGES_LANE
+        assert call_kwargs["headers"]["Sec-Fetch-Mode"] == "cors"
+        assert call_kwargs["headers"]["Sec-Fetch-Dest"] == "empty"
+        assert call_kwargs["headers"]["Sec-Fetch-Site"] == "same-site"
 
     async def test_get_download_resource_invalid_chapter_id_format(self) -> None:
         client = AllMangaClient(MagicMock())
