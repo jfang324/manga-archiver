@@ -433,6 +433,54 @@ class TestAllMangaClientStaleCrypto:
         assert client._keygen._cache is None
 
 
+class TestAllMangaClientNeedCaptcha:
+    async def test_need_captcha_invalidates_and_raises_rate_limit(self, mock_session) -> None:
+        captcha = _json_response({"errors": [{"message": "NEED_CAPTCHA"}]})
+        mock_session.get.return_value = AsyncContextManagerMock(captcha)
+        client = AllMangaClient(mock_session)
+
+        with pytest.raises(RateLimitError):
+            await client.get_download_resource("manga:1")
+        assert mock_session.get.call_count == 1
+        # The challenged token must not remain cached for the rest of the TTL
+        assert client._keygen._cache is None
+
+    async def test_need_captcha_triggers_refresh_on_next_call(self, mock_session) -> None:
+        captcha = _json_response({"errors": [{"message": "NEED_CAPTCHA"}]})
+        mock_session.get.return_value = AsyncContextManagerMock(captcha)
+        client = AllMangaClient(mock_session)
+        with pytest.raises(RateLimitError):
+            await client.get_download_resource("manga:1")
+        assert client._keygen._cache is None
+
+        # With the cache emptied by the CAPTCHA failure, the next token build
+        # must re-fetch keygen instead of serving cached values.
+        fetched = {
+            "build_id": ALLANIME_FALLBACK_BUILD_ID,
+            "epoch": 2953,
+            "lanes": dict(ALLANIME_FALLBACK_LANES),
+        }
+        with patch.object(
+            client._keygen,
+            "_fetch",
+            new=AsyncMock(return_value=AllAnimeKeygen.from_dict(fetched)),
+        ) as mock_fetch:
+            await client._keygen.get()
+            mock_fetch.assert_awaited_once()
+
+    async def test_need_captcha_in_later_error_invalidates_and_raises(self, mock_session) -> None:
+        response = _json_response(
+            {"errors": [{"message": "Something else"}, {"message": "NEED_CAPTCHA"}]}
+        )
+        mock_session.get.return_value = AsyncContextManagerMock(response)
+        client = AllMangaClient(mock_session)
+
+        with pytest.raises(RateLimitError):
+            await client.get_download_resource("manga:1")
+        assert mock_session.get.call_count == 1
+        assert client._keygen._cache is None
+
+
 class TestAllMangaClientQueryNotFound:
     def _not_found(self) -> MagicMock:
         return _json_response({"errors": [{"message": PERSISTED_QUERY_NOT_FOUND}]})
