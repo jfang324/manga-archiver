@@ -51,6 +51,9 @@ CHAPTER_PAGES_LANE: str = "k9"
 # Error message the API returns when the aaReq token was built with rotated-out crypto values
 STALE_CRYPTO_MESSAGE: str = "AA_CRYPTO_STALE"
 
+# Error message the API returns when it demands CAPTCHA verification (anti-bot)
+NEED_CAPTCHA_MESSAGE: str = "NEED_CAPTCHA"
+
 # Error message the API returns when a persisted query hash is not registered
 PERSISTED_QUERY_NOT_FOUND: str = "PersistedQueryNotFound"
 

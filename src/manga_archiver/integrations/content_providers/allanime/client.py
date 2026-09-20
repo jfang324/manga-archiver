@@ -12,6 +12,7 @@ from .constants import (
     CHAPTER_PAGES_LANE,
     CHAPTER_PAGES_QUERY,
     MANGA_DETAILS_QUERY,
+    NEED_CAPTCHA_MESSAGE,
     PERSISTED_QUERY_NOT_FOUND,
     SEARCH_QUERY,
     STALE_CRYPTO_MESSAGE,
@@ -96,9 +97,10 @@ class AllMangaClient(Provider):
         """Validate an API response and return it for parsing.
 
         Centralizes the API error envelope so parsers can rely on a
-        well-formed response: stale crypto or unregistered persisted queries
-        drop the keygen cache and surface as a RateLimitError, other GraphQL
-        errors surface as an ApiError, and a missing data payload is rejected.
+        well-formed response: stale crypto, unregistered persisted queries, or
+        a CAPTCHA challenge drop the keygen cache and surface as a
+        RateLimitError, other GraphQL errors surface as an ApiError, and a
+        missing data payload is rejected.
 
         Args:
             response: Raw API response
@@ -107,7 +109,8 @@ class AllMangaClient(Provider):
             dict: The validated response
 
         Raises:
-            RateLimitError: API reported stale crypto or query not found
+            RateLimitError: API reported stale crypto, query not found, or a
+                CAPTCHA challenge (anti-bot)
             ApiError: Any other error shape or a missing data payload
         """
         errors = response.get("errors")
@@ -118,10 +121,15 @@ class AllMangaClient(Provider):
                 if isinstance(entry, dict) and isinstance(entry.get("message"), str)
             ]
             for message in messages:
-                if message in (STALE_CRYPTO_MESSAGE, PERSISTED_QUERY_NOT_FOUND):
-                    # The API may have rotated crypto values or registered
-                    # persisted query hashes, so drop the cache and surface a
-                    # rate-limit style error for the caller to retry later.
+                if message in (
+                    STALE_CRYPTO_MESSAGE,
+                    PERSISTED_QUERY_NOT_FOUND,
+                    NEED_CAPTCHA_MESSAGE,
+                ):
+                    # The API may have rotated crypto values, registered
+                    # persisted query hashes, or demanded CAPTCHA verification,
+                    # so drop the cache and surface a rate-limit style error for
+                    # the caller to back off and retry with a fresh aaReq token.
                     self._keygen.invalidate()
                     raise RateLimitError(f"API reports rotated keygen values: {errors}")
             if messages:
