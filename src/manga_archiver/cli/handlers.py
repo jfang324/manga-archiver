@@ -25,6 +25,12 @@ class SubcommandResult:
     handled: bool = False
     exit_code: int | None = None
 
+    def __post_init__(self) -> None:
+        """Check for invalid states."""
+
+        if self.handled and self.exit_code is None:
+            raise ValueError("handled SubcommandResult requires an exit_code")
+
 
 async def handle_workflow_subcommands(
     args: Namespace,
@@ -61,7 +67,7 @@ async def handle_workflow_subcommands(
 def _handle_list(args: Namespace) -> SubcommandResult:
     """Handle list subcommands."""
     if args.command != "list":
-        return SubcommandResult(handled=False, exit_code=EXIT_SUCCESS)
+        return SubcommandResult(handled=False)
 
     if args.list_target == "presets":
         print(format_presets())
@@ -73,7 +79,7 @@ def _handle_list(args: Namespace) -> SubcommandResult:
 async def _handle_auth(args: Namespace) -> SubcommandResult:
     """Handle authentication commands."""
     if args.command != "auth":
-        return SubcommandResult(handled=False, exit_code=EXIT_SUCCESS)
+        return SubcommandResult(handled=False)
 
     if args.auth_provider != "google-drive":
         print(f'Unsupported auth provider: {args.auth_provider}. Only "google-drive" is supported.')
@@ -96,7 +102,7 @@ async def _handle_config(
 ) -> SubcommandResult:
     """Handle configuration commands."""
     if args.command != "config":
-        return SubcommandResult(handled=False, exit_code=EXIT_SUCCESS)
+        return SubcommandResult(handled=False)
 
     if args.config_category != "webhooks":
         print(f'Unsupported config category: {args.config_category}. Only "webhooks" is supported.')
@@ -144,7 +150,7 @@ def _prompt_webhook_config(source: WebhookProvider) -> WebhookConfig:
 async def _handle_health(args: Namespace) -> SubcommandResult:
     """Handle provider health command."""
     if args.command != "health":
-        return SubcommandResult(handled=False, exit_code=EXIT_SUCCESS)
+        return SubcommandResult(handled=False)
 
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(resolver=aiohttp.resolver.ThreadedResolver())
@@ -168,7 +174,7 @@ async def _handle_health(args: Namespace) -> SubcommandResult:
 async def _handle_migrations(args: Namespace) -> SubcommandResult:
     """Handle migration commands."""
     if args.command != "migrate":
-        return SubcommandResult(handled=False, exit_code=EXIT_SUCCESS)
+        return SubcommandResult(handled=False)
 
     try:
         if args.migrate_system == "database":
