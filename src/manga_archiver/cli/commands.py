@@ -15,12 +15,22 @@ from .subcommands import (
 FALLBACK_VERSION = "v0.0.0"
 
 
-def _get_package_version() -> str:
-    """Return the installed package version string."""
-    try:
-        return f"v{package_version('manga-archiver')}"
-    except PackageNotFoundError:
-        return FALLBACK_VERSION
+def parse_args(argv: Sequence[str] | None = None) -> Namespace:
+    """Parse command-line arguments.
+
+    Args:
+        argv: Optional argument list to parse. When omitted, argparse reads sys.argv.
+
+    Returns:
+        Namespace: Parsed command-line arguments
+    """
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
+    if args.headless and (not args.archive or not args.backlog):
+        parser.error("--headless requires --archive and --backlog")
+
+    return args
 
 
 def _build_parser() -> ArgumentParser:
@@ -33,10 +43,10 @@ def _build_parser() -> ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", title="commands", metavar="")
 
     add_auth_parser(subparsers)
-    add_config_parser(subparsers)
     add_migrate_parser(subparsers)
     add_list_parser(subparsers)
     add_health_parser(subparsers)
+    add_config_parser(subparsers)
 
     parser.add_argument(
         "--version",
@@ -79,19 +89,9 @@ def _build_parser() -> ArgumentParser:
     return parser
 
 
-def parse_args(argv: Sequence[str] | None = None) -> Namespace:
-    """Parse command-line arguments.
-
-    Args:
-        argv: Optional argument list to parse. When omitted, argparse reads sys.argv.
-
-    Returns:
-        Namespace: Parsed command-line arguments
-    """
-    parser = _build_parser()
-    args = parser.parse_args(argv)
-
-    if args.headless and (not args.archive or not args.backlog):
-        parser.error("--headless requires --archive and --backlog")
-
-    return args
+def _get_package_version() -> str:
+    """Return the installed package version string."""
+    try:
+        return f"v{package_version('manga-archiver')}"
+    except PackageNotFoundError:
+        return FALLBACK_VERSION

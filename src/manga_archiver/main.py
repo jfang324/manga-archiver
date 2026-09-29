@@ -12,8 +12,7 @@ from .bootstrap import (
     load_backlog,
     validate_schema_versions,
 )
-from .cli import parse_args
-from .cli.handlers import handle_workflow_subcommands
+from .cli import handle_workflow_subcommands, parse_args
 from .constants.exit_codes import (
     EXIT_GENERAL_ERROR,
     EXIT_INIT_ERROR,
