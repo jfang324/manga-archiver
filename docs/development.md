@@ -62,6 +62,7 @@ manga-archiver/
 ├── src/manga_archiver/
 │   ├── app.py                  # Textual app root
 │   ├── backlog_sync.py         # Backlog sync workflow
+│   ├── bootstrap.py            # App startup wiring
 │   ├── headless_runner.py      # Non-interactive run support
 │   ├── health.py               # Health check command support
 │   ├── main.py                 # CLI entry point
