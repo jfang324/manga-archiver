@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from .screen_names import ScreenName
+
 
 @dataclass(frozen=True)
 class MenuOption:
@@ -14,21 +16,21 @@ MENU_OPTIONS: tuple[MenuOption, ...] = (
     MenuOption(
         display_name="Search",
         description="Search for manga and download chapters.",
-        screen="search_screen",
+        screen=ScreenName.SEARCH.value,
     ),
     MenuOption(
         display_name="Favorites",
         description="Manage your list of favorite manga.",
-        screen="favorites_screen",
+        screen=ScreenName.FAVORITES.value,
     ),
     MenuOption(
         display_name="Downloads",
         description="View downloads from this session in real time.",
-        screen="downloads_screen",
+        screen=ScreenName.DOWNLOADS.value,
     ),
     MenuOption(
         display_name="Settings",
         description="Configure the application settings.",
-        screen="settings_screen",
+        screen=ScreenName.SETTINGS.value,
     ),
 )

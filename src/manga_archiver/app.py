@@ -5,6 +5,7 @@ from textual import on, work
 from textual.app import App
 from textual.reactive import reactive
 
+from .constants.screen_names import ScreenName
 from .integrations.content_providers import ContentProviderManager
 from .models.app_config import AppConfig
 from .persistence import SettingsStore
@@ -136,26 +137,26 @@ class MangaArchiverApp(App):
         """On mount, install screens and start pipeline manager."""
         await self._load_favorites()
 
-        self.install_screen(MenuScreen(), name="menu_screen")
-        self.install_screen(SearchScreen(self._provider_manager), name="search_screen")
+        self.install_screen(MenuScreen(), name=ScreenName.MENU.value)
+        self.install_screen(SearchScreen(self._provider_manager), name=ScreenName.SEARCH.value)
         self.install_screen(
             SettingsScreen().data_bind(app_config=MangaArchiverApp._app_config),
-            name="settings_screen",
+            name=ScreenName.SETTINGS.value,
         )
         self.install_screen(
             DownloadsScreen(
                 get_jobs=self._pipeline_manager.get_jobs,
                 retry_failed_jobs=self._pipeline_manager.retry_failed_jobs,
             ),
-            name="downloads_screen",
+            name=ScreenName.DOWNLOADS.value,
         )
         self.install_screen(
             FavoritesScreen().data_bind(favorites=MangaArchiverApp._favorites),
-            name="favorites_screen",
+            name=ScreenName.FAVORITES.value,
         )
 
         self._setup_pipeline_manager()
-        self.push_screen("menu_screen")
+        self.push_screen(ScreenName.MENU.value)
 
         if self._resumable_jobs:
             self._prompt_resume_jobs()
